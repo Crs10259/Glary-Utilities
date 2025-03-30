@@ -1,0 +1,30 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Python files
+*.py text diff=python
+
+# Documents
+*.md text diff=markdown
+*.txt text
+
+# Graphics
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+
+# Windows-specific files (always CRLF)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Unix-specific files (always LF)
+*.sh text eol=lf
+
+# Exclude from language statistics
+src/translations/* linguist-documentation
+
+# Exclude from Git archive
+.gitattributes export-ignore
+.gitignore export-ignore 
