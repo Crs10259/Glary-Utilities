@@ -26,7 +26,7 @@ A comprehensive system utility tool for Windows that helps optimize, clean, and 
 
 ### Using the Installer
 
-1. Download the latest installer from the [Releases](https://github.com/yourusername/glary-utilities/releases) page
+1. Download the latest installer from the [Releases](https://github.com/Crs10259/Glary-Utilities.git/releases) page
 2. Run the installer and follow the on-screen instructions
 3. Launch Glary Utilities from the Start menu or desktop shortcut
 
@@ -34,8 +34,8 @@ A comprehensive system utility tool for Windows that helps optimize, clean, and 
 
 1. Clone this repository:
    ```
-   git clone https://github.com/yourusername/glary-utilities.git
-   cd glary-utilities
+   git clone https://github.com/Crs10259/Glary-Utilities.git
+   cd Glary-Utilities
    ```
 
 2. Install the required dependencies:
