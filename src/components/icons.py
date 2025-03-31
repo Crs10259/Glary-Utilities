@@ -1,102 +1,171 @@
 import os
+import sys
+import logging
+from functools import lru_cache
 
-class IconInfo:
-    """存储图标信息的类"""
-    def __init__(self, name, path):
-        self.Name = name
-        self.Path = path
-        self.Exist = os.path.exists(path)
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("Icons")
 
-class Icons:
-    """管理应用程序图标的类"""
-    def __init__(self):
-        # 基本路径
-        self.base_path = "assets/images"
-        
-        # 应用程序图标
-        self.Icon = IconInfo("Icon", os.path.join(self.base_path, "icon.png"))
-        
-        # 工具栏图标
-        self.Home = IconInfo("Home", os.path.join(self.base_path, "home.png"))
-        self.Cleaner = IconInfo("Cleaner", os.path.join(self.base_path, "cleaner.png"))
-        self.GPU = IconInfo("GPU", os.path.join(self.base_path, "gpu.png"))
-        self.Repair = IconInfo("Repair", os.path.join(self.base_path, "repair.png"))
-        self.DISM = IconInfo("DISM", os.path.join(self.base_path, "dism.png"))
-        self.Network = IconInfo("Network", os.path.join(self.base_path, "network.png"))
-        self.Disk = IconInfo("Disk", os.path.join(self.base_path, "disk.png"))
-        self.Boot = IconInfo("Boot", os.path.join(self.base_path, "boot.png"))
-        self.Virus = IconInfo("Virus", os.path.join(self.base_path, "virus.png"))
-        self.Settings = IconInfo("Settings", os.path.join(self.base_path, "settings.png"))
-        
-        # 其他图标
-        self.Arrow = IconInfo("Arrow", os.path.join(self.base_path, "arrow.png"))
-        self.CPU = IconInfo("CPU", os.path.join(self.base_path, "cpu.png"))
-        self.Memory = IconInfo("Memory", os.path.join(self.base_path, "memory.png"))
-        self.Temperature = IconInfo("Temperature", os.path.join(self.base_path, "temperature.png"))
-        self.Optimize = IconInfo("Optimize", os.path.join(self.base_path, "optimize.png"))
-        self.Clean = IconInfo("Clean", os.path.join(self.base_path, "clean.png"))
-        self.Info = IconInfo("Info", os.path.join(self.base_path, "info.png"))
+# Constants
+ASSETS_DIR = "assets/images"
 
-# 创建单例实例
-Icon = Icons()
+class IconBase:
+    @staticmethod
+    @lru_cache()
+    def exists(path):
+        """Check if an icon file exists at the given path"""
+        try:
+            # Get the base directory (src folder)
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            full_path = os.path.join(base_dir, path)
+            return os.path.exists(full_path) and os.path.isfile(full_path)
+        except Exception as e:
+            logger.error(f"Error checking if icon exists at {path}: {str(e)}")
+            return False
+    
+    @staticmethod
+    @lru_cache()
+    def get_path(path):
+        """Get the full path to an icon file"""
+        try:
+            # Get the base directory (src folder)
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            full_path = os.path.join(base_dir, path)
+            
+            # Check if the file exists
+            if os.path.exists(full_path) and os.path.isfile(full_path):
+                return full_path
+            else:
+                logger.warning(f"Icon file not found: {full_path}")
+                # Return a placeholder or default icon
+                placeholder = os.path.join(base_dir, "assets", "images", "placeholder.png")
+                if os.path.exists(placeholder):
+                    return placeholder
+                else:
+                    return path  # Return original path if placeholder doesn't exist
+        except Exception as e:
+            logger.error(f"Error getting icon path for {path}: {str(e)}")
+            return path
+
+    @staticmethod
+    def ensure_dir_exists(dir_path):
+        """Ensure that the directory for icons exists"""
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+            return True
+        except Exception as e:
+            logger.error(f"Error creating directory {dir_path}: {str(e)}")
+            return False
+
+def initialize_icons():
+    """Initialize all icon paths and check for existence"""
+    # Get the base directory (src folder)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    assets_dir = os.path.join(base_dir, ASSETS_DIR)
+    
+    # Ensure the assets directory exists
+    if not os.path.exists(assets_dir):
+        logger.warning(f"Assets directory not found: {assets_dir}")
+        IconBase.ensure_dir_exists(assets_dir)
 
 class Icon:
+    """Icon manager class that handles all application icons"""
+    
     class Home:
-        Path = "assets/images/home.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/home.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Cleaner:
-        Path = "assets/images/cleaner.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/cleaner.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class GPU:
-        Path = "assets/images/gpu.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/gpu.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Repair:
-        Path = "assets/images/repair.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/repair.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Dism:
-        Path = "assets/images/dism.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/dism.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Network:
-        Path = "assets/images/network.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/network.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Disk:
-        Path = "assets/images/disk.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/disk.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Boot:
-        Path = "assets/images/boot.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/boot.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Virus:
-        Path = "assets/images/virus.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/virus.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Settings:
-        Path = "assets/images/settings.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/settings.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Icon:
-        Path = "assets/images/icon.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/icon.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Arrow:
-        Path = "assets/images/arrow.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/arrow.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Optimize:
-        Path = "assets/images/optimize.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/optimize.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Clean:
-        Path = "assets/images/clean.png"
-        Exist = os.path.exists(Path)
-    class Junk:
-        Path = "assets/images/junk.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/clean.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class CPU:
-        Path = "assets/images/cpu.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/cpu.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Memory:
-        Path = "assets/images/memory.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/memory.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Temperature:
-        Path = "assets/images/temperature.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/temperature.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+    
     class Info:
-        Path = "assets/images/info.png"
-        Exist = os.path.exists(Path)
+        _path = f"{ASSETS_DIR}/info.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
         
+    class SystemInfo:
+        _path = f"{ASSETS_DIR}/system_info.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
 
+# Initialize icons when the module is imported
+initialize_icons()

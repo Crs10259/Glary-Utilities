@@ -7,26 +7,26 @@ import subprocess
 from pathlib import Path
 
 def build_application():
-    """Build the application using PyInstaller"""
-    print("Building Glary Utilities...")
+    """使用PyInstaller构建应用程序"""
+    print("正在构建 Glary Utilities...")
     
-    # Get the absolute path to the script's directory
+    # 获取脚本目录的绝对路径
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
-    # Set the source directory
+    # 设置源目录
     src_dir = os.path.join(script_dir, "src")
     
-    # Create build directory if it doesn't exist
+    # 如果构建目录不存在，则创建
     build_dir = os.path.join(script_dir, "build")
     if not os.path.exists(build_dir):
         os.mkdir(build_dir)
     
-    # Create dist directory if it doesn't exist
+    # 如果dist目录不存在，则创建
     dist_dir = os.path.join(script_dir, "dist")
     if not os.path.exists(dist_dir):
         os.mkdir(dist_dir)
     
-    # Define PyInstaller command
+    # 定义PyInstaller命令
     pyinstaller_args = [
         "pyinstaller",
         "--name=GlaryUtilities",
@@ -39,40 +39,40 @@ def build_application():
         os.path.join(src_dir, "main.py")
     ]
     
-    # On Windows, use --noconsole
+    # 在Windows上使用--noconsole
     if platform.system() == "Windows":
         pyinstaller_args.insert(4, "--noconsole")
     
-    print("Running PyInstaller with arguments:", ' '.join(pyinstaller_args))
+    print("正在使用以下参数运行PyInstaller:", ' '.join(pyinstaller_args))
     
-    # Run PyInstaller
+    # 运行PyInstaller
     subprocess.run(pyinstaller_args, check=True)
     
-    print("Build completed successfully!")
+    print("构建成功完成！")
     
-    # Create installer (platform-specific)
+    # 创建安装程序（特定于平台）
     if platform.system() == "Windows":
         create_windows_installer()
     else:
-        print("Installer creation not supported on this platform")
+        print("不支持在此平台上创建安装程序")
 
 def create_windows_installer():
-    """Create a Windows installer using NSIS"""
-    print("Creating Windows installer...")
+    """使用NSIS创建Windows安装程序"""
+    print("正在创建Windows安装程序...")
     
-    # Check if NSIS is installed
+    # 检查是否安装了NSIS
     try:
         subprocess.run(["makensis", "-VERSION"], capture_output=True, check=True)
     except (subprocess.SubprocessError, FileNotFoundError):
-        print("NSIS is not installed or not in PATH. Please install NSIS from https://nsis.sourceforge.io/")
+        print("NSIS未安装或不在PATH中。请从https://nsis.sourceforge.io/安装NSIS。")
         return
     
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
-    # Create NSIS script
+    # 创建NSIS脚本
     nsis_script = os.path.join(script_dir, "installer.nsi")
     with open(nsis_script, "w") as f:
-        f.write("""
+        f.write(""" 
 !include "MUI2.nsh"
 
 ; Application information
@@ -144,10 +144,10 @@ Section "Uninstall"
 SectionEnd
 """)
     
-    # Run NSIS to create installer
+    # 运行NSIS以创建安装程序
     subprocess.run(["makensis", nsis_script], check=True)
     
-    print("Windows installer created successfully!")
+    print("Windows安装程序创建成功！")
 
 if __name__ == "__main__":
     build_application() 

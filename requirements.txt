@@ -1,4 +1,7 @@
 PyQt5==5.15.9
+PyQt5-Qt5==5.15.2
+PyQt5-sip==12.17.0
+PyQtChart==5.15.7
 psutil==5.9.5
 pywin32==308
 pyinstaller===6.12.0

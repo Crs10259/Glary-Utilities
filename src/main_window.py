@@ -4,9 +4,10 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                             QLabel, QPushButton, QStackedWidget, QTabWidget,
                             QFrame, QSplitter, QToolButton, QStyleFactory,
                             QAction, QMenu, QMenuBar, QStatusBar, QToolBar,
-                            QSizePolicy, QDialog, QTextBrowser, QDialogButtonBox)
+                            QSizePolicy, QDialog, QTextBrowser, QDialogButtonBox,
+                            QGraphicsDropShadowEffect)
 from PyQt5.QtCore import Qt, QSize, QPropertyAnimation, QEasingCurve, QTimer, pyqtSignal
-from PyQt5.QtGui import QIcon, QPixmap, QFont, QColor, QPalette
+from PyQt5.QtGui import QIcon, QPixmap, QFont, QColor, QPalette, QCursor
 
 from components.dashboard import DashboardWidget
 from components.system_cleaner import SystemCleanerWidget
@@ -17,22 +18,38 @@ from components.network_reset import NetworkResetWidget
 from components.disk_check import DiskCheckWidget
 from components.boot_repair import BootRepairWidget
 from components.virus_scan import VirusScanWidget
+from components.system_info import SystemInfoWidget
 from components.settings import SettingsWidget
 from components.icons import Icon
 from animations import AnimationUtils
 
 class MainWindow(QMainWindow):
     """主应用程序窗口"""
+    
+    # 语言更改信号
     language_changed = pyqtSignal(str)
     
     def __init__(self, settings):
         super().__init__()
+        
         self.settings = settings
         
-        # 初始化属性
-        self.nav_actions = {}
-        self.sidebar_buttons = {}
+        # Initialize dictionaries
         self.page_indices = {}
+        self.page_buttons = {}
+        
+        # 动画
+        self.fade_in_animation = QPropertyAnimation(self, b"windowOpacity")
+        self.fade_in_animation.setDuration(500)
+        self.fade_in_animation.setStartValue(0)
+        self.fade_in_animation.setEndValue(1)
+        self.fade_in_animation.setEasingCurve(QEasingCurve.OutCubic)
+        
+        # 连接语言更改信号
+        self.language_changed.connect(self.change_language)
+        
+        # 初始化UI
+        self.init_ui()
         
         # 验证翻译 - 查找缺失的键
         missing_translations = self.settings.validate_translations(raise_error=False)
@@ -45,11 +62,6 @@ class MainWindow(QMainWindow):
                     for key in keys:
                         print(f"    - {key}")
         
-        self.init_ui()
-        
-        # 连接语言更改信号
-        self.language_changed.connect(self.update_ui_language)
-        
         # 应用窗口图标
         self.apply_window_icon()
     
@@ -57,6 +69,15 @@ class MainWindow(QMainWindow):
         """初始化UI"""
         self.setWindowTitle("Glary Utilities")
         self.setMinimumSize(1000, 700)
+        
+        # 设置窗口样式
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #1e1e1e;  /* 背景颜色 */
+                border: 2px solid #00a8ff;  /* 边框颜色 */
+                border-radius: 10px;         /* 边框圆角 */
+            }
+        """)
         
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -71,16 +92,7 @@ class MainWindow(QMainWindow):
         self.splitter.setHandleWidth(1)
         self.splitter.setChildrenCollapsible(False)
         
-        self.sidebar = QFrame()
-        self.sidebar.setObjectName("sidebar")
-        self.sidebar.setStyleSheet("""
-            #sidebar {
-                background-color: #252526;
-                border-right: 1px solid #3a3a3a;
-            }
-        """)
-        self.sidebar.setMinimumWidth(220)
-        self.sidebar.setMaximumWidth(220)
+        self.setup_sidebar()
         
         self.content_area = QStackedWidget()
         self.content_area.setObjectName("contentArea")
@@ -92,9 +104,16 @@ class MainWindow(QMainWindow):
         
         self.splitter.addWidget(self.sidebar)
         self.splitter.addWidget(self.content_area)
-        self.splitter.setSizes([220, 780])
         
-        self.main_layout.addWidget(self.splitter)
+        # 修复：确保 splitter 比例正确，内容区域伸展填充
+        self.splitter.setStretchFactor(0, 0)  # 侧边栏不会伸展
+        self.splitter.setStretchFactor(1, 1)  # 内容区域会伸展
+        
+        # 设置分隔条初始位置
+        self.splitter.setSizes([220, self.width() - 220])
+        
+        # 添加到主布局，确保填满整个窗口
+        self.main_layout.addWidget(self.splitter, 1)  # 设置伸展因子
         
         self.status_bar = QStatusBar()
         self.status_bar.setStyleSheet("""
@@ -105,16 +124,22 @@ class MainWindow(QMainWindow):
         """)
         self.setStatusBar(self.status_bar)
         
-        self.setup_sidebar()
-        self.setup_content_pages()
+        self.setup_content_area()
         self.setup_menu_bar()
         self.apply_theme()
+        self.apply_transparency()
         
         default_tab = self.settings.get_setting("default_tab", "Dashboard")
         self.set_active_page(default_tab)
         
-        self.status_bar.showMessage("欢迎使用Glary Utilities", 5000)
-    
+        self.status_bar.showMessage("欢迎使用 Glary Utilities", 5000)
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(20)
+        shadow_effect.setXOffset(5)
+        shadow_effect.setYOffset(5)
+        shadow_effect.setColor(QColor(0, 0, 0, 160))  # 半透明黑色阴影
+        self.setGraphicsEffect(shadow_effect)
+
     def create_toolbar(self):
         """创建顶部工具栏"""
         self.toolbar = QToolBar()
@@ -168,143 +193,242 @@ class MainWindow(QMainWindow):
         self.addToolBar(self.toolbar)
     
     def setup_sidebar(self):
-        """设置侧边栏菜单"""
-        sidebar_layout = QVBoxLayout(self.sidebar)
-        sidebar_layout.setContentsMargins(0, 0, 0, 0)
-        sidebar_layout.setSpacing(1)
-        
-        title_widget = QWidget()
-        title_widget.setObjectName("sidebarTitle")
-        title_widget.setStyleSheet("""
-            #sidebarTitle {
-                background-color: #007acc;
-                min-height: 40px;
-            }
-            QLabel {
-                color: white;
-                font-size: 16px;
-                font-weight: bold;
-                padding: 10px;
+        """设置应用程序侧边栏"""
+        # 创建侧边栏容器
+        self.sidebar = QWidget()
+        self.sidebar.setObjectName("sidebar")
+        self.sidebar.setFixedWidth(220)
+        self.sidebar.setStyleSheet("""
+            #sidebar {
+                background-color: #252525;
+                border-right: 1px solid #3a3a3a;
+                border-radius: 0px;
             }
         """)
-        title_layout = QHBoxLayout(title_widget)
-        title_layout.setContentsMargins(10, 0, 10, 0)
         
-        title_icon = QLabel()
-        title_icon.setPixmap(QPixmap("assets/images/icon.png").scaled(24, 24, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        title_layout.addWidget(title_icon)
+        # 侧边栏布局
+        sidebar_layout = QVBoxLayout(self.sidebar)
+        sidebar_layout.setContentsMargins(10, 20, 10, 20)
+        sidebar_layout.setSpacing(8)
         
-        self.title_label = QLabel(self.settings.get_translation("general", "dashboard"))
-        title_layout.addWidget(self.title_label)
+        # 工具列表组
+        self.sidebar_group = QFrame()
+        self.sidebar_group.setObjectName("sidebarGroup")
+        self.sidebar_group.setStyleSheet("""
+            #sidebarGroup {
+                background-color: transparent;
+                border: none;
+            }
+        """)
         
-        sidebar_layout.addWidget(title_widget)
+        # 工具列表布局
+        sidebar_group_layout = QVBoxLayout(self.sidebar_group)
+        sidebar_group_layout.setContentsMargins(0, 0, 0, 0)
+        sidebar_group_layout.setSpacing(5)
         
-        self.create_sidebar_button("Dashboard", Icon.Home.Path, sidebar_layout)
-        self.create_sidebar_button("System Cleaner", Icon.Clean.Path, sidebar_layout)
-        self.create_sidebar_button("GPU Information", Icon.GPU.Path, sidebar_layout)
-        self.create_sidebar_button("System Repair", Icon.Repair.Path, sidebar_layout)
-        self.create_sidebar_button("DISM Tool", Icon.Dism.Path, sidebar_layout)
-        self.create_sidebar_button("Network Reset", Icon.Network.Path, sidebar_layout)
-        self.create_sidebar_button("Disk Check", Icon.Disk.Path, sidebar_layout)
-        self.create_sidebar_button("Boot Repair", Icon.Boot.Path, sidebar_layout)
-        self.create_sidebar_button("Virus Scan", Icon.Virus.Path, sidebar_layout)
-        self.create_sidebar_button("Settings", Icon.Settings.Path, sidebar_layout)
+        # 添加按钮 - 使用布局而不是硬编码位置
+        self.create_sidebar_button(self.tr("Dashboard"), "Home", sidebar_group_layout)
+        self.create_sidebar_button(self.tr("System Cleaner"), "Cleaner", sidebar_group_layout)
+        self.create_sidebar_button(self.tr("GPU Information"), "GPU", sidebar_group_layout)
+        self.create_sidebar_button(self.tr("System Repair"), "Repair", sidebar_group_layout)
+        self.create_sidebar_button(self.tr("DISM Tool"), "Dism", sidebar_group_layout)
+        self.create_sidebar_button(self.tr("Network Reset"), "Network", sidebar_group_layout)
+        self.create_sidebar_button(self.tr("Disk Check"), "Disk", sidebar_group_layout)
+        self.create_sidebar_button(self.tr("Boot Repair"), "Boot", sidebar_group_layout)
+        self.create_sidebar_button(self.tr("Virus Scan"), "Virus", sidebar_group_layout)
+        self.create_sidebar_button(self.tr("System Information"), "SystemInfo", sidebar_group_layout)
         
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sidebar_layout.addWidget(spacer)
-    
+        # 添加工具列表到侧边栏
+        sidebar_layout.addWidget(self.sidebar_group)
+        
+        # 标题（App名称）- 移至底部
+        app_title = QLabel("Glary Utilities")
+        app_title.setStyleSheet("color: #e0e0e0; font-size: 18px; font-weight: bold;")
+        
+        # 添加伸缩项将设置按钮推到底部
+        sidebar_layout.addStretch()
+        sidebar_layout.addWidget(app_title)
+        
+        # 在侧边栏底部添加设置按钮
+        self.settings_button = QPushButton(self.tr("Settings"))
+        self.settings_button.setObjectName("settingsButton")
+        self.settings_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.settings_button.setStyleSheet("""
+            #settingsButton {
+                background-color: #3a3a3a;
+                color: #e0e0e0;
+                border: none;
+                border-radius: 6px;
+                text-align: left;
+                padding: 10px 15px;
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+            #settingsButton:hover {
+                background-color: #454545;
+            }
+            #settingsButton:pressed {
+                background-color: #505050;
+            }
+        """)
+        
+        # Add settings icon if available
+        if Icon.Settings.Exist:
+            settings_icon = QIcon(Icon.Settings.Path)
+            if not settings_icon.isNull():
+                self.settings_button.setIcon(settings_icon)
+                self.settings_button.setIconSize(QSize(18, 18))
+        
+        # Connect settings button
+        self.settings_button.clicked.connect(lambda: self.set_active_page("Settings"))
+        
+        # Add settings button to bottom of sidebar
+        sidebar_layout.addWidget(self.settings_button)
+        
+        # 将侧边栏添加到主布局
+        self.main_layout.addWidget(self.sidebar)
+
     def create_sidebar_button(self, text, icon_name, parent_layout):
-        """创建侧边栏菜单按钮"""
-        button = QPushButton()
-        button.setObjectName(f"sidebar_btn_{text.lower().replace(' ', '_')}")
+        """创建侧边栏按钮"""
+        button = QPushButton(text)
+        button.setObjectName(f"{text.lower().replace(' ', '_')}_btn")
+        button.setCursor(QCursor(Qt.PointingHandCursor))
         button.setStyleSheet("""
             QPushButton {
                 background-color: transparent;
+                color: #a0a0a0;
                 border: none;
-                border-radius: 0;
-                color: #cccccc;
-                font-size: 14px;
-                padding: 10px;
+                border-radius: 6px;
                 text-align: left;
+                padding: 10px 15px;
+                font-size: 14px;
             }
             QPushButton:hover {
-                background-color: #3a3a3a;
+                background-color: #353535;
+                color: #e0e0e0;
             }
             QPushButton:checked {
-                background-color: #007acc;
-                color: white;
+                background-color: #454545;
+                color: #ffffff;
+                font-weight: bold;
             }
         """)
         button.setCheckable(True)
+        button.setAutoExclusive(True)
         
-        button_layout = QHBoxLayout(button)
-        button_layout.setContentsMargins(10, 0, 10, 0)
-        button_layout.setSpacing(10)
+        # 添加图标（如果可用）
+        icon_path = None
+        if icon_name == "Home":
+            icon_path = Icon.Home.Path if Icon.Home.Exist else None
+        elif icon_name == "Cleaner":
+            icon_path = Icon.Cleaner.Path if Icon.Cleaner.Exist else None
+        elif icon_name == "GPU":
+            icon_path = Icon.GPU.Path if Icon.GPU.Exist else None
+        elif icon_name == "Repair":
+            icon_path = Icon.Repair.Path if Icon.Repair.Exist else None
+        elif icon_name == "Dism":
+            icon_path = Icon.Dism.Path if Icon.Dism.Exist else None
+        elif icon_name == "Network":
+            icon_path = Icon.Network.Path if Icon.Network.Exist else None
+        elif icon_name == "Disk":
+            icon_path = Icon.Disk.Path if Icon.Disk.Exist else None
+        elif icon_name == "Boot":
+            icon_path = Icon.Boot.Path if Icon.Boot.Exist else None
+        elif icon_name == "Virus":
+            icon_path = Icon.Virus.Path if Icon.Virus.Exist else None
+        elif icon_name == "SystemInfo":
+            icon_path = Icon.SystemInfo.Path if Icon.SystemInfo.Exist else None
         
-        icon_label = QLabel()
-        icon_path = f"assets/images/{icon_name}"
-        if os.path.exists(icon_path):
-            icon_label.setPixmap(QPixmap(icon_path).scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        button_layout.addWidget(icon_label)
+        if icon_path:
+            icon = QIcon(icon_path)
+            if not icon.isNull():
+                button.setIcon(icon)
+                button.setIconSize(QSize(18, 18))
         
-        text_label = QLabel(self.settings.get_translation("general", text.lower().replace(' ', '_')))
-        text_label.setObjectName(f"label_{text.lower().replace(' ', '_')}")
-        button_layout.addWidget(text_label)
+        # 添加到布局
+        parent_layout.addWidget(button)
         
-        button_layout.addStretch()
+        # 将按钮添加到页面名称到按钮的映射
+        self.page_buttons[text] = button
         
+        # 连接点击事件
         button.clicked.connect(lambda: self.set_active_page(text))
         
-        setattr(self, f"button_{text.lower().replace(' ', '_')}", button)
-        setattr(self, f"label_{text.lower().replace(' ', '_')}", text_label)
+        return button
+
+    def setup_content_area(self):
+        """Set up the content area"""
+        self.content_area.setStyleSheet("""
+            background-color: #1e1e1e;
+            border: none;
+        """)
         
-        parent_layout.addWidget(button)
-    
+        # Initialize page indices dictionary and buttons dictionary
+        self.page_indices = {}
+        self.page_buttons = {}
+        
+        # Setup content pages
+        self.setup_content_pages()
+
     def setup_content_pages(self):
-        """设置内容页面"""
-        self.dashboard_widget = DashboardWidget(self.settings)
-        self.content_area.addWidget(self.dashboard_widget)
+        """Setup content pages for each menu option"""
+        # Dashboard
+        self.dashboard = DashboardWidget(self.settings)
+        self.content_area.addWidget(self.dashboard)
+        self.page_indices["Dashboard"] = self.content_area.count() - 1
         
-        self.system_cleaner_widget = SystemCleanerWidget(self.settings)
-        self.content_area.addWidget(self.system_cleaner_widget)
+        # System Cleaner
+        self.system_cleaner = SystemCleanerWidget(self.settings)
+        self.content_area.addWidget(self.system_cleaner)
+        self.page_indices["System Cleaner"] = self.content_area.count() - 1
         
-        self.gpu_info_widget = GPUInfoWidget(self.settings)
-        self.content_area.addWidget(self.gpu_info_widget)
+        # GPU Information
+        self.gpu_info = GPUInfoWidget(self.settings)
+        self.content_area.addWidget(self.gpu_info)
+        self.page_indices["GPU Information"] = self.content_area.count() - 1
         
-        self.system_repair_widget = SystemRepairWidget(self.settings)
-        self.content_area.addWidget(self.system_repair_widget)
+        # System Repair
+        self.system_repair = SystemRepairWidget(self.settings)
+        self.content_area.addWidget(self.system_repair)
+        self.page_indices["System Repair"] = self.content_area.count() - 1
         
-        self.dism_tool_widget = DISMToolWidget(self.settings)
-        self.content_area.addWidget(self.dism_tool_widget)
+        # DISM Tool
+        self.dism_tool = DISMToolWidget(self.settings)
+        self.content_area.addWidget(self.dism_tool)
+        self.page_indices["DISM Tool"] = self.content_area.count() - 1
         
-        self.network_reset_widget = NetworkResetWidget(self.settings)
-        self.content_area.addWidget(self.network_reset_widget)
+        # Network Reset
+        self.network_reset = NetworkResetWidget(self.settings)
+        self.content_area.addWidget(self.network_reset)
+        self.page_indices["Network Reset"] = self.content_area.count() - 1
         
-        self.disk_check_widget = DiskCheckWidget(self.settings)
-        self.content_area.addWidget(self.disk_check_widget)
+        # Disk Check
+        self.disk_check = DiskCheckWidget(self.settings)
+        self.content_area.addWidget(self.disk_check)
+        self.page_indices["Disk Check"] = self.content_area.count() - 1
         
-        self.boot_repair_widget = BootRepairWidget(self.settings)
-        self.content_area.addWidget(self.boot_repair_widget)
+        # Boot Repair
+        self.boot_repair = BootRepairWidget(self.settings)
+        self.content_area.addWidget(self.boot_repair)
+        self.page_indices["Boot Repair"] = self.content_area.count() - 1
         
-        self.virus_scan_widget = VirusScanWidget(self.settings)
-        self.content_area.addWidget(self.virus_scan_widget)
+        # Virus Scan
+        self.virus_scan = VirusScanWidget(self.settings)
+        self.content_area.addWidget(self.virus_scan)
+        self.page_indices["Virus Scan"] = self.content_area.count() - 1
         
-        self.settings_widget = SettingsWidget(self.settings)
-        self.content_area.addWidget(self.settings_widget)
+        # System Information
+        self.system_info = SystemInfoWidget(self.settings)
+        self.content_area.addWidget(self.system_info)
+        self.page_indices["System Information"] = self.content_area.count() - 1
         
-        self.page_indices = {
-            "Dashboard": 0,
-            "System Cleaner": 1,
-            "GPU Information": 2,
-            "System Repair": 3,
-            "DISM Tool": 4,
-            "Network Reset": 5,
-            "Disk Check": 6,
-            "Boot Repair": 7,
-            "Virus Scan": 8,
-            "Settings": 9
-        }
+        # Settings
+        self.settings_page = SettingsWidget(self.settings)
+        self.content_area.addWidget(self.settings_page)
+        self.page_indices["Settings"] = self.content_area.count() - 1
+        
+        # Set Dashboard as active page
+        self.set_active_page("Dashboard")
         
         self.fade_in_animation = QPropertyAnimation(self.content_area, b"windowOpacity")
         self.fade_in_animation.setDuration(150)
@@ -364,233 +488,123 @@ class MainWindow(QMainWindow):
         self.setMenuBar(self.menu_bar)
     
     def apply_theme(self):
-        """应用当前主题"""
-        theme = self.settings.get_setting("theme", "dark")
+        """应用主题设置"""
+        theme = self.settings.get_setting("theme", "深色")
         
-        if theme == "dark":
+        # 应用主题
+        if theme == "深色":
             self.apply_dark_theme()
-        elif theme == "light":
+        elif theme == "浅色":
             self.apply_light_theme()
-        elif theme == "custom":
+        elif theme == "蓝色主题":
+            self.apply_blue_theme()
+        elif theme == "绿色主题":
+            self.apply_green_theme()
+        elif theme == "紫色主题":
+            self.apply_purple_theme()
+        elif theme == "自定义":
             self.apply_custom_theme()
         else:
-            self.apply_system_theme()
-    
-    def apply_dark_theme(self):
-        """应用黑暗主题"""
-        self.setStyleSheet("""
-            QMainWindow, QDialog, QWidget {
-                background-color: #1e1e1e;
-                color: #e0e0e0;
-            }
-            QLabel {
-                background-color: transparent;
-                border: none;
-            }
-            QPushButton {
-                background-color: #444444;
-                color: #e0e0e0;
-                border: 1px solid #555555;
-                border-radius: 4px;
-                padding: 5px 10px;
-            }
-            QPushButton:hover {
-                background-color: #555555;
-            }
-            QPushButton:pressed {
-                background-color: #666666;
-            }
-            QTabWidget::pane {
-                border: 1px solid #3a3a3a;
-                background-color: #1e1e1e;
-            }
-            QTabBar::tab {
-                background-color: #252526;
-                color: #e0e0e0;
-                padding: 8px 16px;
-                border: 1px solid #3a3a3a;
-                border-bottom: none;
-                border-top-left-radius: 4px;
-                border-top-right-radius: 4px;
-            }
-            QTabBar::tab:selected {
-                background-color: #1e1e1e;
-                border-bottom: 2px solid #007acc;
-            }
-            QGroupBox {
-                border: 1px solid #3a3a3a;
-                border-radius: 4px;
-                margin-top: 1em;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }
-        """)
-    
-    def apply_light_theme(self):
-        """应用浅色主题"""
-        self.setStyleSheet("""
-            QMainWindow, QDialog, QWidget {
-                background-color: #f8f8f8;
-                color: #202020;
-            }
-            QLabel {
-                background-color: transparent;
-                border: none;
-            }
-            QPushButton {
-                background-color: #e0e0e0;
-                color: #202020;
-                border: 1px solid #c0c0c0;
-                border-radius: 4px;
-                padding: 5px 10px;
-            }
-            QPushButton:hover {
-                background-color: #d0d0d0;
-            }
-            QPushButton:pressed {
-                background-color: #c0c0c0;
-            }
-            QTabWidget::pane {
-                border: 1px solid #c0c0c0;
-                background-color: #f8f8f8;
-            }
-            QTabBar::tab {
-                background-color: #e8e8e8;
-                color: #202020;
-                padding: 8px 16px;
-                border: 1px solid #c0c0c0;
-                border-bottom: none;
-                border-top-left-radius: 4px;
-                border-top-right-radius: 4px;
-            }
-            QTabBar::tab:selected {
-                background-color: #f8f8f8;
-                border-bottom: 2px solid #0078d7;
-            }
-            QGroupBox {
-                border: 1px solid #c0c0c0;
-                border-radius: 4px;
-                margin-top: 1em;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }
-        """)
-    
-    def apply_custom_theme(self):
-        """应用自定义主题"""
-        bg_color = self.settings.get_setting("custom_bg_color", "#1e1e1e")
-        text_color = self.settings.get_setting("custom_text_color", "#e0e0e0")
-        accent_color = self.settings.get_setting("custom_accent_color", "#007acc")
+            self.apply_dark_theme()  # 默认为深色主题
+            
+        # 应用透明度
+        self.apply_transparency()
         
-        self.setStyleSheet(f"""
-            QMainWindow, QDialog, QWidget {{
-                background-color: {bg_color};
-                color: {text_color};
-            }}
-            QPushButton {{
-                background-color: {QColor(bg_color).lighter(130).name()};
-                color: {text_color};
-                border: 1px solid {QColor(bg_color).lighter(150).name()};
-                border-radius: 4px;
-                padding: 5px 10px;
-            }}
-            QPushButton:hover {{
-                background-color: {QColor(bg_color).lighter(150).name()};
-            }}
-            QPushButton:pressed {{
-                background-color: {QColor(bg_color).lighter(170).name()};
-            }}
-            QTabWidget::pane {{
-                border: 1px solid {QColor(bg_color).lighter(130).name()};
-                background-color: {bg_color};
-            }}
-            QTabBar::tab {{
-                background-color: {QColor(bg_color).lighter(110).name()};
-                color: {text_color};
-                padding: 8px 16px;
-                border: 1px solid {QColor(bg_color).lighter(130).name()};
-                border-bottom: none;
-                border-top-left-radius: 4px;
-                border-top-right-radius: 4px;
-            }}
-            QTabBar::tab:selected {{
-                background-color: {bg_color};
-                border-bottom: 2px solid {accent_color};
-            }}
-            QGroupBox {{
-                border: 1px solid {QColor(bg_color).lighter(130).name()};
-                border-radius: 4px;
-                margin-top: 1em;
-            }}
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }}
-        """)
-    
-    def apply_system_theme(self):
-        """应用系统主题"""
-        style = QStyleFactory.create("Fusion")
-        self.setStyle(style)
+        # 更新组件的主题
+        self.update_component_themes()
+            
+    def update_component_themes(self):
+        """Update the theme for all components"""
+        # Find all BaseComponent widgets and refresh their themes
+        for i in range(self.content_area.count()):
+            widget = self.content_area.widget(i)
+            if widget:
+                # Recursively update all child components
+                self.refresh_component_theme(widget)
+                
+    def refresh_component_theme(self, widget):
+        """Recursively refresh theme for a widget and its children"""
+        # If this is a BaseComponent, apply theme
+        if hasattr(widget, 'apply_theme') and callable(widget.apply_theme):
+            widget.apply_theme()
+            
+        # Process children
+        for child in widget.findChildren(QWidget):
+            self.refresh_component_theme(child)
+
+    def lighten_color(self, color, amount=20):
+        """调亮或调暗十六进制颜色
         
-        self.setStyleSheet("")
+        Args:
+            color: 十六进制颜色代码 (如 "#1e1e1e")
+            amount: 亮度调整量 (-100到100)
         
-        palette = QPalette()
-        self.setPalette(palette)
-    
+        Returns:
+            新的十六进制颜色代码
+        """
+        try:
+            c = QColor(color)
+            h, s, l, a = c.getHslF()
+            
+            # 调整亮度
+            l = max(0, min(1, l + amount / 100.0))
+            
+            c.setHslF(h, s, l, a)
+            return c.name()
+        except:
+            return color
+
     def apply_window_icon(self):
-        """为所有窗口应用窗口图标"""
-        icon_path = "src/assets/images/icon.png"
+        """应用窗口图标"""
+        # 检查图标是否存在
+        icon_path = Icon.Icon.Path
         if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
+            window_icon = QIcon(icon_path)
+            if not window_icon.isNull():
+                self.setWindowIcon(window_icon)
+            else:
+                print(f"警告: 无法加载窗口图标: {icon_path}")
         else:
-            icon_path = "assets/images/icon.png"
-            if os.path.exists(icon_path):
-                self.setWindowIcon(QIcon(icon_path))
+            print(f"警告: 窗口图标文件不存在: {icon_path}")
+ 
     
     def set_active_page(self, page_name):
-        """设置活动页面"""
+        """Set the active page in the content area"""
+        # Ensure page_name is in the page_indices dictionary
         if page_name in self.page_indices:
-            old_index = self.content_area.currentIndex()
-            new_index = self.page_indices[page_name]
+            # Show the selected page
+            self.content_area.setCurrentIndex(self.page_indices[page_name])
             
-            if old_index == new_index:
-                return
+            # Update button states if page_buttons is available
+            if hasattr(self, 'page_buttons'):
+                for name, index in self.page_indices.items():
+                    button = self.page_buttons.get(name, None)
+                    if button:
+                        button.setChecked(name == page_name)
             
-            for name, index in self.page_indices.items():
-                button = getattr(self, f"button_{name.lower().replace(' ', '_')}", None)
-                if button:
-                    button.setChecked(name == page_name)
-            
-            self.title_label.setText(self.settings.get_translation("general", page_name.lower().replace(' ', '_')))
-            
-            old_widget = self.content_area.widget(old_index)
-            new_widget = self.content_area.widget(new_index)
-            
-            direction = "left" if new_index > old_index else "right"
-            
-            new_widget.show()
-            self.content_area.setCurrentIndex(new_index)
-            
-            AnimationUtils.slide_view_transition(old_widget, new_widget, direction)
-            
-            self.status_bar.showMessage(f"{page_name} 已加载", 2000)
+            # Fade in animation
+            self.fade_in_animation.setDuration(300)
+            self.fade_in_animation.setStartValue(0.5)
+            self.fade_in_animation.setEndValue(1.0)
+            self.fade_in_animation.setEasingCurve(QEasingCurve.OutQuad)
+            self.fade_in_animation.start()
     
     def change_language(self, language):
-        """更改应用程序语言"""
-        if language != self.settings.current_language:
-            self.settings.set_setting("language", language)
-            self.settings.save_settings()
-            
-            self.language_changed.emit(language)
-            self.update_ui_language(language)
+        """Handle language changes"""
+        # Update UI elements with new translations
+        self.update_ui_texts()
+        
+        # Notify all child components of the language change
+        for i in range(self.content_area.count()):
+            widget = self.content_area.widget(i)
+            if hasattr(widget, 'refresh_language') and callable(getattr(widget, 'refresh_language')):
+                widget.refresh_language()
+    
+    def update_ui_texts(self):
+        """Update all UI text elements with current language translations"""
+        # Update sidebar buttons
+        for name, button in self.page_buttons.items():
+            button.setText(self.tr(name))
     
     def update_ui_language(self, language):
         """在语言更改后更新UI元素"""
@@ -650,6 +664,7 @@ class MainWindow(QMainWindow):
         self.disk_check_widget.check_all_translations()
         self.boot_repair_widget.check_all_translations()
         self.virus_scan_widget.check_all_translations()
+        self.system_info_widget.check_all_translations()
         self.settings_widget.check_all_translations()
     
     def show_about_dialog(self):
@@ -957,4 +972,220 @@ class MainWindow(QMainWindow):
         button_box.accepted.connect(system_info_dialog.accept)
         layout.addWidget(button_box)
         
-        system_info_dialog.exec_() 
+        system_info_dialog.exec_()
+
+    def apply_transparency(self):
+        """应用窗口透明度设置"""
+        # 获取透明度设置（0-100）
+        transparency = self.settings.get_setting("window_transparency", 100)
+        
+        # 将百分比转换为0.0-1.0范围
+        opacity = transparency / 100.0
+        
+        # 确保在有效范围内
+        opacity = max(0.3, min(1.0, opacity))  # 限制最小透明度为30%，避免窗口完全看不见
+        
+        # 应用透明度
+        self.setWindowOpacity(opacity)
+        
+        # 如果透明度低于100%，确保窗口背景能够正确显示
+        if opacity < 1.0:
+            # 允许背景透明
+            self.setAttribute(Qt.WA_TranslucentBackground, True)
+        else:
+            # 完全不透明时无需设置透明背景
+            self.setAttribute(Qt.WA_TranslucentBackground, False)
+
+    def apply_dark_theme(self):
+        """应用深色主题"""
+        bg_color = "#1e1e1e"
+        text_color = "#e0e0e0"
+        accent_color = "#00a8ff"
+        self._apply_theme_colors(bg_color, text_color, accent_color)
+    
+    def apply_light_theme(self):
+        """应用浅色主题"""
+        bg_color = "#f0f0f0"
+        text_color = "#333333"
+        accent_color = "#007acc"
+        self._apply_theme_colors(bg_color, text_color, accent_color)
+    
+    def apply_blue_theme(self):
+        """应用蓝色主题"""
+        bg_color = "#0d1117"
+        text_color = "#e6edf3"
+        accent_color = "#58a6ff"
+        self._apply_theme_colors(bg_color, text_color, accent_color)
+    
+    def apply_green_theme(self):
+        """应用绿色主题"""
+        bg_color = "#0f1610"
+        text_color = "#e6edf3"
+        accent_color = "#4caf50"
+        self._apply_theme_colors(bg_color, text_color, accent_color)
+    
+    def apply_purple_theme(self):
+        """应用紫色主题"""
+        bg_color = "#13111d"
+        text_color = "#e6edf3"
+        accent_color = "#9c27b0"
+        self._apply_theme_colors(bg_color, text_color, accent_color)
+    
+    def apply_custom_theme(self):
+        """应用自定义主题"""
+        bg_color = self.settings.get_setting("custom_bg_color", "#1e1e1e")
+        text_color = self.settings.get_setting("custom_text_color", "#e0e0e0")
+        accent_color = self.settings.get_setting("custom_accent_color", "#00a8ff")
+        self._apply_theme_colors(bg_color, text_color, accent_color)
+    
+    def _apply_theme_colors(self, bg_color, text_color, accent_color):
+        """应用主题颜色"""
+        # 生成辅助颜色
+        bg_lighter = self.lighten_color(bg_color, 10)
+        bg_darker = self.lighten_color(bg_color, -10)
+        
+        # 为整个应用程序设置样式表
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background-color: {bg_color};
+                color: {text_color};
+            }}
+            QWidget {{
+                background-color: transparent;
+                color: {text_color};
+            }}
+            QLabel {{
+                color: {text_color};
+            }}
+            QPushButton {{
+                background-color: {bg_lighter};
+                color: {text_color};
+                border: 1px solid {accent_color};
+                border-radius: 6px;
+                padding: 5px 10px;
+            }}
+            QPushButton:hover {{
+                background-color: {self.lighten_color(bg_lighter, 10)};
+                border: 1px solid {self.lighten_color(accent_color, 10)};
+            }}
+            QPushButton:pressed {{
+                background-color: {self.lighten_color(bg_lighter, -5)};
+            }}
+            QPushButton:disabled {{
+                background-color: {bg_darker};
+                color: {self.lighten_color(bg_color, 30)};
+                border: 1px solid {self.lighten_color(bg_color, 20)};
+            }}
+            QGroupBox {{
+                color: {self.lighten_color(text_color, -10)};
+                font-weight: bold;
+                border: 1px solid {accent_color};
+                border-radius: 6px;
+                margin-top: 1em;
+                padding-top: 10px;
+            }}
+            QGroupBox::title {{
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+                background-color: {bg_color};
+            }}
+            QCheckBox, QRadioButton {{
+                color: {text_color};
+            }}
+            QCheckBox::indicator, QRadioButton::indicator {{
+                width: 16px;
+                height: 16px;
+                background-color: {bg_lighter};
+                border: 1px solid {accent_color};
+                border-radius: 3px;
+            }}
+            QCheckBox::indicator:checked, QRadioButton::indicator:checked {{
+                background-color: {accent_color};
+            }}
+            QLineEdit, QTextEdit, QListWidget, QTableWidget, QComboBox {{
+                background-color: {bg_lighter};
+                color: {text_color};
+                border: 1px solid {accent_color};
+                border-radius: 6px;
+                padding: 3px;
+            }}
+            QLineEdit:focus, QTextEdit:focus, QComboBox:focus {{
+                border: 1px solid {self.lighten_color(accent_color, 15)};
+            }}
+            QTextEdit {{
+                background-color: {bg_lighter};
+                color: {text_color};
+            }}
+            QTableWidget {{
+                background-color: {bg_lighter};
+                alternate-background-color: {self.lighten_color(bg_lighter, 5)};
+                gridline-color: {self.lighten_color(accent_color, -20)};
+                border: 1px solid {accent_color};
+                border-radius: 6px;
+            }}
+            QTableWidget QHeaderView::section {{
+                background-color: {bg_darker};
+                color: {text_color};
+                border: 1px solid {accent_color};
+                padding: 4px;
+            }}
+            QProgressBar {{
+                border: 1px solid {accent_color};
+                border-radius: 6px;
+                background-color: {bg_lighter};
+                text-align: center;
+                color: {text_color};
+            }}
+            QProgressBar::chunk {{
+                background-color: {accent_color};
+                border-radius: 5px;
+            }}
+            QTabWidget::pane {{
+                border: 1px solid {accent_color};
+                background-color: {bg_color};
+                border-radius: 6px;
+            }}
+            QTabBar::tab {{
+                background-color: {bg_lighter};
+                color: {self.lighten_color(text_color, -10)};
+                border: 1px solid {accent_color};
+                border-bottom: none;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                padding: 8px 12px;
+                margin-right: 4px;
+            }}
+            QTabBar::tab:selected {{
+                background-color: {bg_color};
+                color: {text_color};
+            }}
+            QTabBar::tab:hover {{
+                background-color: {self.lighten_color(bg_lighter, 10)};
+            }}
+            QScrollBar {{
+                background-color: {bg_color};
+                width: 12px;
+                height: 12px;
+                border-radius: 6px;
+            }}
+            QScrollBar::handle {{
+                background-color: {self.lighten_color(bg_color, 30)};
+                border-radius: 5px;
+                min-height: 30px;
+            }}
+            QScrollBar::handle:hover {{
+                background-color: {accent_color};
+            }}
+            QScrollBar::add-line, QScrollBar::sub-line {{
+                width: 0px;
+                height: 0px;
+            }}
+            QScrollBar::add-page, QScrollBar::sub-page {{
+                background-color: {bg_color};
+            }}
+            QStatusBar {{
+                background-color: {accent_color};
+                color: white;
+            }}
+        """) 

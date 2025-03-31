@@ -11,19 +11,19 @@ from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
 
 class DismThread(QThread):
-    """Worker thread for DISM operations"""
+    """DISM操作的工作线程"""
     progress_updated = pyqtSignal(str)
     operation_completed = pyqtSignal(bool, str)
     
     def __init__(self, operation):
         super().__init__()
-        self.operation = operation  # One of: check_health, scan_health, restore_health, cleanup_image
+        self.operation = operation  # 其中之一: check_health, scan_health, restore_health, cleanup_image
     
     def run(self):
-        """Run the worker thread"""
+        """运行工作线程"""
         if platform.system() != "Windows":
-            self.progress_updated.emit("DISM is only available on Windows")
-            self.operation_completed.emit(False, "Operation not supported on this platform")
+            self.progress_updated.emit("DISM仅在Windows上可用")
+            self.operation_completed.emit(False, "此平台不支持该操作")
             return
         
         try:
@@ -36,15 +36,15 @@ class DismThread(QThread):
             elif self.operation == "cleanup_image":
                 self.cleanup_image()
             else:
-                self.progress_updated.emit(f"Unknown operation: {self.operation}")
-                self.operation_completed.emit(False, "Unknown operation")
+                self.progress_updated.emit(f"未知操作: {self.operation}")
+                self.operation_completed.emit(False, "未知操作")
         except Exception as e:
-            self.progress_updated.emit(f"Error performing operation: {str(e)}")
+            self.progress_updated.emit(f"执行操作时出错: {str(e)}")
             self.operation_completed.emit(False, str(e))
     
     def check_health(self):
-        """Check health of the Windows image"""
-        self.progress_updated.emit("Checking Windows image health...")
+        """检查Windows映像的健康状况"""
+        self.progress_updated.emit("正在检查Windows映像健康状况...")
         proc = subprocess.Popen(
             ["dism", "/Online", "/Cleanup-Image", "/CheckHealth"],
             stdout=subprocess.PIPE,
@@ -56,8 +56,8 @@ class DismThread(QThread):
         self._process_output(proc)
     
     def scan_health(self):
-        """Scan health of the Windows image"""
-        self.progress_updated.emit("Scanning Windows image health...")
+        """扫描Windows映像的健康状况"""
+        self.progress_updated.emit("正在扫描Windows映像健康状况...")
         proc = subprocess.Popen(
             ["dism", "/Online", "/Cleanup-Image", "/ScanHealth"],
             stdout=subprocess.PIPE,
@@ -69,8 +69,8 @@ class DismThread(QThread):
         self._process_output(proc)
     
     def restore_health(self):
-        """Restore health of the Windows image"""
-        self.progress_updated.emit("Restoring Windows image health...")
+        """恢复Windows映像的健康状况"""
+        self.progress_updated.emit("正在恢复Windows映像健康状况...")
         proc = subprocess.Popen(
             ["dism", "/Online", "/Cleanup-Image", "/RestoreHealth"],
             stdout=subprocess.PIPE,
@@ -82,8 +82,8 @@ class DismThread(QThread):
         self._process_output(proc)
     
     def cleanup_image(self):
-        """Clean up the Windows image"""
-        self.progress_updated.emit("Cleaning up Windows image...")
+        """清理Windows映像"""
+        self.progress_updated.emit("正在清理Windows映像...")
         proc = subprocess.Popen(
             ["dism", "/Online", "/Cleanup-Image", "/StartComponentCleanup"],
             stdout=subprocess.PIPE,
@@ -95,7 +95,7 @@ class DismThread(QThread):
         self._process_output(proc)
     
     def _process_output(self, proc):
-        """Process the output of a DISM command"""
+        """处理DISM命令的输出"""
         success = True
         last_line = ""
         
@@ -113,7 +113,7 @@ class DismThread(QThread):
         
         if proc.returncode != 0:
             success = False
-            last_line = f"Operation failed with return code {proc.returncode}"
+            last_line = f"操作失败，返回代码 {proc.returncode}"
         
         self.operation_completed.emit(success, last_line)
 
@@ -123,34 +123,34 @@ class DismToolWidget(BaseComponent):
         super().__init__(settings, parent)
     
     def get_translation(self, key, default=None):
-        """Override get_translation to use the correct section name"""
+        """重写 get_translation 以使用正确的部分名称"""
         return self.settings.get_translation("dism_tool", key, default)
     
     def setup_ui(self):
-        # Main layout
+        # 主布局
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(20)
         
-        # Title
+        # 标题
         self.title = QLabel(self.get_translation("title"))
         self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
         self.main_layout.addWidget(self.title)
         
-        # Description
+        # 描述
         self.description = QLabel(self.get_translation("description"))
         self.description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
         self.main_layout.addWidget(self.description)
         
-        # Warning label for non-Windows systems
+        # 非Windows系统的警告标签
         if platform.system() != "Windows":
-            warning_label = QLabel("⚠️ DISM is only available on Windows systems")
+            warning_label = QLabel("⚠️ DISM仅在Windows系统上可用")
             warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
             self.main_layout.addWidget(warning_label)
         
-        # Operations group
+        # 操作组
         self.operations_group = QGroupBox(self.get_translation("operations"))
-        self.operations_group.setStyleSheet("""
+        self.operations_group.setStyleSheet(""" 
             QGroupBox {
                 color: #c0c0c0;
                 font-weight: bold;
@@ -167,7 +167,7 @@ class DismToolWidget(BaseComponent):
         """)
         operations_layout = QVBoxLayout(self.operations_group)
         
-        # Radio buttons for operation selection
+        # 操作选择的单选按钮
         self.operation_group = QButtonGroup(self)
         
         self.check_health_rb = QRadioButton(self.get_translation("check_health"))
@@ -193,9 +193,9 @@ class DismToolWidget(BaseComponent):
         
         self.main_layout.addWidget(self.operations_group)
         
-        # Start button
+        # 开始按钮
         self.start_button = QPushButton(self.get_translation("start_button"))
-        self.start_button.setStyleSheet("""
+        self.start_button.setStyleSheet(""" 
             QPushButton {
                 background-color: #00a8ff;
                 color: white;
@@ -218,7 +218,7 @@ class DismToolWidget(BaseComponent):
         self.start_button.clicked.connect(self.start_operation)
         self.start_button.setEnabled(platform.system() == "Windows")
         
-        # Button container (for right alignment)
+        # 按钮容器（用于右对齐）
         button_container = QWidget()
         button_layout = QHBoxLayout(button_container)
         button_layout.setContentsMargins(0, 0, 0, 0)
@@ -227,14 +227,14 @@ class DismToolWidget(BaseComponent):
         
         self.main_layout.addWidget(button_container)
         
-        # Log output
+        # 日志输出
         self.log_label = QLabel(self.get_translation("log_output"))
         self.log_label.setStyleSheet("color: #a0a0a0; margin-top: 10px;")
         self.main_layout.addWidget(self.log_label)
         
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
-        self.log_output.setStyleSheet("""
+        self.log_output.setStyleSheet(""" 
             QTextEdit {
                 background-color: #2a2a2a;
                 color: #e0e0e0;
@@ -245,11 +245,11 @@ class DismToolWidget(BaseComponent):
         """)
         self.main_layout.addWidget(self.log_output)
         
-        # Set a minimum size for the log
+        # 设置日志的最小高度
         self.log_output.setMinimumHeight(200)
     
     def start_operation(self):
-        """Start the selected DISM operation"""
+        """开始选定的DISM操作"""
         operation = None
         
         if self.check_health_rb.isChecked():
@@ -264,39 +264,39 @@ class DismToolWidget(BaseComponent):
         if not operation:
             return
         
-        # Clear log and disable start button
+        # 清除日志并禁用开始按钮
         self.log_output.clear()
         self.start_button.setEnabled(False)
-        self.log_output.append(f"Starting operation: {operation}")
+        self.log_output.append(f"开始操作: {operation}")
         
-        # Start worker thread
+        # 启动工作线程
         self.worker = DismThread(operation)
         self.worker.progress_updated.connect(self.update_log)
         self.worker.operation_completed.connect(self.operation_completed)
         self.worker.start()
     
     def update_log(self, message):
-        """Update the log output"""
+        """更新日志输出"""
         self.log_output.append(message)
-        # Scroll to bottom
+        # 滚动到底部
         scrollbar = self.log_output.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
     
     def operation_completed(self, success, message):
-        """Handle operation completion"""
-        # Re-enable start button
+        """处理操作完成"""
+        # 重新启用开始按钮
         self.start_button.setEnabled(True)
         
-        # Add completion message to log
+        # 将完成消息添加到日志
         if success:
-            self.log_output.append("✅ Operation completed successfully")
+            self.log_output.append("✅ 操作成功完成")
             self.log_output.append(message)
         else:
-            self.log_output.append("❌ Operation failed")
+            self.log_output.append("❌ 操作失败")
             self.log_output.append(message)
 
     def refresh_language(self):
-        """Update UI elements with new translations"""
+        """使用新翻译更新UI元素"""
         self.title.setText(self.get_translation("title"))
         self.description.setText(self.get_translation("description"))
         self.operations_group.setTitle(self.get_translation("operations"))
@@ -307,16 +307,16 @@ class DismToolWidget(BaseComponent):
         self.start_button.setText(self.get_translation("start_button"))
         self.log_label.setText(self.get_translation("log_output"))
         
-        # Add animation to highlight the change
+        # 添加动画以突出显示更改
         super().refresh_language()
 
     def check_all_translations(self):
-        """Check if all translation keys used in this component exist
+        """检查此组件中使用的所有翻译键是否存在
         
-        Raises:
-            KeyError: If any translation key is missing
+        引发:
+            KeyError: 如果缺少任何翻译键
         """
-        # Try to get all translations used in this component
+        # 尝试获取此组件中使用的所有翻译
         keys = [
             "title", "description", "operations", "check_health", 
             "scan_health", "restore_health", "cleanup_image",
@@ -324,8 +324,8 @@ class DismToolWidget(BaseComponent):
         ]
         
         for key in keys:
-            # This will raise KeyError if the key doesn't exist
+            # 如果键不存在，将引发KeyError
             self.get_translation(key, None)
 
-# Create an alias for backward compatibility
+# 创建别名以保持向后兼容性
 DISMToolWidget = DismToolWidget 

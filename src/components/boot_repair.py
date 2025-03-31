@@ -194,113 +194,151 @@ class BootRepairWidget(QWidget):
         self.setup_ui()
         
     def setup_ui(self):
-        # Main layout
+        """Setup the UI components"""
         main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(15)
         
-        # Title
-        title_label = QLabel(self.get_translation("title"))
-        title_label.setObjectName("title_label")
-        title_label.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 10px;")
-        main_layout.addWidget(title_label)
+        # Title and description
+        title = QLabel(self.get_translation("title", "Boot Repair"))
+        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
+        main_layout.addWidget(title)
         
-        # Description
-        desc_label = QLabel(self.get_translation("description"))
-        desc_label.setObjectName("desc_label")
-        desc_label.setWordWrap(True)
-        desc_label.setStyleSheet("margin-bottom: 20px;")
-        main_layout.addWidget(desc_label)
+        description = QLabel(self.get_translation("description", "Repair Windows startup issues..."))
+        description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
+        description.setWordWrap(True)
+        main_layout.addWidget(description)
         
-        # Create tabs
-        tabs = QTabWidget()
-        
-        # Boot Repair tab
-        boot_repair_tab = QWidget()
-        self.setup_boot_repair_tab(boot_repair_tab)
-        tabs.addTab(boot_repair_tab, self.get_translation("title"))
-        
-        # Startup Manager tab
-        startup_manager_tab = QWidget()
-        self.setup_startup_manager_tab(startup_manager_tab)
-        tabs.addTab(startup_manager_tab, self.get_translation("startup_manager"))
-        
-        main_layout.addWidget(tabs)
-    
-    def setup_boot_repair_tab(self, tab):
-        # Tab layout
-        layout = QVBoxLayout(tab)
-        
-        # Warning label
-        warning_label = QLabel(self.get_translation("warning"))
-        warning_label.setObjectName("warning_label")
-        warning_label.setWordWrap(True)
-        warning_label.setStyleSheet("color: #ff9900; margin-bottom: 20px;")
-        layout.addWidget(warning_label)
+        # Warning message
+        warning = QLabel(self.get_translation("warning", "⚠️ WARNING: Boot repair operations..."))
+        warning.setStyleSheet("color: #ff9900; font-weight: bold;")
+        warning.setWordWrap(True)
+        main_layout.addWidget(warning)
         
         # Repair options group
-        repair_group = QGroupBox(self.get_translation("repair_options"))
-        repair_group.setObjectName("repair_group")
+        repair_group = QGroupBox(self.get_translation("repair_options", "Repair Options"))
+        repair_group.setStyleSheet("""
+            QGroupBox {
+                color: #e0e0e0;
+                font-weight: bold;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+                margin-top: 1em;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+                background-color: #1e1e1e;
+            }
+        """)
         repair_layout = QVBoxLayout(repair_group)
         
-        # Radio buttons for repair options
-        self.radio_mbr = QRadioButton(self.get_translation("mbr"))
-        self.radio_mbr.setChecked(True)
-        repair_layout.addWidget(self.radio_mbr)
+        # MBR repair option
+        self.mbr_checkbox = QCheckBox(self.get_translation("mbr", "Repair Master Boot Record (MBR)"))
+        self.mbr_checkbox.setStyleSheet("color: #e0e0e0;")
+        self.mbr_checkbox.setChecked(True)
+        repair_layout.addWidget(self.mbr_checkbox)
         
-        self.radio_bcd = QRadioButton(self.get_translation("bcd"))
-        repair_layout.addWidget(self.radio_bcd)
+        # BCD repair option
+        self.bcd_checkbox = QCheckBox(self.get_translation("bcd", "Repair Boot Configuration Data (BCD)"))
+        self.bcd_checkbox.setStyleSheet("color: #e0e0e0;")
+        self.bcd_checkbox.setChecked(True)
+        repair_layout.addWidget(self.bcd_checkbox)
         
-        self.radio_bootmgr = QRadioButton(self.get_translation("bootmgr"))
-        repair_layout.addWidget(self.radio_bootmgr)
+        # Boot Manager repair option
+        self.bootmgr_checkbox = QCheckBox(self.get_translation("bootmgr", "Repair Boot Manager"))
+        self.bootmgr_checkbox.setStyleSheet("color: #e0e0e0;")
+        self.bootmgr_checkbox.setChecked(True)
+        repair_layout.addWidget(self.bootmgr_checkbox)
         
-        self.radio_winload = QRadioButton(self.get_translation("winload"))
-        repair_layout.addWidget(self.radio_winload)
+        # Windows loader repair option
+        self.winload_checkbox = QCheckBox(self.get_translation("winload", "Repair Windows Loader"))
+        self.winload_checkbox.setStyleSheet("color: #e0e0e0;")
+        self.winload_checkbox.setChecked(True)
+        repair_layout.addWidget(self.winload_checkbox)
         
-        self.radio_full = QRadioButton(self.get_translation("full"))
-        repair_layout.addWidget(self.radio_full)
+        main_layout.addWidget(repair_group)
         
-        layout.addWidget(repair_group)
+        # Action buttons
+        buttons_layout = QHBoxLayout()
         
-        # Progress bar
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setRange(0, 100)
-        self.progress_bar.setValue(0)
-        self.progress_bar.setTextVisible(True)
-        self.progress_bar.setFormat(f"%p% {self.get_translation('complete')}")
-        layout.addWidget(self.progress_bar)
+        self.start_button = QPushButton(self.get_translation("start_repair", "Start Repair"))
+        self.start_button.setStyleSheet("""
+            QPushButton {
+                background-color: #00a8ff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #0096e0;
+            }
+            QPushButton:pressed {
+                background-color: #0085c7;
+            }
+            QPushButton:disabled {
+                background-color: #555555;
+                color: #888888;
+            }
+        """)
+        buttons_layout.addWidget(self.start_button)
         
-        # Log output
-        log_group = QGroupBox(self.get_translation("log_output"))
-        log_group.setObjectName("log_group")
-        log_layout = QVBoxLayout(log_group)
+        self.stop_button = QPushButton(self.get_translation("stop", "Stop"))
+        self.stop_button.setStyleSheet("""
+            QPushButton {
+                background-color: #ff5555;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #ff3333;
+            }
+            QPushButton:pressed {
+                background-color: #cc0000;
+            }
+            QPushButton:disabled {
+                background-color: #555555;
+                color: #888888;
+            }
+        """)
+        self.stop_button.setEnabled(False)
+        buttons_layout.addWidget(self.stop_button)
+        
+        buttons_layout.addStretch()
+        main_layout.addLayout(buttons_layout)
+        
+        # Progress section
+        progress_label = QLabel(self.get_translation("log_output", "Operation Log"))
+        progress_label.setStyleSheet("color: #a0a0a0; margin-top: 10px;")
+        main_layout.addWidget(progress_label)
         
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
+        self.log_output.setStyleSheet("""
+            QTextEdit {
+                background-color: #2a2a2a;
+                color: #e0e0e0;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
         self.log_output.setMinimumHeight(200)
-        log_layout.addWidget(self.log_output)
+        main_layout.addWidget(self.log_output)
         
-        layout.addWidget(log_group)
-        
-        # Buttons layout
-        button_layout = QHBoxLayout()
-        
-        # Start repair button
-        self.start_button = QPushButton(self.get_translation("start_repair"))
-        self.start_button.setMinimumHeight(40)
-        self.start_button.setStyleSheet("background-color: #00a8ff; color: white;")
+        # Connect signals
         self.start_button.clicked.connect(self.start_repair)
-        button_layout.addWidget(self.start_button)
-        
-        # Stop button
-        self.stop_button = QPushButton(self.get_translation("stop"))
-        self.stop_button.setMinimumHeight(40)
-        self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(self.stop_repair)
-        button_layout.addWidget(self.stop_button)
         
-        layout.addLayout(button_layout)
-        
-        # Initial log message
-        self.log_output.append("Boot repair tool ready. Select a repair option and click 'Start Repair'.")
+        # Add initial message
+        self.log_output.append(self.get_translation("ready_message", "Ready to perform boot repair operations. Select options and click Start Repair."))
     
     def setup_startup_manager_tab(self, tab):
         # Tab layout
@@ -515,16 +553,14 @@ class BootRepairWidget(QWidget):
     def start_repair(self):
         """Start the boot repair process"""
         # Determine which repair option is selected
-        if self.radio_mbr.isChecked():
+        if self.mbr_checkbox.isChecked():
             repair_type = "mbr"
-        elif self.radio_bcd.isChecked():
+        elif self.bcd_checkbox.isChecked():
             repair_type = "bcd"
-        elif self.radio_bootmgr.isChecked():
+        elif self.bootmgr_checkbox.isChecked():
             repair_type = "bootmgr"
-        elif self.radio_winload.isChecked():
+        elif self.winload_checkbox.isChecked():
             repair_type = "winload"
-        elif self.radio_full.isChecked():
-            repair_type = "full"
         
         # Check if we're on Windows
         if platform.system() != "Windows":
@@ -635,9 +671,9 @@ class BootRepairWidget(QWidget):
             repair_group.setTitle(self.get_translation("operations", "Repair Options"))
         
         # 更新单选按钮
-        self.radio_mbr.setText(self.get_translation("fix_mbr", "Repair Master Boot Record (MBR)"))
-        self.radio_bcd.setText(self.get_translation("rebuild_bcd", "Repair Boot Configuration Data (BCD)"))
-        self.radio_bootmgr.setText(self.get_translation("fix_boot", "Repair Boot Manager"))
+        self.mbr_checkbox.setText(self.get_translation("fix_mbr", "Repair Master Boot Record (MBR)"))
+        self.bcd_checkbox.setText(self.get_translation("rebuild_bcd", "Repair Boot Configuration Data (BCD)"))
+        self.bootmgr_checkbox.setText(self.get_translation("fix_boot", "Repair Boot Manager"))
         
         # 更新按钮
         self.start_button.setText(self.get_translation("repair_button", "Start Repair"))

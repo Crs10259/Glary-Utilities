@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
+from utils.platform_utils import PlatformUtils
 
 class DiskCheckThread(QThread):
     """Worker thread for disk check operations"""
@@ -26,8 +27,8 @@ class DiskCheckThread(QThread):
     
     def run(self):
         """Run the worker thread"""
-        if platform.system() != "Windows":
-            self.progress_updated.emit("Disk check is only supported on Windows")
+        if not PlatformUtils.is_windows():
+            self.progress_updated.emit("磁盘检查当前仅在Windows系统上支持")
             self.operation_completed.emit(False)
             return
         
@@ -36,15 +37,15 @@ class DiskCheckThread(QThread):
                 self.check_disk()
             elif self.operation == "repair":
                 if self.read_only:
-                    self.progress_updated.emit("Read-only mode is enabled. Running in check-only mode...")
+                    self.progress_updated.emit("只读模式已启用。仅在检查模式下运行...")
                     self.check_disk()
                 else:
                     self.repair_disk()
             else:
-                self.progress_updated.emit(f"Unknown operation: {self.operation}")
+                self.progress_updated.emit(f"未知操作: {self.operation}")
                 self.operation_completed.emit(False)
         except Exception as e:
-            self.progress_updated.emit(f"Error performing operation: {str(e)}")
+            self.progress_updated.emit(f"执行操作时出错: {str(e)}")
             self.operation_completed.emit(False)
     
     def check_disk(self):
@@ -71,7 +72,7 @@ class DiskCheckThread(QThread):
         self.progress_updated.emit(f"运行命令: {' '.join(cmd)}")
         
         try:
-            # 运行chkdsk
+            # 使用PlatformUtils运行chkdsk
             proc = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -111,7 +112,7 @@ class DiskCheckThread(QThread):
     
     def repair_disk(self):
         """Check and repair disk errors"""
-        self.progress_updated.emit(f"Checking and repairing drive {self.drive}...")
+        self.progress_updated.emit(f"正在检查并修复驱动器 {self.drive}...")
         
         # Build command arguments
         cmd = ["chkdsk", self.drive, "/F"]  # /F to fix errors
@@ -119,39 +120,32 @@ class DiskCheckThread(QThread):
         if self.check_bad_sectors:
             cmd.append("/R")  # Repair bad sectors
         
-        self.progress_updated.emit(f"Running command: {' '.join(cmd)}")
-        self.progress_updated.emit("Note: This operation may require a system restart")
+        self.progress_updated.emit(f"运行命令: {' '.join(cmd)}")
+        self.progress_updated.emit("注意: 此操作可能需要系统重新启动")
         
         try:
-            # Run chkdsk with repair options
-            proc = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                universal_newlines=True
-            )
+            # 使用PlatformUtils运行chkdsk修复命令
+            result = PlatformUtils.run_command(cmd)
             
-            # Process output
-            while True:
-                line = proc.stdout.readline()
-                if not line:
-                    break
+            if result.returncode == 0:
+                for line in result.stdout.split('\n'):
+                    if line.strip():
+                        self.progress_updated.emit(line.strip())
                 
-                line = line.strip()
-                if line:
-                    self.progress_updated.emit(line)
-            
-            proc.wait()
-            
-            if proc.returncode == 0:
-                self.progress_updated.emit("Disk repair scheduled successfully")
+                self.progress_updated.emit("磁盘修复已成功安排")
                 self.operation_completed.emit(True)
             else:
-                self.progress_updated.emit(f"Disk repair failed with return code {proc.returncode}")
+                for line in result.stdout.split('\n'):
+                    if line.strip():
+                        self.progress_updated.emit(line.strip())
+                
+                if result.stderr:
+                    self.progress_updated.emit(f"错误: {result.stderr}")
+                
+                self.progress_updated.emit(f"磁盘修复失败，返回代码 {result.returncode}")
                 self.operation_completed.emit(False)
         except Exception as e:
-            self.progress_updated.emit(f"Error running disk repair: {str(e)}")
+            self.progress_updated.emit(f"运行磁盘修复时出错: {str(e)}")
             self.operation_completed.emit(False)
 
 class DiskCheckWidget(BaseComponent):
@@ -182,8 +176,8 @@ class DiskCheckWidget(BaseComponent):
         self.main_layout.addWidget(self.description)
         
         # Warning for non-Windows systems
-        if platform.system() != "Windows":
-            warning_label = QLabel("⚠️ Disk check is only available on Windows systems")
+        if not PlatformUtils.is_windows():
+            warning_label = QLabel("⚠️ " + self.get_translation("windows_only", "磁盘检查功能仅在Windows系统上可用"))
             warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
             self.main_layout.addWidget(warning_label)
         
@@ -193,7 +187,8 @@ class DiskCheckWidget(BaseComponent):
             QGroupBox {
                 color: #c0c0c0;
                 font-weight: bold;
-                border: none;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
                 margin-top: 1em;
                 padding-top: 10px;
             }
@@ -211,7 +206,7 @@ class DiskCheckWidget(BaseComponent):
             QComboBox {
                 background-color: #2a2a2a;
                 color: #e0e0e0;
-                border: none;
+                border: 1px solid #3a3a3a;
                 border-radius: 4px;
                 padding: 5px;
                 min-height: 25px;
@@ -221,9 +216,6 @@ class DiskCheckWidget(BaseComponent):
                 subcontrol-position: top right;
                 width: 25px;
                 border-left: none;
-            }
-            QComboBox::down-arrow {
-                image: url(assets/images/down-arrow.png);
             }
             QComboBox QAbstractItemView {
                 background-color: #2a2a2a;
@@ -242,7 +234,8 @@ class DiskCheckWidget(BaseComponent):
             QGroupBox {
                 color: #c0c0c0;
                 font-weight: bold;
-                border: none;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
                 margin-top: 1em;
                 padding-top: 10px;
             }
@@ -306,7 +299,7 @@ class DiskCheckWidget(BaseComponent):
             }
         """)
         self.check_button.clicked.connect(self.check_disk)
-        self.check_button.setEnabled(platform.system() == "Windows")
+        self.check_button.setEnabled(PlatformUtils.is_windows())
         buttons_layout.addWidget(self.check_button)
         
         # Repair button
@@ -332,7 +325,7 @@ class DiskCheckWidget(BaseComponent):
             }
         """)
         self.repair_button.clicked.connect(self.repair_disk)
-        self.repair_button.setEnabled(platform.system() == "Windows")
+        self.repair_button.setEnabled(PlatformUtils.is_windows())
         buttons_layout.addWidget(self.repair_button)
         
         self.main_layout.addWidget(buttons_container)
@@ -348,7 +341,7 @@ class DiskCheckWidget(BaseComponent):
             QTextEdit {
                 background-color: #2a2a2a;
                 color: #e0e0e0;
-                border: none;
+                border: 1px solid #3a3a3a;
                 border-radius: 4px;
                 padding: 5px;
             }
@@ -358,8 +351,11 @@ class DiskCheckWidget(BaseComponent):
         # Set a minimum size for the log
         self.log_output.setMinimumHeight(200)
         
+        # 初始状态信息
+        self.log_output.append(self.get_translation("ready_message", "磁盘检查工具准备就绪。请选择一个驱动器和检查选项，然后点击检查按钮。"))
+        
         # 在初始化完所有UI元素后再填充驱动器列表
-        if platform.system() == "Windows":
+        if PlatformUtils.is_windows():
             self.populate_drives()
     
     def populate_drives(self):
@@ -371,77 +367,46 @@ class DiskCheckWidget(BaseComponent):
         
         try:
             # 获取可用驱动器
-            available_drives = []
+            drives = PlatformUtils.get_drives()
             
-            # 对于Windows，获取驱动器字母
-            if platform.system() == "Windows":
-                from ctypes import windll
-                import string
-                
-                # 获取驱动器位掩码
-                bitmask = windll.kernel32.GetLogicalDrives()
-                
-                # 将位掩码转换为驱动器字母并验证每个驱动器
-                for letter in string.ascii_uppercase:  # A到Z
-                    drive = f"{letter}:"
-                    if bitmask & (1 << (ord(letter) - ord('A'))):
-                        # 额外检查：确保驱动器真的存在且可访问
-                        try:
-                            drive_path = f"{drive}\\"
-                            drive_type = windll.kernel32.GetDriveTypeW(drive_path)
-                            
-                            # 添加所有类型的驱动器，但标记类型
-                            drive_type_name = "未知"
-                            if drive_type == 2:
-                                drive_type_name = "可移动"
-                            elif drive_type == 3:
-                                drive_type_name = "固定"
-                            elif drive_type == 4:
-                                drive_type_name = "网络"
-                            elif drive_type == 5:
-                                drive_type_name = "光盘"
-                            
-                            # 检查磁盘是否可访问
-                            accessible = False
-                            try:
-                                if os.path.exists(drive):
-                                    # 尝试读取磁盘根目录
-                                    os.listdir(drive)
-                                    accessible = True
-                            except Exception:
-                                pass
-                            
-                            if accessible:
-                                # 只添加可访问的驱动器
-                                available_drives.append((drive, f"{drive} ({drive_type_name})"))
-                                self.log_output.append(f"发现驱动器: {drive} - 类型: {drive_type_name}")
-                            else:
-                                self.log_output.append(f"跳过不可访问的驱动器: {drive}")
-                        except Exception as e:
-                            self.log_output.append(f"检查驱动器 {drive} 时出错: {str(e)}")
-            
-            # 填充下拉列表
-            if available_drives:
-                for drive, display_text in available_drives:
-                    self.drive_combo.addItem(display_text, drive)
-                
-                # 默认选择C盘（如果可用）
-                c_drive_index = -1
-                for i in range(self.drive_combo.count()):
-                    if self.drive_combo.itemData(i) == "C:":
-                        c_drive_index = i
-                        break
+            if drives:
+                for drive in drives:
+                    if drive.get("accessible", False):
+                        # 添加可访问的驱动器
+                        display_name = drive.get("display_name")
+                        name = drive.get("name")
+                        self.drive_combo.addItem(display_name, name)
                         
-                if c_drive_index >= 0:
-                    self.drive_combo.setCurrentIndex(c_drive_index)
+                        # 记录日志
+                        drive_type = drive.get("type", "未知")
+                        self.log_output.append(f"发现驱动器: {name} - 类型: {drive_type}")
+                    else:
+                        # 记录不可访问的驱动器
+                        self.log_output.append(f"跳过不可访问的驱动器: {drive.get('name')}")
+                
+                # 默认选择第一个驱动器
+                if self.drive_combo.count() > 0:
+                    self.drive_combo.setCurrentIndex(0)
                     
+                # 在Windows上，尝试选择C盘作为默认驱动器（如果可用）
+                if PlatformUtils.is_windows():
+                    c_drive_index = -1
+                    for i in range(self.drive_combo.count()):
+                        if self.drive_combo.itemData(i) == "C:":
+                            c_drive_index = i
+                            break
+                            
+                    if c_drive_index >= 0:
+                        self.drive_combo.setCurrentIndex(c_drive_index)
             else:
                 self.log_output.append("未找到可用驱动器")
                 # 禁用检查按钮
                 self.check_button.setEnabled(False)
                 self.repair_button.setEnabled(False)
+                
         except Exception as e:
             self.log_output.append(f"填充驱动器列表时出错: {str(e)}")
+            print(f"填充驱动器列表时出错: {str(e)}")
     
     def check_disk(self):
         """检查磁盘错误"""
@@ -573,7 +538,7 @@ class DiskCheckWidget(BaseComponent):
         keys = [
             "title", "description", "select_drive", "check_types",
             "file_system", "bad_sectors", "read_only", "warning",
-            "check_button", "repair_button", "log_output"
+            "check_button", "repair_button", "log_output", "windows_only", "ready_message"
         ]
         
         for key in keys:

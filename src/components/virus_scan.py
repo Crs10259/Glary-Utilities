@@ -351,6 +351,23 @@ class VirusScanWidget(QWidget):
         self.threats_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.threats_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.threats_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.threats_table.setStyleSheet("""
+            QTableWidget {
+                background-color: #2a2a2a;
+                color: #e0e0e0;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+            }
+            QTableWidget::item {
+                color: #e0e0e0;
+            }
+            QHeaderView::section {
+                background-color: #333333;
+                color: #e0e0e0;
+                border: 1px solid #3a3a3a;
+                padding: 4px;
+            }
+        """)
         threats_layout.addWidget(self.threats_table)
         layout.addWidget(threats_group)
         
@@ -511,9 +528,21 @@ class VirusScanWidget(QWidget):
         """Add a detected threat to the list"""
         row = self.threats_table.rowCount()
         self.threats_table.insertRow(row)
-        self.threats_table.setItem(row, 0, QTableWidgetItem(os.path.basename(file_path)))
-        self.threats_table.setItem(row, 1, QTableWidgetItem(threat_type))
-        self.threats_table.setItem(row, 2, QTableWidgetItem("Detected"))
+        
+        # Create items with proper text
+        file_item = QTableWidgetItem(os.path.basename(file_path))
+        threat_item = QTableWidgetItem(threat_type)
+        status_item = QTableWidgetItem("Detected")
+        
+        # Set tooltips
+        file_item.setToolTip(file_path)
+        
+        # Set items in the table
+        self.threats_table.setItem(row, 0, file_item)
+        self.threats_table.setItem(row, 1, threat_item)
+        self.threats_table.setItem(row, 2, status_item)
+        
+        # Store the full threat information for later use
         self.detected_threats.append((file_path, threat_type))
         
         # Enable the fix button if there are threats

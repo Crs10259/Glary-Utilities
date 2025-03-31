@@ -74,6 +74,9 @@ target/
 profile_default/
 ipython_config.py
 
+# Test
+src/test_app.py
+
 # pyenv
 .python-version
 

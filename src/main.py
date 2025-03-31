@@ -3,6 +3,7 @@ import os
 from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import QCoreApplication, Qt
+from PyQt5.QtChart import QChart
 from utils.settings_manager import Settings
 from main_window import MainWindow
 from components.icons import Icon
@@ -23,12 +24,19 @@ def main():
     app.setOrganizationName("Glarysoft")
     
     # 设置应用程序图标
-    if Icon.Icon.Exist:
-        app.setWindowIcon(QIcon(Icon.Icon.Path))
-    
+    icon_path = Icon.Icon.Path
+    if os.path.exists(icon_path):
+        app_icon = QIcon(icon_path)
+        if not app_icon.isNull():
+            app.setWindowIcon(app_icon)
+        else:
+            print(f"警告: 无法加载应用程序图标: {icon_path}")
+    else:
+        print(f"警告: 应用程序图标文件不存在: {icon_path}")
+
     # 初始化设置
     settings = Settings()
-    
+
     # 开启调试模式
     if debug_mode:
         settings.set_setting("debug_mode", True)
@@ -67,18 +75,18 @@ def main():
             error_dialog.exec_()
         
         return 1
-    # except Exception as e:
-    #     print(f"错误: {e}")
+    except Exception as e:
+        print(f"错误: {e}")
         
-        # # 仅在非检查模式下显示对话框
-        # if not check_translations:
-        #     error_dialog = QMessageBox()
-        #     error_dialog.setIcon(QMessageBox.Critical)
-        #     error_dialog.setWindowTitle("错误")
-        #     error_dialog.setText(f"发生错误: {e}")
-        #     error_dialog.exec_()
+        # 仅在非检查模式下显示对话框
+        if not check_translations:
+            error_dialog = QMessageBox()
+            error_dialog.setIcon(QMessageBox.Critical)
+            error_dialog.setWindowTitle("错误")
+            error_dialog.setText(f"发生错误: {e}")
+            error_dialog.exec_()
         
-        # return 1
+        return 1
 
 if __name__ == "__main__":
     sys.exit(main()) 

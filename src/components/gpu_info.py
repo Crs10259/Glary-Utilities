@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
+from utils.platform_utils import PlatformUtils
 
 class GPUInfoWorker(QThread):
     """Worker thread to fetch GPU information without blocking UI"""
@@ -21,35 +22,47 @@ class GPUInfoWorker(QThread):
     
     def get_gpu_info(self):
         """Get GPU information based on operating system"""
-        system = platform.system()
+        # 默认信息
         gpu_info = {
-            "name": "Unknown",
-            "driver_version": "Unknown",
-            "memory_total": "Unknown",
-            "memory_used": "Unknown",
-            "temperature": "Unknown"
+            "name": "未知",
+            "driver_version": "未知",
+            "memory_total": "未知",
+            "memory_used": "未知",
+            "temperature": "未知"
         }
         
-        if system == "Windows":
-            # Try to get GPU info using PowerShell commands
+        # 根据操作系统选择不同的获取方法
+        if PlatformUtils.is_windows():
+            self._get_windows_gpu_info(gpu_info)
+        elif PlatformUtils.is_linux():
+            self._get_linux_gpu_info(gpu_info)
+        elif PlatformUtils.is_macos():
+            self._get_macos_gpu_info(gpu_info)
+        
+        return gpu_info
+    
+    def _get_windows_gpu_info(self, gpu_info):
+        """获取Windows系统上的GPU信息"""
+        try:
+            # 获取GPU名称
+            name_cmd = ['powershell', 'Get-WmiObject Win32_VideoController | Select-Object -ExpandProperty Name']
+            name_result = PlatformUtils.run_command(name_cmd)
+            if name_result.returncode == 0 and name_result.stdout.strip():
+                gpu_info["name"] = name_result.stdout.strip()
+            
+            # 获取驱动程序版本
+            driver_cmd = ['powershell', 'Get-WmiObject Win32_VideoController | Select-Object -ExpandProperty DriverVersion']
+            driver_result = PlatformUtils.run_command(driver_cmd)
+            if driver_result.returncode == 0 and driver_result.stdout.strip():
+                gpu_info["driver_version"] = driver_result.stdout.strip()
+            
+            # 尝试获取NVIDIA特定信息（如果可用）
             try:
-                # Get GPU name
-                name_cmd = ['powershell', 'Get-WmiObject Win32_VideoController | Select-Object -ExpandProperty Name']
-                name_result = subprocess.run(name_cmd, stdout=subprocess.PIPE, text=True)
-                if name_result.returncode == 0 and name_result.stdout.strip():
-                    gpu_info["name"] = name_result.stdout.strip()
-                
-                # Get driver version
-                driver_cmd = ['powershell', 'Get-WmiObject Win32_VideoController | Select-Object -ExpandProperty DriverVersion']
-                driver_result = subprocess.run(driver_cmd, stdout=subprocess.PIPE, text=True)
-                if driver_result.returncode == 0 and driver_result.stdout.strip():
-                    gpu_info["driver_version"] = driver_result.stdout.strip()
-                
-                # Try getting NVIDIA-specific info if available
-                try:
-                    # Check if nvidia-smi is available
+                # 检查nvidia-smi是否可用
+                nvidia_path = PlatformUtils.get_executable_path("nvidia-smi")
+                if nvidia_path:
                     nvidia_cmd = ['nvidia-smi', '--query-gpu=memory.total,memory.used,temperature.gpu', '--format=csv,noheader,nounits']
-                    nvidia_result = subprocess.run(nvidia_cmd, stdout=subprocess.PIPE, text=True)
+                    nvidia_result = PlatformUtils.run_command(nvidia_cmd)
                     
                     if nvidia_result.returncode == 0 and nvidia_result.stdout.strip():
                         parts = nvidia_result.stdout.strip().split(',')
@@ -57,32 +70,34 @@ class GPUInfoWorker(QThread):
                             gpu_info["memory_total"] = f"{parts[0].strip()} MB"
                             gpu_info["memory_used"] = f"{parts[1].strip()} MB"
                             gpu_info["temperature"] = f"{parts[2].strip()}°C"
-                except:
-                    pass  # NVIDIA tools not available
             except Exception as e:
-                print(f"Error getting GPU info: {e}")
-        
-        elif system == "Linux":
-            # Try using lspci on Linux
+                print(f"尝试获取NVIDIA信息时出错: {e}")
+        except Exception as e:
+            print(f"获取Windows GPU信息时出错: {e}")
+    
+    def _get_linux_gpu_info(self, gpu_info):
+        """获取Linux系统上的GPU信息"""
+        try:
+            # 使用lspci获取GPU信息
+            lspci_cmd = ['lspci', '-v']
+            lspci_result = PlatformUtils.run_command(lspci_cmd)
+            
+            if lspci_result.returncode == 0:
+                # 查找VGA兼容控制器
+                output = lspci_result.stdout
+                vga_pattern = r"VGA compatible controller: (.*)"
+                vga_match = re.search(vga_pattern, output)
+                
+                if vga_match:
+                    gpu_info["name"] = vga_match.group(1).strip()
+            
+            # 尝试获取NVIDIA特定信息（如果可用）
             try:
-                # Get GPU info using lspci
-                lspci_cmd = ['lspci', '-v']
-                lspci_result = subprocess.run(lspci_cmd, stdout=subprocess.PIPE, text=True)
-                
-                if lspci_result.returncode == 0:
-                    # Look for VGA compatible controller
-                    output = lspci_result.stdout
-                    vga_pattern = r"VGA compatible controller: (.*)"
-                    vga_match = re.search(vga_pattern, output)
-                    
-                    if vga_match:
-                        gpu_info["name"] = vga_match.group(1).strip()
-                
-                # Try getting NVIDIA-specific info if available
-                try:
-                    # Check if nvidia-smi is available
+                # 检查nvidia-smi是否可用
+                nvidia_path = PlatformUtils.get_executable_path("nvidia-smi")
+                if nvidia_path:
                     nvidia_cmd = ['nvidia-smi', '--query-gpu=driver_version,memory.total,memory.used,temperature.gpu', '--format=csv,noheader,nounits']
-                    nvidia_result = subprocess.run(nvidia_cmd, stdout=subprocess.PIPE, text=True)
+                    nvidia_result = PlatformUtils.run_command(nvidia_cmd)
                     
                     if nvidia_result.returncode == 0 and nvidia_result.stdout.strip():
                         parts = nvidia_result.stdout.strip().split(',')
@@ -91,34 +106,68 @@ class GPUInfoWorker(QThread):
                             gpu_info["memory_total"] = f"{parts[1].strip()} MB"
                             gpu_info["memory_used"] = f"{parts[2].strip()} MB"
                             gpu_info["temperature"] = f"{parts[3].strip()}°C"
-                except:
-                    pass  # NVIDIA tools not available
             except Exception as e:
-                print(f"Error getting GPU info: {e}")
-        
-        elif system == "Darwin":  # macOS
-            try:
-                # Get GPU info using system_profiler
-                cmd = ['system_profiler', 'SPDisplaysDataType', '-json']
-                result = subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
+                print(f"尝试获取Linux NVIDIA信息时出错: {e}")
                 
-                if result.returncode == 0:
+            # 尝试获取AMD特定信息（如果可用）
+            try:
+                if not gpu_info["temperature"].startswith("未知"):
+                    # 已从NVIDIA获取到温度信息，跳过
+                    pass
+                else:
+                    # 检查amdgpu驱动路径
+                    amd_temp_path = "/sys/class/drm/card0/device/hwmon/hwmon0/temp1_input"
+                    if os.path.exists(amd_temp_path):
+                        with open(amd_temp_path, 'r') as f:
+                            temp = int(f.read().strip()) / 1000.0
+                            gpu_info["temperature"] = f"{temp:.1f}°C"
+            except Exception as e:
+                print(f"尝试获取Linux AMD信息时出错: {e}")
+        except Exception as e:
+            print(f"获取Linux GPU信息时出错: {e}")
+    
+    def _get_macos_gpu_info(self, gpu_info):
+        """获取macOS系统上的GPU信息"""
+        try:
+            # 使用system_profiler获取GPU信息
+            cmd = ['system_profiler', 'SPDisplaysDataType', '-json']
+            result = PlatformUtils.run_command(cmd)
+            
+            if result.returncode == 0 and result.stdout:
+                try:
                     data = json.loads(result.stdout)
                     if "SPDisplaysDataType" in data and len(data["SPDisplaysDataType"]) > 0:
                         gpu_data = data["SPDisplaysDataType"][0]
                         
                         if "spdisplays_device-name" in gpu_data:
                             gpu_info["name"] = gpu_data["spdisplays_device-name"]
+                        elif "spdisplays_name" in gpu_data:
+                            gpu_info["name"] = gpu_data["spdisplays_name"]
                         
                         if "spdisplays_version" in gpu_data:
                             gpu_info["driver_version"] = gpu_data["spdisplays_version"]
                         
                         if "spdisplays_vram" in gpu_data:
                             gpu_info["memory_total"] = gpu_data["spdisplays_vram"]
-            except Exception as e:
-                print(f"Error getting GPU info: {e}")
-        
-        return gpu_info
+                except json.JSONDecodeError:
+                    # 回退到使用常规system_profiler输出解析
+                    cmd = ['system_profiler', 'SPDisplaysDataType']
+                    result = PlatformUtils.run_command(cmd)
+                    
+                    if result.returncode == 0:
+                        output = result.stdout
+                        
+                        # 尝试提取型号
+                        model_match = re.search(r"Chipset Model: (.*?)\n", output)
+                        if model_match:
+                            gpu_info["name"] = model_match.group(1).strip()
+                        
+                        # 尝试提取VRAM
+                        vram_match = re.search(r"VRAM \(.*?\): (.*?)\n", output)
+                        if vram_match:
+                            gpu_info["memory_total"] = vram_match.group(1).strip()
+        except Exception as e:
+            print(f"获取macOS GPU信息时出错: {e}")
 
 class InfoRow(QFrame):
     """Row for displaying a single GPU information item"""

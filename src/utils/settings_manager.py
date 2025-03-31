@@ -147,6 +147,7 @@ class Settings:
                     if os.path.exists(file_path):
                         with open(file_path, 'r', encoding='utf-8') as f:
                             self.translations[language] = json.load(f)
+                            
         except Exception as e:
             print(f"Error loading translations: {e}")
     
@@ -274,7 +275,7 @@ class Settings:
         """
         try:
             # 检查参数有效性
-            if info_type is None or info_type == "impossible":
+            if info_type is None:
                 return "参数无效"
             
             if info_type == "cpu":
@@ -285,37 +286,27 @@ class Settings:
                 return f"总计: {self._format_bytes(mem.total)}, 可用: {self._format_bytes(mem.available)}, 已使用: {mem.percent}%"
             
             elif info_type == "disk":
+                
                 disk_info = []
                 try:
                     # 获取所有磁盘分区
                     partitions = psutil.disk_partitions(all=False)  # 只获取实际挂载的分区
-                    
+              
                     for partition in partitions:
                         try:
-                            # 过滤掉光驱和特殊分区
-                            if platform.system() == "Windows":
-                                # 检查驱动器类型
-                                from ctypes import windll
-                                drive_path = f"{partition.device}\\"
-                                drive_type = windll.kernel32.GetDriveTypeW(drive_path)
-                                
-                                # 跳过光驱(5)和可移动设备(2)
-                                if drive_type in [2, 5]:
-                                    disk_info.append(f"{partition.device} - 可移动驱动器或光驱")
-                                    continue
-                            
                             # 检查路径是否存在
                             if not os.path.exists(partition.mountpoint):
                                 disk_info.append(f"{partition.device} - 挂载点不存在")
                                 continue
-                                
+                       
                             # 检查是否可访问
                             if not os.access(partition.mountpoint, os.R_OK):
                                 disk_info.append(f"{partition.device} ({partition.mountpoint}) - 无访问权限")
                                 continue
-                                
+                   
                             # 获取磁盘使用情况
                             usage = psutil.disk_usage(partition.mountpoint)
+                            
                             disk_info.append(f"{partition.device} ({partition.mountpoint}) - 总计: {self._format_bytes(usage.total)}, 已使用: {self._format_bytes(usage.used)} ({usage.percent}%)")
                         except PermissionError:
                             disk_info.append(f"{partition.device} ({partition.mountpoint}) - 权限错误")
@@ -324,7 +315,7 @@ class Settings:
                         except OSError as e:
                             disk_info.append(f"{partition.device} ({partition.mountpoint}) - 操作系统错误: {str(e)}")
                         except Exception as e:
-                            disk_info.append(f"{partition.device} ({partition.mountpoint}) - 未知错误: {str(e)}")
+                            disk_info.append(f"{partition.device} ({partition.mountpoint}) - 错误: {str(e)}")
                 except Exception as e:
                     disk_info.append(f"获取磁盘信息时出错: {str(e)}")
                     
