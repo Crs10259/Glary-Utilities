@@ -48,13 +48,43 @@ class SettingsWidget(QWidget):
         self.save_button = QPushButton("保存设置")
         self.save_button.setObjectName("save_button")
         self.save_button.setMinimumWidth(120)
-        self.save_button.setStyleSheet("color: #e0e0e0; background-color: #2a2a2a;")
+        self.save_button.setStyleSheet("""
+            QPushButton {
+                background-color: #00a8ff;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #0096e0;
+            }
+            QPushButton:pressed {
+                background-color: #0085c7;
+            }
+        """)
         buttons_layout.addWidget(self.save_button)
         
         self.restore_defaults_button = QPushButton("恢复默认")
         self.restore_defaults_button.setObjectName("restore_defaults_button")
         self.restore_defaults_button.setMinimumWidth(140)
-        self.restore_defaults_button.setStyleSheet("color: #e0e0e0; background-color: #2a2a2a;")
+        self.restore_defaults_button.setStyleSheet("""
+            QPushButton {
+                background-color: #555555;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #666666;
+            }
+            QPushButton:pressed {
+                background-color: #444444;
+            }
+        """)
         buttons_layout.addWidget(self.restore_defaults_button)
         
         layout.addLayout(buttons_layout)
@@ -65,53 +95,100 @@ class SettingsWidget(QWidget):
         self.language_combo.currentIndexChanged.connect(self.on_language_changed)
     
     def setup_general_tab(self):
-        """设置常规设置选项卡"""
-        layout = QVBoxLayout(self.general_tab)
+        """设置常规选项卡"""
+        # 创建常规选项卡内容
+        general_layout = QVBoxLayout(self.general_tab)
+        general_layout.setContentsMargins(15, 15, 15, 15)
+        general_layout.setSpacing(20)  # 增加间距
         
-        # 常规组
-        general_group = QGroupBox("常规设置")
-        general_group.setObjectName("general_group")
-        general_group.setStyleSheet("color: #e0e0e0;")
-        general_group_layout = QFormLayout(general_group)
+        # 语言设置组
+        language_group = QGroupBox(self.get_translation("language"))
+        language_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                border: 1px solid #3a3a3a;
+                border-radius: 6px;
+                margin-top: 1em;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
+        language_layout = QVBoxLayout(language_group)
+        language_layout.setContentsMargins(15, 15, 15, 15)  # 增加内边距
         
-        # 语言设置
-        language_label = QLabel("语言：")
-        language_label.setObjectName("language_label")
-        language_label.setStyleSheet("color: #e0e0e0;")
+        language_select_layout = QHBoxLayout()
+        language_label = QLabel(self.get_translation("language"))
+        language_label.setMinimumWidth(120)  # 设置最小宽度确保标签不会重叠
+        language_label.setMaximumWidth(120)  # 设置最大宽度
+        
         self.language_combo = QComboBox()
-        self.language_combo.setObjectName("language_combo")
-        self.language_combo.addItems(["English", "中文"])
-        self.language_combo.setStyleSheet("color: #e0e0e0; background-color: #2a2a2a;")
-        general_group_layout.addRow(language_label, self.language_combo)
+        self.language_combo.addItem("English", "en")
+        self.language_combo.addItem("简体中文", "zh")
+        self.language_combo.currentIndexChanged.connect(self.on_language_changed)
+        
+        language_select_layout.addWidget(language_label)
+        language_select_layout.addWidget(self.language_combo, 1)  # 设置伸展因子
+        
+        language_layout.addLayout(language_select_layout)
         
         # 启动设置
-        startup_label = QLabel("开机启动：")
-        startup_label.setObjectName("startup_label")
-        startup_label.setStyleSheet("color: #e0e0e0;")
-        self.startup_checkbox = QCheckBox("自动启动")
+        startup_layout = QHBoxLayout()
+        startup_label = QLabel(self.get_translation("start_with_windows", "开机启动:"))
+        startup_label.setMinimumWidth(120)
+        startup_label.setMaximumWidth(120)
+        
+        self.startup_checkbox = QCheckBox(self.get_translation("auto_start", "自动启动"))
         self.startup_checkbox.setObjectName("startup_checkbox")
-        self.startup_checkbox.setStyleSheet("color: #e0e0e0;")
-        general_group_layout.addRow(startup_label, self.startup_checkbox)
         
-        layout.addWidget(general_group)
+        startup_layout.addWidget(startup_label)
+        startup_layout.addWidget(self.startup_checkbox)
         
-        # 主题设置
-        theme_group = QGroupBox("主题设置")
-        theme_group.setObjectName("theme_group")
-        theme_group.setStyleSheet("color: #e0e0e0;")
+        language_layout.addLayout(startup_layout)
+        
+        # Add language group to general layout
+        general_layout.addWidget(language_group)
+        
+        # 主题设置组
+        theme_group = QGroupBox(self.get_translation("theme_settings"))
+        theme_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                border: 1px solid #3a3a3a;
+                border-radius: 6px;
+                margin-top: 1em;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
         theme_layout = QVBoxLayout(theme_group)
+        theme_layout.setContentsMargins(15, 15, 15, 15)  # 增加内边距
         
-        # 主题选择
-        theme_form_layout = QFormLayout()
-        theme_label = QLabel("主题：")
-        theme_label.setObjectName("theme_label")
-        theme_label.setStyleSheet("color: #e0e0e0;")
+        theme_select_layout = QHBoxLayout()
+        theme_label = QLabel(self.get_translation("theme"))
+        theme_label.setMinimumWidth(120)  # 设置最小宽度确保标签不会重叠
+        theme_label.setMaximumWidth(120)  # 设置最大宽度
+        
         self.theme_combo = QComboBox()
-        self.theme_combo.setObjectName("theme_combo")
-        self.theme_combo.addItems(["深色", "浅色", "蓝色主题", "绿色主题", "紫色主题", "自定义"])
-        self.theme_combo.setStyleSheet("color: #e0e0e0; background-color: #2a2a2a;")
-        theme_form_layout.addRow(theme_label, self.theme_combo)
-        theme_layout.addLayout(theme_form_layout)
+        self.theme_combo.addItem(self.get_translation("dark"), "深色")
+        self.theme_combo.addItem(self.get_translation("light"), "浅色")
+        self.theme_combo.addItem(self.get_translation("blue"), "蓝色主题")
+        self.theme_combo.addItem(self.get_translation("green"), "绿色主题")
+        self.theme_combo.addItem(self.get_translation("purple"), "紫色主题")
+        self.theme_combo.addItem(self.get_translation("custom"), "自定义")
+        self.theme_combo.currentIndexChanged.connect(self.on_theme_changed)
+        
+        theme_select_layout.addWidget(theme_label)
+        theme_select_layout.addWidget(self.theme_combo, 1)  # 设置伸展因子
+        
+        theme_layout.addLayout(theme_select_layout)
         
         # 透明度设置
         transparency_layout = QFormLayout()
@@ -212,7 +289,7 @@ class SettingsWidget(QWidget):
         # Connect theme combo box signal
         self.theme_combo.currentIndexChanged.connect(self.on_theme_changed)
         
-        layout.addWidget(theme_group)
+        general_layout.addWidget(theme_group)
         
         # 通知组
         notifications_group = QGroupBox("通知")
@@ -238,7 +315,7 @@ class SettingsWidget(QWidget):
         self.maintenance_reminder_checkbox.setStyleSheet("color: #e0e0e0;")
         notifications_layout.addWidget(self.maintenance_reminder_checkbox)
         
-        layout.addWidget(notifications_group)
+        general_layout.addWidget(notifications_group)
     
     def setup_scan_tab(self):
         """设置扫描选项卡"""

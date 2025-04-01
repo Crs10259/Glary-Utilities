@@ -227,30 +227,30 @@ class MainWindow(QMainWindow):
         sidebar_group_layout.setSpacing(5)
         
         # 添加按钮 - 使用布局而不是硬编码位置
-        self.create_sidebar_button(self.tr("Dashboard"), "Home", sidebar_group_layout)
-        self.create_sidebar_button(self.tr("System Cleaner"), "Cleaner", sidebar_group_layout)
-        self.create_sidebar_button(self.tr("GPU Information"), "GPU", sidebar_group_layout)
-        self.create_sidebar_button(self.tr("System Repair"), "Repair", sidebar_group_layout)
-        self.create_sidebar_button(self.tr("DISM Tool"), "Dism", sidebar_group_layout)
-        self.create_sidebar_button(self.tr("Network Reset"), "Network", sidebar_group_layout)
-        self.create_sidebar_button(self.tr("Disk Check"), "Disk", sidebar_group_layout)
-        self.create_sidebar_button(self.tr("Boot Repair"), "Boot", sidebar_group_layout)
-        self.create_sidebar_button(self.tr("Virus Scan"), "Virus", sidebar_group_layout)
-        self.create_sidebar_button(self.tr("System Information"), "SystemInfo", sidebar_group_layout)
+        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "dashboard")), "Home", sidebar_group_layout)
+        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "system_cleaner")), "Cleaner", sidebar_group_layout)
+        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "gpu_information")), "GPU", sidebar_group_layout)
+        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "system_repair")), "Repair", sidebar_group_layout)
+        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "dism_tool")), "Dism", sidebar_group_layout)
+        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "network_reset")), "Network", sidebar_group_layout)
+        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "disk_check")), "Disk", sidebar_group_layout)
+        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "boot_repair")), "Boot", sidebar_group_layout)
+        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "virus_scan")), "Virus", sidebar_group_layout)
+        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "system_information")), "SystemInfo", sidebar_group_layout)
         
         # 添加工具列表到侧边栏
         sidebar_layout.addWidget(self.sidebar_group)
         
         # 标题（App名称）- 移至底部
-        app_title = QLabel("Glary Utilities")
-        app_title.setStyleSheet("color: #e0e0e0; font-size: 18px; font-weight: bold;")
+        # app_title = QLabel("Glary Utilities")
+        # app_title.setStyleSheet("color: #e0e0e0; font-size: 18px; font-weight: bold;")
         
         # 添加伸缩项将设置按钮推到底部
         sidebar_layout.addStretch()
-        sidebar_layout.addWidget(app_title)
+        # sidebar_layout.addWidget(app_title)
         
         # 在侧边栏底部添加设置按钮
-        self.settings_button = QPushButton(self.tr("Settings"))
+        self.settings_button = QPushButton(self.tr(self.settings.get_translation("general", "settings")))
         self.settings_button.setObjectName("settingsButton")
         self.settings_button.setCursor(QCursor(Qt.PointingHandCursor))
         self.settings_button.setStyleSheet("""
@@ -320,24 +320,36 @@ class MainWindow(QMainWindow):
         icon_path = None
         if icon_name == "Home":
             icon_path = Icon.Home.Path if Icon.Home.Exist else None
+            page_name = "Dashboard"
         elif icon_name == "Cleaner":
             icon_path = Icon.Cleaner.Path if Icon.Cleaner.Exist else None
+            page_name = "System Cleaner"
         elif icon_name == "GPU":
             icon_path = Icon.GPU.Path if Icon.GPU.Exist else None
+            page_name = "GPU Information"
         elif icon_name == "Repair":
             icon_path = Icon.Repair.Path if Icon.Repair.Exist else None
+            page_name = "System Repair"
         elif icon_name == "Dism":
             icon_path = Icon.Dism.Path if Icon.Dism.Exist else None
+            page_name = "DISM Tool"
         elif icon_name == "Network":
             icon_path = Icon.Network.Path if Icon.Network.Exist else None
+            page_name = "Network Reset"
         elif icon_name == "Disk":
             icon_path = Icon.Disk.Path if Icon.Disk.Exist else None
+            page_name = "Disk Check"
         elif icon_name == "Boot":
             icon_path = Icon.Boot.Path if Icon.Boot.Exist else None
+            page_name = "Boot Repair"
         elif icon_name == "Virus":
             icon_path = Icon.Virus.Path if Icon.Virus.Exist else None
+            page_name = "Virus Scan"
         elif icon_name == "SystemInfo":
             icon_path = Icon.SystemInfo.Path if Icon.SystemInfo.Exist else None
+            page_name = "System Information"
+        else:
+            page_name = text  # Default fallback
         
         if icon_path:
             icon = QIcon(icon_path)
@@ -349,10 +361,10 @@ class MainWindow(QMainWindow):
         parent_layout.addWidget(button)
         
         # 将按钮添加到页面名称到按钮的映射
-        self.page_buttons[text] = button
+        self.page_buttons[page_name] = button
         
         # 连接点击事件
-        button.clicked.connect(lambda: self.set_active_page(text))
+        button.clicked.connect(lambda: self.set_active_page(page_name))
         
         return button
 

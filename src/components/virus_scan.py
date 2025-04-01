@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QTextEdit, QProgressBar, QMessageBox,
                              QGroupBox, QCheckBox, QFileDialog, QListWidget,
                              QListWidgetItem, QRadioButton, QComboBox, QTableWidget,
-                             QHeaderView)
+                             QHeaderView, QTableWidgetItem)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QDir
 
 class VirusScanThread(QThread):
@@ -334,6 +334,21 @@ class VirusScanWidget(QWidget):
         self.progress_bar.setObjectName("progress_bar")
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
+        self.progress_bar.setStyleSheet("""
+            QProgressBar {
+                background-color: #2a2a2a;
+                color: white;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+                text-align: center;
+                height: 20px;
+                margin: 5px 0;
+            }
+            QProgressBar::chunk {
+                background-color: #00a8ff;
+                border-radius: 3px;
+            }
+        """)
         layout.addWidget(self.progress_bar)
         
         # Threats found
@@ -389,18 +404,78 @@ class VirusScanWidget(QWidget):
         self.start_button = QPushButton(self.get_translation("scan_button"))
         self.start_button.setObjectName("start_button")
         self.start_button.setMinimumWidth(120)
+        self.start_button.setStyleSheet("""
+            QPushButton {
+                background-color: #00a8ff;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #0096e0;
+            }
+            QPushButton:pressed {
+                background-color: #0085c7;
+            }
+            QPushButton:disabled {
+                background-color: #555555;
+                color: #aaaaaa;
+            }
+        """)
         buttons_layout.addWidget(self.start_button)
         
         self.stop_button = QPushButton(self.get_translation("stop_button"))
         self.stop_button.setObjectName("stop_button")
         self.stop_button.setEnabled(False)
         self.stop_button.setMinimumWidth(120)
+        self.stop_button.setStyleSheet("""
+            QPushButton {
+                background-color: #d9534f;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #c9302c;
+            }
+            QPushButton:pressed {
+                background-color: #ac2925;
+            }
+            QPushButton:disabled {
+                background-color: #555555;
+                color: #aaaaaa;
+            }
+        """)
         buttons_layout.addWidget(self.stop_button)
         
         self.fix_button = QPushButton(self.get_translation("clean_threats"))
         self.fix_button.setObjectName("fix_button")
         self.fix_button.setEnabled(False)
         self.fix_button.setMinimumWidth(120)
+        self.fix_button.setStyleSheet("""
+            QPushButton {
+                background-color: #5cb85c;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #4cae4c;
+            }
+            QPushButton:pressed {
+                background-color: #3e8f3e;
+            }
+            QPushButton:disabled {
+                background-color: #555555;
+                color: #aaaaaa;
+            }
+        """)
         buttons_layout.addWidget(self.fix_button)
         
         layout.addLayout(buttons_layout)

@@ -610,7 +610,6 @@ class SystemRepairWidget(BaseComponent):
         self.start_scan_button.setText(self.get_translation("start_scan"))
         
         # Update results tab elements
-        self.results_summary_label.setText(self.get_translation("scan_results"))
         self.issues_found_label.setText(self.get_translation("issues_found") + ":")
         self.repair_button.setText(self.get_translation("repair_selected"))
         

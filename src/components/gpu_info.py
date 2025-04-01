@@ -192,10 +192,12 @@ class InfoRow(QFrame):
         self.title_label = QLabel(title)
         self.title_label.setStyleSheet("color: #a0a0a0; font-size: 14px;")
         self.title_label.setMinimumWidth(200)
+        self.title_label.setMaximumWidth(200)  # Fixed width to prevent text overlap
         
         # Value label
         self.value_label = QLabel(value)
         self.value_label.setStyleSheet("color: #e0e0e0; font-size: 14px;")
+        self.value_label.setWordWrap(True)  # Enable word wrap for long values
         
         # Add to layout
         self.layout.addWidget(self.title_label)
@@ -330,11 +332,11 @@ class GpuInfoWidget(BaseComponent):
         # Update text elements with new translations
         self.title.setText(self.get_translation("title"))
         self.description.setText(self.get_translation("description"))
-        self.gpu_name_row.label.setText(self.get_translation("gpu_name"))
-        self.driver_version_row.label.setText(self.get_translation("driver_version"))
-        self.memory_total_row.label.setText(self.get_translation("memory_total"))
-        self.memory_used_row.label.setText(self.get_translation("memory_used"))
-        self.temperature_row.label.setText(self.get_translation("temperature"))
+        self.gpu_name_row.title_label.setText(self.get_translation("gpu_name"))
+        self.driver_version_row.title_label.setText(self.get_translation("driver_version"))
+        self.memory_total_row.title_label.setText(self.get_translation("memory_total"))
+        self.memory_used_row.title_label.setText(self.get_translation("memory_used"))
+        self.temperature_row.title_label.setText(self.get_translation("temperature"))
         self.refresh_button.setText(self.get_translation("refresh"))
         
         # Add animation to highlight the change

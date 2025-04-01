@@ -18,17 +18,18 @@ MAX_DATA_POINTS = 60  # 60 data points = 2 minutes at 2-second intervals
 
 class ChartTile(QFrame):
     """Custom chart widget for system metrics"""
-    def __init__(self, title, icon_path=None, parent=None):
+    def __init__(self, title, icon_path=None, chart_color="#00a8ff", parent=None):
         super().__init__(parent)
         self.setObjectName("chartTile")
         self.setStyleSheet("""
             #chartTile {
                 background-color: #2d2d2d;
                 border-radius: 8px;
-                border: none;
+                border: 1px solid #3a3a3a;
             }
         """)
         self.setMinimumHeight(200)
+        self.chart_color = chart_color
         
         # 设置尺寸策略，确保在窗口调整大小时正常伸展
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -45,12 +46,12 @@ class ChartTile(QFrame):
         
         # Title label
         self.title_label = QLabel(title)
-        self.title_label.setStyleSheet("color: #a0a0a0; font-size: 14px;")
+        self.title_label.setStyleSheet(f"color: {chart_color}; font-size: 14px; font-weight: bold;")
         title_container.addWidget(self.title_label)
         
         # Current value label (right-aligned)
         self.value_label = QLabel("0%")
-        self.value_label.setStyleSheet("color: #e0e0e0; font-size: 18px; font-weight: bold;")
+        self.value_label.setStyleSheet(f"color: {chart_color}; font-size: 18px; font-weight: bold;")
         self.value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         title_container.addWidget(self.value_label)
         
@@ -65,7 +66,7 @@ class ChartTile(QFrame):
         
         # Create chart series
         self.series = QLineSeries()
-        self.series.setColor(QColor("#00a8ff"))
+        self.series.setColor(QColor(chart_color))
         self.chart.addSeries(self.series)
         
         # Create X axis (time)
@@ -267,28 +268,32 @@ class DashboardWidget(BaseComponent):
         # CPU 使用情况图表
         self.cpu_chart = ChartTile(
             self.get_translation("cpu_usage"), 
-            Icon.CPU.Path
+            Icon.CPU.Path,
+            chart_color="#E74856"  # 红色，模拟Windows Task Manager CPU图表
         )
         self.stats_layout.addWidget(self.cpu_chart, 0, 0)
         
         # 内存使用情况图表
         self.memory_chart = ChartTile(
             self.get_translation("memory_usage"), 
-            Icon.Memory.Path
+            Icon.Memory.Path,
+            chart_color="#00B7C3"  # 青色，模拟Windows Task Manager内存图表
         )
         self.stats_layout.addWidget(self.memory_chart, 0, 1)
         
         # 磁盘使用情况图表
         self.disk_chart = ChartTile(
             self.get_translation("disk_usage"), 
-            Icon.Disk.Path
+            Icon.Disk.Path,
+            chart_color="#FFB900"  # 黄色，模拟Windows Task Manager磁盘图表
         )
         self.stats_layout.addWidget(self.disk_chart, 1, 0)
         
         # 温度图表
         self.temp_chart = ChartTile(
             self.get_translation("system_temperature"), 
-            Icon.Temperature.Path
+            Icon.Temperature.Path,
+            chart_color="#10893E"  # 绿色，模拟Windows Task Manager温度图表
         )
         self.stats_layout.addWidget(self.temp_chart, 1, 1)
         
