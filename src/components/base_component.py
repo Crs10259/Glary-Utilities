@@ -2,22 +2,28 @@ from PyQt5.QtWidgets import QWidget, QSizePolicy
 from PyQt5.QtCore import QPropertyAnimation, QEasingCurve, QPoint, Qt
 import sys
 import os
+import json
+from PyQt5.QtGui import QColor
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from animations import AnimationUtils
+from utils.animations import AnimationUtils
+from utils.settings_manager import Settings
+from utils.theme_manager import ThemeManager
 
 class BaseComponent(QWidget):
     """Base component class for all application components"""
     
-    def __init__(self, settings, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.settings = settings
+        self.settings = Settings()
+        self.theme_manager = ThemeManager()
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.apply_theme()
         
         # 确保组件填充整个可用空间
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         # 初始化UI
         self.setup_ui()
-        self.apply_theme()
     
     def setup_ui(self):
         """Setup component UI - must be implemented by subclasses"""
@@ -29,180 +35,124 @@ class BaseComponent(QWidget):
         self.setAttribute(Qt.WA_StyledBackground, True)
         
         # 获取当前主题
-        theme = self.settings.get_setting("theme", "深色")
+        theme_name = self.settings.get_setting("theme", "dark")
         
-        # 根据主题名称获取相应的颜色
-        if theme == "深色" or theme == "Dark":
-            bg_color = "#1e1e1e"
-            text_color = "#e0e0e0"
-            accent_color = "#00a8ff"
-        elif theme == "浅色" or theme == "Light":
-            bg_color = "#f0f0f0"
-            text_color = "#333333"
-            accent_color = "#007acc"
-        elif theme == "蓝色主题" or theme == "Blue Theme":
-            bg_color = "#0d1117"
-            text_color = "#e6edf3"
-            accent_color = "#58a6ff"
-        elif theme == "绿色主题" or theme == "Green Theme":
-            bg_color = "#0f1610"
-            text_color = "#e6edf3"
-            accent_color = "#4caf50"
-        elif theme == "紫色主题" or theme == "Purple Theme":
-            bg_color = "#13111d"
-            text_color = "#e6edf3"
-            accent_color = "#9c27b0"
-        elif theme == "自定义" or theme == "Custom":
-            # 自定义主题使用用户定义的颜色
-            bg_color = self.settings.get_setting("custom_bg_color", "#1e1e1e")
-            text_color = self.settings.get_setting("custom_text_color", "#e0e0e0")
-            accent_color = self.settings.get_setting("custom_accent_color", "#00a8ff")
-        else:
-            # 默认为深色主题
-            bg_color = "#1e1e1e"
-            text_color = "#e0e0e0"
-            accent_color = "#00a8ff"
+        # 确保主题管理器使用同样的主题
+        self.theme_manager.set_current_theme(theme_name)
         
-        # 生成辅助颜色
-        bg_lighter = self._lighten_color(bg_color, 10)
-        bg_darker = self._lighten_color(bg_color, -10)
+        # 获取主题颜色
+        colors = self.theme_manager.get_theme_colors()
         
-        # 应用基础样式表
+        # 获取基本颜色
+        bg_color = colors.get("bg_color", "#1e1e1e")
+        text_color = colors.get("text_color", "#e0e0e0")
+        accent_color = colors.get("accent_color", "#555555")
+        bg_lighter = colors.get("bg_lighter", self.theme_manager.lighten_color(bg_color, 10))
+        bg_darker = colors.get("bg_darker", self.theme_manager.lighten_color(bg_color, -10))
+        
+        # 获取组件特定颜色
+        button_colors = self.theme_manager.get_component_colors("button")
+        button_bg = button_colors.get("primary_bg", accent_color)
+        button_text = button_colors.get("primary_text", "#ffffff")
+        button_hover = button_colors.get("primary_hover", self.theme_manager.lighten_color(accent_color, 10))
+        button_pressed = button_colors.get("primary_pressed", self.theme_manager.lighten_color(accent_color, -10))
+        
+        # 应用基本样式
         self.setStyleSheet(f"""
-            QWidget {{
+            BaseComponent {{
+                /* 使用透明背景，防止出现蓝色叠加 */
                 background-color: transparent;
                 color: {text_color};
+                border-radius: 8px;
             }}
+            
             QLabel {{
                 color: {text_color};
+                border: none;
+                background-color: transparent;
             }}
+            
             QPushButton {{
-                background-color: {bg_lighter};
-                color: {text_color};
-                border: 1px solid {accent_color};
-                border-radius: 6px;
-                padding: 5px 10px;
-            }}
-            QPushButton:hover {{
-                background-color: {self._lighten_color(bg_lighter, 10)};
-                border: 1px solid {self._lighten_color(accent_color, 10)};
-            }}
-            QPushButton:pressed {{
-                background-color: {self._lighten_color(bg_lighter, -5)};
-            }}
-            QPushButton:disabled {{
-                background-color: {bg_darker};
-                color: {self._lighten_color(bg_color, 30)};
-                border: 1px solid {self._lighten_color(bg_color, 20)};
-            }}
-            QGroupBox {{
-                color: {self._lighten_color(text_color, -10)};
+                background-color: {button_bg};
+                color: {button_text};
+                border: none;
+                border-radius: 4px;
+                padding: 6px 12px;
                 font-weight: bold;
-                border: 1px solid {accent_color};
-                border-radius: 6px;
-                margin-top: 1em;
-                padding-top: 10px;
-                background-color: {bg_color};
             }}
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-                background-color: {bg_color};
+            
+            QPushButton:hover {{
+                background-color: {button_hover};
             }}
-            QCheckBox, QRadioButton {{
-                color: {text_color};
+            
+            QPushButton:pressed {{
+                background-color: {button_pressed};
             }}
-            QCheckBox::indicator, QRadioButton::indicator {{
-                width: 16px;
-                height: 16px;
-                background-color: {bg_lighter};
-                border: 1px solid {accent_color};
-                border-radius: 3px;
-            }}
-            QCheckBox::indicator:checked, QRadioButton::indicator:checked {{
-                background-color: {accent_color};
-            }}
-            QLineEdit, QTextEdit, QListWidget, QTableWidget, QComboBox {{
+            
+            QLineEdit, QTextEdit {{
                 background-color: {bg_lighter};
                 color: {text_color};
                 border: 1px solid {accent_color};
-                border-radius: 6px;
-                padding: 3px;
-            }}
-            QLineEdit:focus, QTextEdit:focus, QComboBox:focus {{
-                border: 1px solid {self._lighten_color(accent_color, 15)};
-            }}
-            QTextEdit {{
-                background-color: {bg_lighter};
-                color: {text_color};
-            }}
-            QTableWidget {{
-                background-color: {bg_lighter};
-                alternate-background-color: {self._lighten_color(bg_lighter, 5)};
-                gridline-color: {self._lighten_color(accent_color, -20)};
-                border: 1px solid {accent_color};
-                border-radius: 6px;
-            }}
-            QTableWidget QHeaderView::section {{
-                background-color: {bg_darker};
-                color: {text_color};
-                border: 1px solid {accent_color};
+                border-radius: 4px;
                 padding: 4px;
             }}
+            
+            QComboBox {{
+                background-color: {bg_lighter};
+                color: {text_color};
+                border: 1px solid {accent_color};
+                border-radius: 4px;
+                padding: 4px;
+                min-height: 20px;
+            }}
+            
+            QComboBox::drop-down {{
+                border: none;
+                background-color: transparent;
+            }}
+            
+            QComboBox::down-arrow {{
+                image: url(assets/images/down_arrow.png);
+                width: 12px;
+                height: 12px;
+            }}
+            
+            QComboBox QAbstractItemView {{
+                background-color: {bg_color};
+                color: {text_color};
+                border: 1px solid {accent_color};
+                selection-background-color: {bg_lighter};
+            }}
+            
             QProgressBar {{
                 border: 1px solid {accent_color};
-                border-radius: 6px;
-                background-color: {bg_lighter};
+                border-radius: 5px;
+                background-color: {bg_darker};
                 text-align: center;
                 color: {text_color};
             }}
+            
             QProgressBar::chunk {{
                 background-color: {accent_color};
-                border-radius: 5px;
+                border-radius: 4px;
             }}
-            QTabWidget::pane {{
-                border: 1px solid {accent_color};
-                background-color: {bg_color};
-                border-radius: 6px;
-            }}
-            QTabBar::tab {{
-                background-color: {bg_lighter};
-                color: {self._lighten_color(text_color, -10)};
-                border: 1px solid {accent_color};
-                border-bottom: none;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                padding: 8px 12px;
-                margin-right: 4px;
-            }}
-            QTabBar::tab:selected {{
-                background-color: {bg_color};
+            
+            QCheckBox {{
                 color: {text_color};
+                spacing: 5px;
             }}
-            QTabBar::tab:hover {{
-                background-color: {self._lighten_color(bg_lighter, 10)};
+            
+            QCheckBox::indicator {{
+                width: 16px;
+                height: 16px;
+                border: 1px solid {accent_color};
+                border-radius: 3px;
+                background-color: {bg_lighter};
             }}
-            QScrollBar {{
-                background-color: {bg_color};
-                width: 12px;
-                height: 12px;
-                border-radius: 6px;
-            }}
-            QScrollBar::handle {{
-                background-color: {self._lighten_color(bg_color, 30)};
-                border-radius: 5px;
-                min-height: 30px;
-            }}
-            QScrollBar::handle:hover {{
+            
+            QCheckBox::indicator:checked {{
                 background-color: {accent_color};
-            }}
-            QScrollBar::add-line, QScrollBar::sub-line {{
-                width: 0px;
-                height: 0px;
-            }}
-            QScrollBar::add-page, QScrollBar::sub-page {{
-                background-color: {bg_color};
+                image: url(assets/images/checkbox_checked.png);
             }}
         """)
     
@@ -217,8 +167,6 @@ class BaseComponent(QWidget):
             新的十六进制颜色代码
         """
         try:
-            from PyQt5.QtGui import QColor
-            
             c = QColor(color)
             h, s, l, a = c.getHslF()
             
@@ -315,4 +263,10 @@ class BaseComponent(QWidget):
                     missing_in_language.append(key)
             
             if missing_in_language:
-                missing_keys[language] = missing_in_language 
+                missing_keys[language] = missing_in_language
+        
+        return missing_keys
+    
+    def getComponentName(self):
+        """Get component name for identification"""
+        return self.__class__.__name__ 

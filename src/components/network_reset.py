@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QCheckBox, QTextEdit, QGroupBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont
+from components.base_component import BaseComponent
 
 class NetworkResetThread(QThread):
     """Worker thread for network reset operations"""
@@ -117,40 +118,52 @@ class NetworkResetThread(QThread):
             self.progress_updated.emit(f"Error resetting firewall: {e.stderr}")
             return False
 
-class NetworkResetWidget(QWidget):
-    def __init__(self, settings, parent=None):
-        super().__init__(parent)
-        self.settings = settings
-        self.worker = None
+class NetworkResetWidget(BaseComponent):
+    def __init__(self, parent=None):
+        # 初始化属性
+        self.reset_worker = None
         
-        self.setup_ui()
+        # 调用父类构造函数
+        super().__init__(parent)
     
     def setup_ui(self):
-        # Main layout
-        self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(20, 20, 20, 20)
-        self.main_layout.setSpacing(20)
+        """设置UI"""
+        # 清除旧布局（如果有）
+        if self.layout():
+            # 清除旧布局中的所有部件
+            while self.layout().count():
+                item = self.layout().takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # 删除旧布局
+            old_layout = self.layout()
+            QWidget().setLayout(old_layout)  # 将旧布局设置给一个临时部件以便删除
+        
+        # Create layout
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(20, 20, 20, 20)
         
         # Title
         self.title = QLabel(self.get_translation("title"))
-        self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
-        self.main_layout.addWidget(self.title)
+        self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0; background-color: transparent;")
+        main_layout.addWidget(self.title)
         
         # Description
         self.description = QLabel(self.get_translation("description"))
-        self.description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
-        self.main_layout.addWidget(self.description)
+        self.description.setStyleSheet("font-size: 14px; color: #a0a0a0; background-color: transparent;")
+        main_layout.addWidget(self.description)
         
         # Warning for non-Windows systems
         if platform.system() != "Windows":
             warning_label = QLabel("⚠️ Network reset is only available on Windows systems")
-            warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
-            self.main_layout.addWidget(warning_label)
+            warning_label.setStyleSheet("color: #ff9900; font-weight: bold; background-color: transparent;")
+            main_layout.addWidget(warning_label)
         
         # Warning label
         warning_label = QLabel(self.get_translation("warning"))
-        warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
-        self.main_layout.addWidget(warning_label)
+        warning_label.setStyleSheet("color: #ff9900; font-weight: bold; background-color: transparent;")
+        main_layout.addWidget(warning_label)
         
         # Operations group
         operations_group = QGroupBox(self.get_translation("operations"))
@@ -162,11 +175,13 @@ class NetworkResetWidget(QWidget):
                 border-radius: 4px;
                 margin-top: 1em;
                 padding-top: 10px;
+                background-color: transparent;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
                 left: 10px;
                 padding: 0 5px;
+                background-color: transparent;
             }
         """)
         operations_layout = QVBoxLayout(operations_group)
@@ -174,28 +189,28 @@ class NetworkResetWidget(QWidget):
         # Checkboxes for operation selection
         self.flush_dns_cb = QCheckBox(self.get_translation("flush_dns"))
         self.flush_dns_cb.setChecked(True)
-        self.flush_dns_cb.setStyleSheet("color: #e0e0e0;")
+        self.flush_dns_cb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
         operations_layout.addWidget(self.flush_dns_cb)
         
         self.reset_winsock_cb = QCheckBox(self.get_translation("reset_winsock"))
         self.reset_winsock_cb.setChecked(True)
-        self.reset_winsock_cb.setStyleSheet("color: #e0e0e0;")
+        self.reset_winsock_cb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
         operations_layout.addWidget(self.reset_winsock_cb)
         
         self.reset_tcp_ip_cb = QCheckBox(self.get_translation("reset_tcp_ip"))
         self.reset_tcp_ip_cb.setChecked(True)
-        self.reset_tcp_ip_cb.setStyleSheet("color: #e0e0e0;")
+        self.reset_tcp_ip_cb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
         operations_layout.addWidget(self.reset_tcp_ip_cb)
         
         self.reset_firewall_cb = QCheckBox(self.get_translation("reset_firewall"))
         self.reset_firewall_cb.setChecked(False)
-        self.reset_firewall_cb.setStyleSheet("color: #e0e0e0;")
+        self.reset_firewall_cb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
         operations_layout.addWidget(self.reset_firewall_cb)
         
-        self.main_layout.addWidget(operations_group)
+        main_layout.addWidget(operations_group)
         
         # Add some spacing
-        self.main_layout.addItem(QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Minimum))
+        main_layout.addItem(QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Minimum))
         
         # Reset button
         self.reset_button = QPushButton(self.get_translation("reset_button"))
@@ -224,17 +239,18 @@ class NetworkResetWidget(QWidget):
         
         # Button container (for right alignment)
         button_container = QWidget()
+        button_container.setStyleSheet("background-color: transparent;")
         button_layout = QHBoxLayout(button_container)
         button_layout.setContentsMargins(0, 0, 0, 0)
         button_layout.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
         button_layout.addWidget(self.reset_button)
         
-        self.main_layout.addWidget(button_container)
+        main_layout.addWidget(button_container)
         
         # Log output
         log_label = QLabel(self.get_translation("log_output"))
-        log_label.setStyleSheet("color: #a0a0a0; margin-top: 10px;")
-        self.main_layout.addWidget(log_label)
+        log_label.setStyleSheet("color: #a0a0a0; margin-top: 10px; background-color: transparent;")
+        main_layout.addWidget(log_label)
         
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
@@ -247,10 +263,16 @@ class NetworkResetWidget(QWidget):
                 padding: 5px;
             }
         """)
-        self.main_layout.addWidget(self.log_output)
+        main_layout.addWidget(self.log_output)
         
         # Set a minimum size for the log
         self.log_output.setMinimumHeight(200)
+        
+        # Set the layout
+        self.setLayout(main_layout)
+        
+        # 确保样式正确应用
+        self.setAttribute(Qt.WA_StyledBackground, True)
     
     def reset_network(self):
         """Reset network settings based on selected operations"""
@@ -273,10 +295,10 @@ class NetworkResetWidget(QWidget):
         self.log_output.append("Starting network reset operations...")
         
         # Start worker thread
-        self.worker = NetworkResetThread(operations)
-        self.worker.progress_updated.connect(self.update_log)
-        self.worker.operation_completed.connect(self.operation_completed)
-        self.worker.start()
+        self.reset_worker = NetworkResetThread(operations)
+        self.reset_worker.progress_updated.connect(self.update_log)
+        self.reset_worker.operation_completed.connect(self.operation_completed)
+        self.reset_worker.start()
     
     def update_log(self, message):
         """Update the log output"""

@@ -13,11 +13,11 @@ from PyQt5.QtChart import QChart, QChartView, QLineSeries, QValueAxis
 from components.base_component import BaseComponent
 from components.icons import Icon
 
-# Maximum number of data points to store for charts
-MAX_DATA_POINTS = 60  # 60 data points = 2 minutes at 2-second intervals
+# 最大数据点数量
+MAX_DATA_POINTS = 60  # 60个数据点 = 2分钟，每2秒一个数据点
 
 class ChartTile(QFrame):
-    """Custom chart widget for system metrics"""
+    """自定义图表小部件，用于系统指标"""
     def __init__(self, title, icon_path=None, chart_color="#00a8ff", parent=None):
         super().__init__(parent)
         self.setObjectName("chartTile")
@@ -34,72 +34,72 @@ class ChartTile(QFrame):
         # 设置尺寸策略，确保在窗口调整大小时正常伸展
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
-        # Data storage (deque for efficient append/pop)
+        # 数据存储（使用deque以提高append/pop效率）
         self.data_points = deque(maxlen=MAX_DATA_POINTS)
         
-        # Create layout
+        # 创建布局
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(10, 10, 10, 10)
         
-        # Title container
+        # 标题容器
         title_container = QHBoxLayout()
         
-        # Title label
+        # 标题标签
         self.title_label = QLabel(title)
         self.title_label.setStyleSheet(f"color: {chart_color}; font-size: 14px; font-weight: bold;")
         title_container.addWidget(self.title_label)
         
-        # Current value label (right-aligned)
+        # 当前值标签（右对齐）
         self.value_label = QLabel("0%")
         self.value_label.setStyleSheet(f"color: {chart_color}; font-size: 18px; font-weight: bold;")
         self.value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         title_container.addWidget(self.value_label)
         
-        # Add title container to main layout
+        # 将标题容器添加到主布局
         self.layout.addLayout(title_container)
         
-        # Create chart
+        # 创建图表
         self.chart = QChart()
         self.chart.setBackgroundVisible(False)
         self.chart.setMargins(QMargins(0, 0, 0, 0))
         self.chart.legend().hide()
         
-        # Create chart series
+        # 创建图表系列
         self.series = QLineSeries()
         self.series.setColor(QColor(chart_color))
         self.chart.addSeries(self.series)
         
-        # Create X axis (time)
+        # 创建X轴（时间）
         self.axis_x = QValueAxis()
         self.axis_x.setRange(0, MAX_DATA_POINTS - 1)
         self.axis_x.setVisible(False)
         
-        # Create Y axis (value)
+        # 创建Y轴（值）
         self.axis_y = QValueAxis()
         self.axis_y.setRange(0, 100)
         self.axis_y.setVisible(False)
         
-        # Attach axes to chart
+        # 将轴附加到图表
         self.chart.addAxis(self.axis_x, Qt.AlignBottom)
         self.chart.addAxis(self.axis_y, Qt.AlignLeft)
         self.series.attachAxis(self.axis_x)
         self.series.attachAxis(self.axis_y)
         
-        # Create chart view
+        # 创建图表视图
         self.chart_view = QChartView(self.chart)
         self.chart_view.setRenderHint(QPainter.Antialiasing)
         self.chart_view.setStyleSheet("background-color: transparent;")
         self.chart_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
-        # Add chart view to layout
+        # 将图表视图添加到布局
         self.layout.addWidget(self.chart_view, 1)  # 设置伸展因子
         
-        # Initialize with zero data
+        # 初始化为零数据
         for i in range(MAX_DATA_POINTS):
             self.data_points.append(0)
             self.series.append(i, 0)
             
-        # If icon path provided and exists, add icon
+        # 如果提供了图标路径且存在，则添加图标
         if icon_path and os.path.exists(icon_path):
             icon = QIcon(icon_path)
             if not icon.isNull():
@@ -108,38 +108,38 @@ class ChartTile(QFrame):
                 title_container.insertWidget(0, self.icon_label)
     
     def update_value(self, value):
-        """Update the displayed value and chart"""
-        # Update text display
+        """更新显示的值和图表"""
+        # 更新文本显示
         if isinstance(value, float):
             self.value_label.setText(f"{value:.1f}%")
         else:
             self.value_label.setText(str(value))
         
-        # Add new data point
+        # 添加新数据点
         if isinstance(value, str) and value != "N/A":
-            # Try to parse numeric value from string
+            # 尝试从字符串解析数值
             try:
                 numeric_value = float(value.replace("%", "").replace("°C", ""))
                 self.data_points.append(numeric_value)
             except (ValueError, AttributeError):
                 self.data_points.append(0)
         else:
-            # If value is already numeric or N/A
+            # 如果值已经是数值或N/A
             try:
                 numeric_value = float(value) if value != "N/A" else 0
                 self.data_points.append(numeric_value)
             except (ValueError, TypeError):
                 self.data_points.append(0)
         
-        # Update chart data
+        # 更新图表数据
         self.series.clear()
         for i, point in enumerate(self.data_points):
             self.series.append(i, point)
             
-        # Adjust Y axis range if needed
+        # 如果需要，调整Y轴范围
         max_value = max(self.data_points)
         if max_value > 0:
-            # Set upper limit to the next multiple of 25 above max value
+            # 将上限设置为最大值的下一个25的倍数
             upper_limit = ((int(max_value) // 25) + 1) * 25
             self.axis_y.setRange(0, max(100, upper_limit))
         
@@ -178,11 +178,11 @@ class ActionTile(QFrame):
                         self.icon_label.setPixmap(pixmap)
                         self.layout.addWidget(self.icon_label)
                     else:
-                        print(f"警告: 无法加载图标 {icon_path} 的像素图")
+                        print(f"Warning: Could not load pixmap for icon {icon_path}")  # 警告：无法加载图标像素图
                 else:
-                    print(f"警告: 无法加载图标 {icon_path}")
+                    print(f"Warning: Could not load icon {icon_path}")  # 警告：无法加载图标
             except Exception as e:
-                print(f"加载图标时出错 {icon_path}: {str(e)}")
+                print(f"Error loading icon {icon_path}: {str(e)}")  # 加载图标时出错
         
         # 文本容器
         self.text_container = QVBoxLayout()
@@ -211,30 +211,29 @@ class ActionTile(QFrame):
                         self.arrow_label.setPixmap(arrow_pixmap)
                         self.layout.addWidget(self.arrow_label, 0, Qt.AlignRight)
         except Exception as e:
-            print(f"加载箭头图标时出错: {str(e)}")
+            print(f"Error loading arrow icon: {str(e)}")  # 加载箭头图标时出错
 
 class DashboardWidget(BaseComponent):
-    def __init__(self, settings, parent=None):
+    def __init__(self, parent=None):
         # 初始化属性
         self.update_timer = None
         
         # 调用父类构造函数
-        super().__init__(settings, parent)
+        super().__init__(parent)
         
         # 检查缺失翻译（仅在开发模式下）
         missing_keys = self.check_all_translations()
         if missing_keys:
-            print(f"警告: 在 DashboardWidget 中缺少翻译:")
+            print(f"Warning: Missing translations in DashboardWidget:")  # 警告：DashboardWidget 中缺少翻译
             for language, keys in missing_keys.items():
-                print(f"  语言: {language}, 缺少的键: {', '.join(keys)}")
+                print(f"  Language: {language}, Missing keys: {', '.join(keys)}")  # 语言和缺少的键
         
         # 设置定时器以更新系统信息
         self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update_system_info)
-        self.update_timer.start(2000) 
+        self.update_timer.start(2000)
     
     def get_translation(self, key, default=None):
-        """重写 get_translation 以使用正确的部分名称"""
         return self.settings.get_translation("dashboard", key, default)
     
     def setup_ui(self):
@@ -316,7 +315,7 @@ class DashboardWidget(BaseComponent):
         # 优化系统块
         self.optimize_tile = ActionTile(
             self.get_translation("optimize_system"),
-            "通过修复问题来加速您的系统",
+            "Speed up your system by fixing issues",  # 通过修复问题加速系统
             None if not Icon.Optimize.Exist else Icon.Optimize.Path
         )
         self.quick_layout.addWidget(self.optimize_tile, 0, 0)
@@ -324,7 +323,7 @@ class DashboardWidget(BaseComponent):
         # 清理垃圾块
         self.clean_tile = ActionTile(
             self.get_translation("clean_junk"),
-            "通过删除不必要的文件来释放磁盘空间",
+            "Free up disk space by removing unnecessary files",  # 通过删除不必要的文件释放磁盘空间
             None if not Icon.Clean.Exist else Icon.Clean.Path
         )
         self.quick_layout.addWidget(self.clean_tile, 0, 1)
@@ -332,7 +331,7 @@ class DashboardWidget(BaseComponent):
         # 病毒扫描块
         self.virus_tile = ActionTile(
             self.get_translation("scan_system"),
-            "扫描您的系统以查找病毒和恶意软件",
+            "Scan your system for viruses and malware",  # 扫描系统中的病毒和恶意软件
             None if not Icon.Virus.Exist else Icon.Virus.Path
         )
         self.quick_layout.addWidget(self.virus_tile, 1, 0)
@@ -340,7 +339,7 @@ class DashboardWidget(BaseComponent):
         # 获取系统信息块
         self.info_tile = ActionTile(
             self.get_translation("get_system_info"),
-            "获取系统信息",
+            "Get system information",  # 获取系统信息
             None if not Icon.Info.Exist else Icon.Info.Path
         )
         self.quick_layout.addWidget(self.info_tile, 1, 1)
@@ -378,8 +377,8 @@ class DashboardWidget(BaseComponent):
             
             self.disk_chart.update_value(disk_percent)
         except Exception as e:
-            self.disk_chart.update_value("错误")
-            print(f"获取磁盘使用情况时出错: {e}")
+            self.disk_chart.update_value("Error")  # 错误
+            print(f"Error getting disk usage: {e}")  # 获取磁盘使用情况时出错
         
         # 温度（如果可用）
         try:

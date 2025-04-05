@@ -1,21 +1,26 @@
 import os
 import sys
+import json
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLabel, QPushButton, 
                           QComboBox, QCheckBox, QGroupBox, QFormLayout, QSlider, QLineEdit,
-                          QColorDialog, QFileDialog, QDialog, QScrollArea, QSpinBox)
-from PyQt5.QtCore import Qt, QSize, QSettings, QTranslator, QCoreApplication
-from PyQt5.QtGui import QColor, QIcon
+                          QColorDialog, QFileDialog, QDialog, QScrollArea, QSpinBox, QStatusBar,
+                          QApplication)
+from PyQt5.QtCore import Qt, QSize, QSettings, QTranslator, QCoreApplication, QTimer
+from PyQt5.QtGui import QColor, QIcon, QMovie
+from utils.animations import AnimationUtils
+from utils.theme_manager import ThemeManager
 
 class SettingsWidget(QWidget):
     """应用程序设置的窗口小部件"""
     
-    def __init__(self, settings, parent=None):
+    def __init__(self, settings, parent=None) -> None:
         super().__init__(parent)
         self.settings = settings
+        self.theme_manager = ThemeManager()
         self.setup_ui()
         self.load_settings()
     
-    def setup_ui(self):
+    def setup_ui(self) -> None:
         """设置UI元素"""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -48,7 +53,7 @@ class SettingsWidget(QWidget):
         self.save_button = QPushButton("保存设置")
         self.save_button.setObjectName("save_button")
         self.save_button.setMinimumWidth(120)
-        self.save_button.setStyleSheet("""
+        self.save_button.setStyleSheet(""" 
             QPushButton {
                 background-color: #00a8ff;
                 color: white;
@@ -66,10 +71,35 @@ class SettingsWidget(QWidget):
         """)
         buttons_layout.addWidget(self.save_button)
         
+        self.apply_button = QPushButton(self.get_translation("apply_settings"))
+        self.apply_button.setObjectName("apply_button")
+        self.apply_button.setMinimumWidth(120)
+        self.apply_button.setStyleSheet("""
+            QPushButton {
+                background-color: #5cb85c;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #4cae4c;
+            }
+            QPushButton:pressed {
+                background-color: #3e8f3e;
+            }
+            QPushButton:disabled {
+                background-color: #555555;
+                color: #aaaaaa;
+            }
+        """)
+        buttons_layout.addWidget(self.apply_button)
+        
         self.restore_defaults_button = QPushButton("恢复默认")
         self.restore_defaults_button.setObjectName("restore_defaults_button")
         self.restore_defaults_button.setMinimumWidth(140)
-        self.restore_defaults_button.setStyleSheet("""
+        self.restore_defaults_button.setStyleSheet(""" 
             QPushButton {
                 background-color: #555555;
                 color: white;
@@ -91,10 +121,11 @@ class SettingsWidget(QWidget):
         
         # 连接信号
         self.save_button.clicked.connect(self.save_settings)
+        self.apply_button.clicked.connect(self.apply_settings)
         self.restore_defaults_button.clicked.connect(self.reset_settings)
         self.language_combo.currentIndexChanged.connect(self.on_language_changed)
     
-    def setup_general_tab(self):
+    def setup_general_tab(self) -> None:
         """设置常规选项卡"""
         # 创建常规选项卡内容
         general_layout = QVBoxLayout(self.general_tab)
@@ -103,7 +134,7 @@ class SettingsWidget(QWidget):
         
         # 语言设置组
         language_group = QGroupBox(self.get_translation("language"))
-        language_group.setStyleSheet("""
+        language_group.setStyleSheet(""" 
             QGroupBox {
                 font-weight: bold;
                 border: 1px solid #3a3a3a;
@@ -153,142 +184,93 @@ class SettingsWidget(QWidget):
         general_layout.addWidget(language_group)
         
         # 主题设置组
-        theme_group = QGroupBox(self.get_translation("theme_settings"))
-        theme_group.setStyleSheet("""
-            QGroupBox {
-                font-weight: bold;
-                border: 1px solid #3a3a3a;
-                border-radius: 6px;
-                margin-top: 1em;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-            }
-        """)
-        theme_layout = QVBoxLayout(theme_group)
-        theme_layout.setContentsMargins(15, 15, 15, 15)  # 增加内边距
+        theme_group = QGroupBox(self.get_translation("theme_selection", "主题选择"))
+        theme_layout = QVBoxLayout()
         
-        theme_select_layout = QHBoxLayout()
-        theme_label = QLabel(self.get_translation("theme"))
-        theme_label.setMinimumWidth(120)  # 设置最小宽度确保标签不会重叠
-        theme_label.setMaximumWidth(120)  # 设置最大宽度
-        
+        theme_label = QLabel(self.get_translation("select_theme", "选择主题:"))
         self.theme_combo = QComboBox()
-        self.theme_combo.addItem(self.get_translation("dark"), "深色")
-        self.theme_combo.addItem(self.get_translation("light"), "浅色")
-        self.theme_combo.addItem(self.get_translation("blue"), "蓝色主题")
-        self.theme_combo.addItem(self.get_translation("green"), "绿色主题")
-        self.theme_combo.addItem(self.get_translation("purple"), "紫色主题")
-        self.theme_combo.addItem(self.get_translation("custom"), "自定义")
+        
+        # 加载主题名称和显示名称
+        theme_names = self.theme_manager.get_theme_names()
+        display_names = self.theme_manager.get_theme_display_names(
+            "zh" if self.settings.get_setting("language", "English") == "简体中文" else "en"
+        )
+        
+        # 添加主题选项
+        for theme_name in theme_names:
+            display_name = display_names.get(theme_name, theme_name.capitalize())
+            self.theme_combo.addItem(display_name, theme_name)
+        
         self.theme_combo.currentIndexChanged.connect(self.on_theme_changed)
         
-        theme_select_layout.addWidget(theme_label)
-        theme_select_layout.addWidget(self.theme_combo, 1)  # 设置伸展因子
-        
-        theme_layout.addLayout(theme_select_layout)
-        
-        # 透明度设置
-        transparency_layout = QFormLayout()
-        transparency_label = QLabel("窗口透明度：")
-        transparency_label.setObjectName("transparency_label")
-        transparency_label.setStyleSheet("color: #e0e0e0;")
-        
-        transparency_container = QWidget()
-        transparency_container_layout = QHBoxLayout(transparency_container)
-        transparency_container_layout.setContentsMargins(0, 0, 0, 0)
-        
+        # 窗口透明度
+        transparency_label = QLabel(self.get_translation("window_transparency", "窗口透明度:"))
         self.transparency_slider = QSlider(Qt.Horizontal)
-        self.transparency_slider.setObjectName("transparency_slider")
-        self.transparency_slider.setRange(30, 100)  # 30% 到 100% 的透明度范围
-        self.transparency_slider.setValue(100)  # 默认为不透明
+        self.transparency_slider.setRange(30, 100)  # 30% 到 100%
+        self.transparency_slider.setValue(100)
         self.transparency_slider.setTickPosition(QSlider.TicksBelow)
         self.transparency_slider.setTickInterval(10)
-        
         self.transparency_value = QLabel("100%")
-        self.transparency_value.setStyleSheet("color: #e0e0e0;")
+        self.transparency_slider.valueChanged.connect(self.on_transparency_changed)
         
-        transparency_container_layout.addWidget(self.transparency_slider)
-        transparency_container_layout.addWidget(self.transparency_value)
+        transparency_layout = QHBoxLayout()
+        transparency_layout.addWidget(self.transparency_slider)
+        transparency_layout.addWidget(self.transparency_value)
         
-        transparency_layout.addRow(transparency_label, transparency_container)
-        theme_layout.addLayout(transparency_layout)
-        
-        # 连接透明度滑块的信号
-        self.transparency_slider.valueChanged.connect(self.update_transparency_value)
-        
-        # 自定义颜色设置
+        # 自定义颜色选项
         self.custom_colors_widget = QWidget()
-        custom_colors_layout = QFormLayout(self.custom_colors_widget)
+        custom_colors_layout = QVBoxLayout()
+        self.custom_colors_widget.setLayout(custom_colors_layout)
         
         # 背景颜色
-        bg_color_label = QLabel("背景颜色：")
-        bg_color_label.setStyleSheet("color: #e0e0e0;")
-        bg_color_container = QWidget()
-        bg_color_layout = QHBoxLayout(bg_color_container)
-        bg_color_layout.setContentsMargins(0, 0, 0, 0)
-        
-        self.bg_color_preview = QLabel()
-        self.bg_color_preview.setFixedSize(24, 24)
-        self.bg_color_preview.setStyleSheet("background-color: #1e1e1e; border: 1px solid #3a3a3a;")
-        bg_color_layout.addWidget(self.bg_color_preview)
-        
-        self.bg_color_button = QPushButton("选择颜色")
-        self.bg_color_button.clicked.connect(lambda: self.choose_color("bg"))
-        self.bg_color_button.setStyleSheet("color: #e0e0e0; background-color: #2a2a2a;")
+        bg_color_layout = QHBoxLayout()
+        bg_color_label = QLabel(self.get_translation("background_color", "背景颜色:"))
+        self.bg_color_button = QPushButton()
+        self.bg_color_button.setFixedSize(80, 24)
+        self.bg_color_button.clicked.connect(lambda: self.choose_color("custom_bg_color", self.bg_color_button))
+        bg_color_layout.addWidget(bg_color_label)
         bg_color_layout.addWidget(self.bg_color_button)
         bg_color_layout.addStretch()
         
-        custom_colors_layout.addRow(bg_color_label, bg_color_container)
-        
         # 文本颜色
-        text_color_label = QLabel("文本颜色：")
-        text_color_label.setStyleSheet("color: #e0e0e0;")
-        text_color_container = QWidget()
-        text_color_layout = QHBoxLayout(text_color_container)
-        text_color_layout.setContentsMargins(0, 0, 0, 0)
-        
-        self.text_color_preview = QLabel()
-        self.text_color_preview.setFixedSize(24, 24)
-        self.text_color_preview.setStyleSheet("background-color: #e0e0e0; border: 1px solid #3a3a3a;")
-        text_color_layout.addWidget(self.text_color_preview)
-        
-        self.text_color_button = QPushButton("选择颜色")
-        self.text_color_button.clicked.connect(lambda: self.choose_color("text"))
-        self.text_color_button.setStyleSheet("color: #e0e0e0; background-color: #2a2a2a;")
+        text_color_layout = QHBoxLayout()
+        text_color_label = QLabel(self.get_translation("text_color", "文本颜色:"))
+        self.text_color_button = QPushButton()
+        self.text_color_button.setFixedSize(80, 24)
+        self.text_color_button.clicked.connect(lambda: self.choose_color("custom_text_color", self.text_color_button))
+        text_color_layout.addWidget(text_color_label)
         text_color_layout.addWidget(self.text_color_button)
         text_color_layout.addStretch()
         
-        custom_colors_layout.addRow(text_color_label, text_color_container)
-        
         # 强调颜色
-        accent_color_label = QLabel("强调颜色：")
-        accent_color_label.setStyleSheet("color: #e0e0e0;")
-        accent_color_container = QWidget()
-        accent_color_layout = QHBoxLayout(accent_color_container)
-        accent_color_layout.setContentsMargins(0, 0, 0, 0)
-        
-        self.accent_color_preview = QLabel()
-        self.accent_color_preview.setFixedSize(24, 24)
-        self.accent_color_preview.setStyleSheet("background-color: #00a8ff; border: 1px solid #3a3a3a;")
-        accent_color_layout.addWidget(self.accent_color_preview)
-        
-        self.accent_color_button = QPushButton("选择颜色")
-        self.accent_color_button.clicked.connect(lambda: self.choose_color("accent"))
-        self.accent_color_button.setStyleSheet("color: #e0e0e0; background-color: #2a2a2a;")
+        accent_color_layout = QHBoxLayout()
+        accent_color_label = QLabel(self.get_translation("accent_color", "强调颜色:"))
+        self.accent_color_button = QPushButton()
+        self.accent_color_button.setFixedSize(80, 24)
+        self.accent_color_button.clicked.connect(lambda: self.choose_color("custom_accent_color", self.accent_color_button))
+        accent_color_layout.addWidget(accent_color_label)
         accent_color_layout.addWidget(self.accent_color_button)
         accent_color_layout.addStretch()
         
-        custom_colors_layout.addRow(accent_color_label, accent_color_container)
+        # 保存自定义主题按钮
+        save_theme_button = QPushButton(self.get_translation("save_custom_theme", "保存自定义主题"))
+        save_theme_button.clicked.connect(self.save_custom_theme)
         
+        # 添加所有颜色选择器到自定义布局
+        custom_colors_layout.addLayout(bg_color_layout)
+        custom_colors_layout.addLayout(text_color_layout)
+        custom_colors_layout.addLayout(accent_color_layout)
+        custom_colors_layout.addWidget(save_theme_button)
+        
+        # 组装主题布局
+        theme_layout.addWidget(theme_label)
+        theme_layout.addWidget(self.theme_combo)
+        theme_layout.addWidget(transparency_label)
+        theme_layout.addLayout(transparency_layout)
         theme_layout.addWidget(self.custom_colors_widget)
-        self.custom_colors_widget.setVisible(False)  # Initially hide custom colors
+        theme_group.setLayout(theme_layout)
         
-        # Connect theme combo box signal
-        self.theme_combo.currentIndexChanged.connect(self.on_theme_changed)
-        
+        # 将主题组添加到主布局
         general_layout.addWidget(theme_group)
         
         # 通知组
@@ -317,7 +299,7 @@ class SettingsWidget(QWidget):
         
         general_layout.addWidget(notifications_group)
     
-    def setup_scan_tab(self):
+    def setup_scan_tab(self) -> None:
         """设置扫描选项卡"""
         layout = QVBoxLayout(self.scan_tab)
         
@@ -476,46 +458,66 @@ class SettingsWidget(QWidget):
         if folder:
             self.edit_backup_location.setText(folder)
     
-    def choose_color(self, color_type):
+    def choose_color(self, color_type, button):
         """打开颜色选择对话框"""
         current_color = None
-        preview_widget = None
         
-        if color_type == "bg":
-            current_color = QColor(self.settings.get_setting("custom_bg_color", "#1e1e1e"))
-            preview_widget = self.bg_color_preview
-        elif color_type == "text":
-            current_color = QColor(self.settings.get_setting("custom_text_color", "#e0e0e0"))
-            preview_widget = self.text_color_preview
-        elif color_type == "accent":
-            current_color = QColor(self.settings.get_setting("custom_accent_color", "#00a8ff"))
-            preview_widget = self.accent_color_preview
+        try:
+            # 获取当前颜色设置
+            if color_type == "custom_bg_color":
+                current_color = self.settings.get_setting("custom_bg_color", "#1e1e1e")
+            elif color_type == "custom_text_color":
+                current_color = self.settings.get_setting("custom_text_color", "#e0e0e0")
+            elif color_type == "custom_accent_color":
+                current_color = self.settings.get_setting("custom_accent_color", "#555555")
+            
+            # 创建颜色对话框
+            color = QColorDialog.getColor(QColor(current_color), self, "选择颜色")
+            
+            if color.isValid():
+                # 保存新颜色设置
+                hex_color = color.name()
+                self.settings.set_setting(color_type, hex_color)
+                
+                # 更新按钮颜色
+                button.setStyleSheet(f"background-color: {hex_color}; min-width: 80px; min-height: 24px;")
+                
+                # 更新并应用自定义主题
+                self.update_custom_theme()
+        except Exception as e:
+            print(f"选择颜色时出错: {str(e)}")
+    
+    def update_custom_theme(self):
+        """更新自定义主题"""
+        # 获取自定义颜色
+        bg_color = self.settings.get_setting("custom_bg_color", "#1e1e1e")
+        text_color = self.settings.get_setting("custom_text_color", "#e0e0e0")
+        accent_color = self.settings.get_setting("custom_accent_color", "#555555")
         
-        dialog = QColorDialog(current_color, self)
-        if dialog.exec_():
-            selected_color = dialog.selectedColor()
-            if selected_color.isValid():
-                color_hex = selected_color.name()
-                
-                # 更新预览
-                preview_widget.setStyleSheet(f"background-color: {color_hex}; border: 1px solid #3a3a3a;")
-                
-                # 存储颜色
-                if color_type == "bg":
-                    self.settings.set_setting("custom_bg_color", color_hex)
-                elif color_type == "text":
-                    self.settings.set_setting("custom_text_color", color_hex)
-                elif color_type == "accent":
-                    self.settings.set_setting("custom_accent_color", color_hex)
+        # 更新主题管理器中的自定义主题
+        self.theme_manager.update_custom_theme({
+            "bg_color": bg_color,
+            "text_color": text_color,
+            "accent_color": accent_color
+        })
+        
+        # 更新主题
+        if self.settings.get_setting("theme", "dark") == "custom":
+            main_window = self.window()
+            if main_window and hasattr(main_window, 'apply_theme'):
+                main_window.apply_theme()
     
     def on_theme_changed(self, index):
         """处理主题变化"""
         # 只有当选择"自定义"时才显示自定义颜色选项
-        self.custom_colors_widget.setVisible(index == 5)  # 5 = "自定义"
+        selected_theme = self.theme_combo.currentData()
+        self.custom_colors_widget.setVisible(selected_theme == "custom")
         
         # 实时应用主题更改
-        selected_theme = self.theme_combo.currentText()
         self.settings.set_setting("theme", selected_theme)
+        
+        # 设置主题管理器当前主题
+        self.theme_manager.set_current_theme(selected_theme)
         
         # 尝试通知主窗口应用新主题
         main_window = self.window()
@@ -532,29 +534,26 @@ class SettingsWidget(QWidget):
         self.maintenance_reminder_checkbox.setChecked(self.settings.get_setting("maintenance_reminder", True))
         
         # 加载主题设置
-        theme = self.settings.get_setting("theme", "深色")
-        index = self.theme_combo.findText(theme)
+        theme = self.settings.get_setting("theme", "dark")
+        # 查找主题的索引 - 尝试使用数据角色查找
+        index = -1
+        for i in range(self.theme_combo.count()):
+            if self.theme_combo.itemData(i) == theme:
+                index = i
+                break
+                
         if index >= 0:
             self.theme_combo.setCurrentIndex(index)
         else:
-            self.theme_combo.setCurrentIndex(0)  # 默认深色主题
+            self.theme_combo.setCurrentIndex(0)  # 默认dark主题
         
         # 加载透明度设置
         transparency = self.settings.get_setting("window_transparency", 100)
         self.transparency_slider.setValue(transparency)
         self.transparency_value.setText(f"{transparency}%")
-            
-        # 设置自定义颜色预览
-        bg_color = self.settings.get_setting("custom_bg_color", "#1e1e1e")
-        text_color = self.settings.get_setting("custom_text_color", "#e0e0e0")
-        accent_color = self.settings.get_setting("custom_accent_color", "#00a8ff")
         
-        self.bg_color_preview.setStyleSheet(f"background-color: {bg_color}; border: 1px solid #3a3a3a;")
-        self.text_color_preview.setStyleSheet(f"background-color: {text_color}; border: 1px solid #3a3a3a;")
-        self.accent_color_preview.setStyleSheet(f"background-color: {accent_color}; border: 1px solid #3a3a3a;")
-        
-        # 显示/隐藏自定义颜色设置
-        self.custom_colors_widget.setVisible(self.theme_combo.currentText() == "自定义")
+        # 设置自定义颜色按钮的初始颜色
+        self.update_color_buttons()
         
         # 加载高级设置
         self.check_backup_before_repair.setChecked(self.settings.get_setting("backup_before_repair", True))
@@ -591,8 +590,9 @@ class SettingsWidget(QWidget):
         self.settings.set_setting("show_tips", self.show_tips_checkbox.isChecked())
         self.settings.set_setting("maintenance_reminder", self.maintenance_reminder_checkbox.isChecked())
         
-        # 保存主题设置
-        self.settings.set_setting("theme", self.theme_combo.currentText())
+        # 保存主题设置 - 使用数据角色的值
+        theme_data = self.theme_combo.currentData()
+        self.settings.set_setting("theme", theme_data)
         
         # 保存透明度设置
         self.settings.set_setting("window_transparency", self.transparency_slider.value())
@@ -628,15 +628,10 @@ class SettingsWidget(QWidget):
         self.maintenance_reminder_checkbox.setChecked(True)
         
         # 重置主题设置
-        self.theme_combo.setCurrentText("深色")
+        self.theme_combo.setCurrentText("dark")
         
         # 重置自定义颜色
-        self.bg_color_preview.setStyleSheet("background-color: #1e1e1e; border: 1px solid #3a3a3a;")
-        self.text_color_preview.setStyleSheet("background-color: #e0e0e0; border: 1px solid #3a3a3a;")
-        self.accent_color_preview.setStyleSheet("background-color: #00a8ff; border: 1px solid #3a3a3a;")
-        
-        # 隐藏自定义颜色设置
-        self.custom_colors_widget.setVisible(False)
+        self.update_color_buttons()
         
         # 重置高级设置
         self.check_backup_before_repair.setChecked(True)
@@ -680,8 +675,8 @@ class SettingsWidget(QWidget):
             parent = parent.parent()
         
     def refresh_language(self):
-        """使用新翻译更新UI元素"""
-        # 更新选项卡标题
+        """根据当前语言更新界面文本"""
+        # 更新标签页标题
         self.tabs.setTabText(0, self.get_translation("general_tab", "常规"))
         self.tabs.setTabText(1, self.get_translation("scan_tab", "扫描"))
         self.tabs.setTabText(2, self.get_translation("advanced_tab", "高级"))
@@ -719,21 +714,26 @@ class SettingsWidget(QWidget):
             self.theme_combo.setItemText(4, self.get_translation("purple", "紫色主题"))
             self.theme_combo.setItemText(5, self.get_translation("custom", "自定义"))
             
-        # 找到自定义颜色部分的标签并更新
-        for i in range(self.custom_colors_widget.layout().rowCount()):
-            item = self.custom_colors_widget.layout().itemAt(i, 0)
-            if item and item.widget():
-                label = item.widget()
-                if label.text() == "背景颜色：":
+        # 更新自定义颜色部分 - 考虑布局变更为QVBoxLayout
+        try:
+            bg_color_label = None
+            text_color_label = None
+            accent_color_label = None
+            
+            # 遍历所有标签，查找自定义颜色的标签
+            for label in self.findChildren(QLabel):
+                if "背景颜色" in label.text():
                     label.setText(self.get_translation("background_color", "背景颜色："))
-                elif label.text() == "文本颜色：":
+                elif "文本颜色" in label.text():
                     label.setText(self.get_translation("text_color", "文本颜色："))
-                elif label.text() == "强调颜色：":
+                elif "强调颜色" in label.text():
                     label.setText(self.get_translation("accent_color", "强调颜色："))
-                    
+        except Exception as e:
+            print(f"更新自定义颜色标签出错: {str(e)}")
+                
         # 更新颜色选择按钮
         for button in self.findChildren(QPushButton):
-            if button.text() == "选择颜色":
+            if "选择颜色" in button.text():
                 button.setText(self.get_translation("choose_color", "选择颜色"))
         
         # 更新通知组
@@ -747,6 +747,7 @@ class SettingsWidget(QWidget):
         
         # 更新按钮
         self.save_button.setText(self.get_translation("save_settings", "保存设置"))
+        self.apply_button.setText(self.get_translation("apply_settings", "应用设置"))
         self.restore_defaults_button.setText(self.get_translation("restore_defaults", "恢复默认"))
     
     def check_all_translations(self):
@@ -772,7 +773,194 @@ class SettingsWidget(QWidget):
         self.get_translation("save_settings")
         self.get_translation("restore_defaults")
 
-    def update_transparency_value(self):
+    def on_transparency_changed(self, value):
         """处理透明度变化"""
-        value = self.transparency_slider.value()
         self.transparency_value.setText(f"{value}%")
+        self.settings.set_setting("window_transparency", value)
+        
+        # 如果直接连接到主窗口，应用透明度变化
+        main_window = self.window()
+        if main_window and hasattr(main_window, 'apply_transparency'):
+            main_window.apply_transparency()
+
+    def apply_settings(self):
+        """应用当前设置并重新加载UI"""
+        self.save_settings()  # 复用保存逻辑
+        
+        # 获取主窗口实例
+        main_window = self.window()
+        
+        # 如果当前在独立设置窗口
+        if isinstance(main_window, QDialog):
+            main_window = main_window.parent()
+        
+        # 禁用应用按钮，避免重复点击
+        self.apply_button.setEnabled(False)
+        self.apply_button.setText(self.get_translation("applying", "正在应用..."))
+        
+        # 清除之前的状态栏（如果存在）
+        if hasattr(self, 'status_bar') and self.status_bar:
+            try:
+                self.layout().removeWidget(self.status_bar)
+                self.status_bar.deleteLater()
+                self.status_bar = None
+            except Exception as e:
+                print(f"移除状态栏出错: {str(e)}")
+        
+        # 添加加载动画
+        movie = QMovie("src/assets/images/loading.gif")
+        loading_label = None
+        if movie.isValid():
+            loading_label = QLabel(self)
+            loading_label.setAlignment(Qt.AlignCenter)
+            loading_label.setMovie(movie)
+            movie.start()
+            
+            # 将加载动画覆盖在设置界面上，但不影响原来的布局
+            loading_label.setGeometry(self.rect())
+            loading_label.setFixedSize(self.size())  # 确保大小固定
+            loading_label.setStyleSheet("background-color: rgba(0, 0, 0, 150); border: none;")
+            loading_label.raise_()  # 确保显示在最上层
+            loading_label.show()
+            
+            # 确保处理事件以显示加载界面
+            QApplication.processEvents()
+        
+        if main_window and hasattr(main_window, 'apply_theme'):
+            # 应用主题变化
+            main_window.apply_theme()
+            
+            # 应用透明度
+            main_window.apply_transparency()
+            
+            # 刷新所有组件
+            if hasattr(main_window, 'refresh_all_components'):
+                main_window.refresh_all_components()
+                
+            # 应用语言变化并重新加载UI
+            QTimer.singleShot(100, lambda: main_window.change_language(
+                self.settings.get_setting("language", "en")
+            ))
+        
+        # 延迟一段时间后恢复按钮状态，确保用户看到反馈
+        QTimer.singleShot(1500, lambda: self._finish_applying(loading_label if movie.isValid() else None, movie))
+            
+        # 添加视觉反馈
+        AnimationUtils.highlight(self.apply_button, duration=800)
+        
+        # 创建新的状态栏用于显示反馈信息
+        self.status_bar = QStatusBar(self)
+        self.status_bar.setStyleSheet("color: #4CAF50;")
+        self.layout().addWidget(self.status_bar)
+        self.status_bar.showMessage(self.get_translation("settings_applied", "设置已应用"), 3000)
+        
+    def _finish_applying(self, loading_label=None, movie=None):
+        """完成应用设置过程"""
+        try:
+            # 恢复按钮状态
+            self.apply_button.setEnabled(True)
+            self.apply_button.setText(self.get_translation("apply_settings", "应用设置"))
+            
+            # 移除加载动画
+            if loading_label:
+                if movie:
+                    movie.stop()
+                loading_label.hide()
+                loading_label.deleteLater()
+            
+            # 确保布局更新
+            self.updateGeometry()
+            self.update()
+        except Exception as e:
+            print(f"清理应用设置界面出错: {str(e)}")
+
+    def save_custom_theme(self):
+        """保存当前自定义主题设置到主题文件"""
+        # 获取当前自定义颜色
+        bg_color = self.settings.get_setting("custom_bg_color", "#1e1e1e")
+        text_color = self.settings.get_setting("custom_text_color", "#e0e0e0")
+        accent_color = self.settings.get_setting("custom_accent_color", "#555555")
+        
+        # 创建主题数据结构
+        theme_data = {
+            "name": "custom",
+            "display_name": {
+                "en": "Custom",
+                "zh": "自定义"
+            },
+            "colors": {
+                "bg_color": bg_color,
+                "text_color": text_color,
+                "accent_color": accent_color,
+                "bg_lighter": self.lighten_color(bg_color, 10),
+                "bg_darker": self.lighten_color(bg_color, -10)
+            },
+            "component_specific": {
+                "button": {
+                    "primary_bg": accent_color,
+                    "primary_text": "#ffffff",
+                    "primary_hover": self.lighten_color(accent_color, 10),
+                    "primary_pressed": self.lighten_color(accent_color, -10)
+                },
+                "progressbar": {
+                    "chunk_color": accent_color
+                }
+            }
+        }
+        
+        # 保存主题到文件
+        try:
+            theme_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "themes")
+            if not os.path.exists(theme_dir):
+                os.makedirs(theme_dir)
+            
+            theme_file = os.path.join(theme_dir, "custom.json")
+            with open(theme_file, 'w', encoding='utf-8') as f:
+                json.dump(theme_data, f, indent=4, ensure_ascii=False)
+            
+            # 显示成功消息
+            self.status_bar = QStatusBar(self)
+            self.status_bar.setStyleSheet("color: #4CAF50;")
+            self.layout().addWidget(self.status_bar)
+            self.status_bar.showMessage(self.get_translation("custom_theme_saved", "自定义主题已保存"), 3000)
+        except Exception as e:
+            # 显示错误消息
+            self.status_bar = QStatusBar(self)
+            self.status_bar.setStyleSheet("color: #F44336;")
+            self.layout().addWidget(self.status_bar)
+            self.status_bar.showMessage(self.get_translation("custom_theme_save_error", f"保存自定义主题时出错: {str(e)}"), 3000)
+
+    def lighten_color(self, color, amount=0):
+        """使颜色变亮或变暗
+        
+        Args:
+            color: 十六进制颜色代码
+            amount: 变化量，正数变亮，负数变暗
+            
+        Returns:
+            新的十六进制颜色代码
+        """
+        try:
+            c = color.lstrip('#')
+            c = tuple(int(c[i:i+2], 16) for i in (0, 2, 4))
+            
+            r, g, b = c
+            
+            r = min(255, max(0, r + amount * 2.55))
+            g = min(255, max(0, g + amount * 2.55))
+            b = min(255, max(0, b + amount * 2.55))
+            
+            return '#{:02x}{:02x}{:02x}'.format(int(r), int(g), int(b))
+        except Exception as e:
+            print(f"计算颜色变化出错: {str(e)}")
+            return color
+
+    def update_color_buttons(self):
+        """更新自定义颜色按钮的显示"""
+        bg_color = self.settings.get_setting("custom_bg_color", "#1e1e1e")
+        text_color = self.settings.get_setting("custom_text_color", "#e0e0e0")
+        accent_color = self.settings.get_setting("custom_accent_color", "#555555")
+        
+        self.bg_color_button.setStyleSheet(f"background-color: {bg_color}; min-width: 80px; min-height: 24px;")
+        self.text_color_button.setStyleSheet(f"background-color: {text_color}; min-width: 80px; min-height: 24px;")
+        self.accent_color_button.setStyleSheet(f"background-color: {accent_color}; min-width: 80px; min-height: 24px;")

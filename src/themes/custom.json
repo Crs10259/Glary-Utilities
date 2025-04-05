@@ -1,0 +1,25 @@
+{
+    "name": "custom",
+    "display_name": {
+        "en": "Custom",
+        "zh": "自定义"
+    },
+    "colors": {
+        "bg_color": "#1e1e1e",
+        "text_color": "#e0e0e0",
+        "accent_color": "#00a8ff",
+        "bg_lighter": "#373737",
+        "bg_darker": "#040404"
+    },
+    "component_specific": {
+        "button": {
+            "primary_bg": "#00a8ff",
+            "primary_text": "#ffffff",
+            "primary_hover": "#19c1ff",
+            "primary_pressed": "#008ee5"
+        },
+        "progressbar": {
+            "chunk_color": "#00a8ff"
+        }
+    }
+}

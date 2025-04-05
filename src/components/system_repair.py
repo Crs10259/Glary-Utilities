@@ -19,8 +19,8 @@ class RepairThread(QThread):
     
     def __init__(self, options, operation="scan"):
         super().__init__()
-        self.options = options  # Dictionary of options to scan for
-        self.operation = operation  # "scan" or "repair"
+        self.options = options 
+        self.operation = operation  
         self.stop_requested = False
     
     def run(self):
@@ -230,33 +230,48 @@ class RepairThread(QThread):
         return True
 
 class SystemRepairWidget(BaseComponent):
-    def __init__(self, settings, parent=None):
+    """系统修复小部件，显示系统修复选项"""
+    
+    def __init__(self, parent=None):
         # Initialize properties
         self.scan_results = None
         self.selected_issues = []
-        self.worker = None
+        self.repair_worker = None
         
         # Call parent constructor
-        super().__init__(settings, parent)
+        super().__init__(parent)
     
     def get_translation(self, key, default=None):
         """Override get_translation to use the correct section name"""
         return self.settings.get_translation("system_repair", key, default)
     
     def setup_ui(self):
-        # Main layout
-        self.main_layout = QVBoxLayout(self)
+        """设置UI组件"""
+        # 清除旧布局（如果有）
+        if self.layout():
+            # 清除旧布局中的所有部件
+            while self.layout().count():
+                item = self.layout().takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # 删除旧布局
+            old_layout = self.layout()
+            QWidget().setLayout(old_layout)  # 将旧布局设置给一个临时部件以便删除
+        
+        # 主布局
+        self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(20)
         
         # Title
         self.title = QLabel(self.get_translation("title"))
-        self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
+        self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0; background-color: transparent;")
         self.main_layout.addWidget(self.title)
         
         # Description
         self.description = QLabel(self.get_translation("description"))
-        self.description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
+        self.description.setStyleSheet("font-size: 14px; color: #a0a0a0; background-color: transparent;")
         self.main_layout.addWidget(self.description)
         
         # Tab widget
@@ -288,11 +303,13 @@ class SystemRepairWidget(BaseComponent):
         
         # Scan tab
         self.scan_tab = QWidget()
+        self.scan_tab.setStyleSheet("background-color: transparent;")
         self.setup_scan_tab()
         self.tab_widget.addTab(self.scan_tab, self.get_translation("scan_tab"))
         
         # Results tab
         self.results_tab = QWidget()
+        self.results_tab.setStyleSheet("background-color: transparent;")
         self.setup_results_tab()
         self.tab_widget.addTab(self.results_tab, self.get_translation("results_tab"))
         
@@ -322,8 +339,14 @@ class SystemRepairWidget(BaseComponent):
         
         # Status label
         self.status_label = QLabel("Ready to scan")
-        self.status_label.setStyleSheet("color: #a0a0a0;")
+        self.status_label.setStyleSheet("color: #a0a0a0; background-color: transparent;")
         self.main_layout.addWidget(self.status_label)
+        
+        # 设置布局
+        self.setLayout(self.main_layout)
+        
+        # 确保样式正确应用
+        self.setAttribute(Qt.WA_StyledBackground, True)
     
     def setup_scan_tab(self):
         """Setup the scan options tab"""
@@ -515,10 +538,10 @@ class SystemRepairWidget(BaseComponent):
         self.start_scan_button.setText(self.get_translation("scanning"))
         
         # Start worker thread
-        self.worker = RepairThread(options, "scan")
-        self.worker.progress_updated.connect(self.update_progress)
-        self.worker.scan_completed.connect(self.scan_completed)
-        self.worker.start()
+        self.repair_worker = RepairThread(options, "scan")
+        self.repair_worker.progress_updated.connect(self.update_progress)
+        self.repair_worker.scan_completed.connect(self.scan_completed)
+        self.repair_worker.start()
     
     def update_progress(self, progress, status):
         """Update progress bar and status label"""
@@ -572,10 +595,10 @@ class SystemRepairWidget(BaseComponent):
         self.repair_button.setText(self.get_translation("repairing"))
         
         # Start worker thread
-        self.worker = RepairThread({"issues": issues_to_fix}, "repair")
-        self.worker.progress_updated.connect(self.update_progress)
-        self.worker.repair_completed.connect(self.repair_completed)
-        self.worker.start()
+        self.repair_worker = RepairThread({"issues": issues_to_fix}, "repair")
+        self.repair_worker.progress_updated.connect(self.update_progress)
+        self.repair_worker.repair_completed.connect(self.repair_completed)
+        self.repair_worker.start()
     
     def repair_completed(self, results):
         """Handle repair completion"""

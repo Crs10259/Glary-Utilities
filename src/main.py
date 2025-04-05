@@ -1,92 +1,145 @@
 import sys
 import os
+from typing import List, Dict, Any, Optional, Tuple
+
 from PyQt5.QtWidgets import QApplication, QMessageBox
-from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QCoreApplication, Qt
-from PyQt5.QtChart import QChart
+
 from utils.settings_manager import Settings
 from main_window import MainWindow
 from components.icons import Icon
+from utils.platform import PlatformUtils
+from utils.logger import Logger
+from utils.exception_handler import ExceptionHandler
 
-def main():
-    
-    # 解析命令行参数
-    check_translations = '--check-translations' in sys.argv
-    debug_mode = '--debug' in sys.argv
-    
-    # 启用高DPI缩放
-    QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-    QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
-    
-    # 创建应用程序
-    app = QApplication(sys.argv)
-    app.setApplicationName("Glary Utilities")
-    app.setOrganizationName("Glarysoft")
-    
-    # 设置应用程序图标
-    icon_path = Icon.Icon.Path
-    if os.path.exists(icon_path):
-        app_icon = QIcon(icon_path)
-        if not app_icon.isNull():
-            app.setWindowIcon(app_icon)
-        else:
-            print(f"警告: 无法加载应用程序图标: {icon_path}")
-    else:
-        print(f"警告: 应用程序图标文件不存在: {icon_path}")
 
-    # 初始化设置
-    settings = Settings()
-
-    # 开启调试模式
-    if debug_mode:
-        settings.set_setting("debug_mode", True)
-        print("调试模式已启用")
+class GlaryUtilitiesApp:
+    """Main application class for Glary Utilities"""
     
-    try:
-        # 创建主窗口
-        window = MainWindow(settings)
+    def __init__(self, argv: List[str]):
+        self.argv = argv
+        self.logger = Logger().get_logger()
+        self.exception_handler = ExceptionHandler()
+        self.settings: Optional[Settings] = None
+        self.app: Optional[QApplication] = None
+        self.window: Optional[MainWindow] = None
         
-        # 检查缺失的翻译
-        if check_translations:
-            print("正在检查缺失的翻译...")
-            window.check_all_translations()
-            print("翻译检查完成")
+    def parse_arguments(self) -> Dict[str, bool]:
+        """Parse command line arguments"""
+        return {
+            "check_translations": "--check-translations" in self.argv,
+            "debug_mode": "--debug" in self.argv,
+            "reset_settings": "--reset-settings" in self.argv,
+            "exit_after_check": "--exit-after-check" in self.argv
+        }
+        
+    def setup_application(self) -> None:
+        """Initialize QApplication with proper settings"""
+        # Enable high DPI scaling
+        QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+        QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+        
+        # Create application
+        self.app = QApplication(self.argv)
+        self.app.setApplicationName("Glary Utilities")
+        self.app.setOrganizationName("Glarysoft")
+        
+        # Set application icon
+        if Icon.Icon.Exist:
+            app_icon = QIcon(Icon.Icon.Path)
+            if not app_icon.isNull():
+                self.app.setWindowIcon(app_icon)
+            else:
+                self.logger.warning(f"Failed to load application icon: {Icon.Icon.Path}")
+                
+        # Optimize startup performance
+        self.app.setStartDragDistance(20)  # Reduce drag sensitivity
+        self.app.setStartDragTime(500)     # Increase drag start time
+        
+    def initialize_settings(self, args: Dict[str, bool]) -> None:
+        """Initialize and configure settings"""
+        self.settings = Settings()
+        
+        # Reset settings if requested
+        if args["reset_settings"]:
+            self.settings.reset_settings()
+            self.logger.info("Settings have been reset to defaults.")
             
-            # 如果只检查翻译，则退出
-            if '--exit-after-check' in sys.argv:
-                print("检查后退出")
+        # Enable debug mode if requested
+        if args["debug_mode"]:
+            self.settings.set_setting("debug_mode", True)
+            self.logger.info("Debug mode enabled")
+    
+    def handle_translations(self, args: Dict[str, bool]) -> bool:
+        """Handle translation checking
+        
+        Returns:
+            bool: True if application should continue, False if it should exit
+        """
+        if not args["check_translations"]:
+            return True
+            
+        self.logger.info("Checking for missing translations...")
+        self.window.check_all_translations()
+        self.logger.info("Translation check completed")
+        
+        # Exit if only checking translations
+        if args["exit_after_check"]:
+            self.logger.info("Exiting after check")
+            return False
+            
+        return True
+    
+    def run(self) -> int:
+        """Run the application
+        
+        Returns:
+            int: Exit code
+        """
+        # Install global exception handler
+        self.exception_handler.install()
+        
+        try:
+            # Parse command line arguments
+            args = self.parse_arguments()
+            
+            # Setup application
+            self.setup_application()
+            
+            # Initialize settings
+            self.initialize_settings(args)
+            
+            # Create main window
+            self.window = MainWindow(self.settings)
+            
+            # Handle translations
+            if not self.handle_translations(args):
+                self.exception_handler.uninstall()
                 return 0
-        
-        # 显示窗口并启动应用程序
-        window.show()
-        return app.exec_()
-        
-    except KeyError as e:
+                
+            # Show window and start application
+            self.window.show()
+            self.logger.info("Application started successfully")
+            
+            # Execute application
+            result = self.app.exec_()
+            return result
+            
+        except Exception as e:
+            self.logger.exception(f"An error occurred during program execution: {e}")
+            return 1
+            
+        finally:
+            # Uninstall global exception handler
+            self.exception_handler.uninstall()
 
-        print(f"错误: {e}")
-        
-        # 仅在非检查模式下显示对话框
-        if not check_translations:
-            error_dialog = QMessageBox()
-            error_dialog.setIcon(QMessageBox.Critical)
-            error_dialog.setWindowTitle("翻译错误")
-            error_dialog.setText(f"缺失翻译: {e}")
-            error_dialog.setInformativeText("请检查翻译文件，确保所有必需的键都存在。")
-            error_dialog.exec_()
-        
-        return 1
-    except Exception as e:
-        print(f"错误: {e}")
-        
-        # 仅在非检查模式下显示对话框
-        if not check_translations:
-            error_dialog = QMessageBox()
-            error_dialog.setIcon(QMessageBox.Critical)
-            error_dialog.setWindowTitle("错误")
-            error_dialog.setText(f"发生错误: {e}")
-            error_dialog.exec_()
-        
-        return 1
+
+def main() -> int:
+    """Application entry point"""
+    app = GlaryUtilitiesApp(sys.argv)
+    return app.run()
+
 
 if __name__ == "__main__":
     sys.exit(main()) 

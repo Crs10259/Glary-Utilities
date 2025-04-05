@@ -1,0 +1,25 @@
+{
+    "name": "green",
+    "display_name": {
+        "en": "Green",
+        "zh": "绿色"
+    },
+    "colors": {
+        "bg_color": "#0f1610",
+        "text_color": "#e6edf3",
+        "accent_color": "#4caf50",
+        "bg_lighter": "#1a2e1c",
+        "bg_darker": "#0a100b"
+    },
+    "component_specific": {
+        "button": {
+            "primary_bg": "#4caf50",
+            "primary_text": "#ffffff",
+            "primary_hover": "#66bb6a",
+            "primary_pressed": "#388e3c"
+        },
+        "progressbar": {
+            "chunk_color": "#4caf50"
+        }
+    }
+}

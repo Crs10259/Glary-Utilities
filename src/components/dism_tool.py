@@ -118,34 +118,49 @@ class DismThread(QThread):
         self.operation_completed.emit(success, last_line)
 
 class DismToolWidget(BaseComponent):
-    def __init__(self, settings, parent=None):
-        self.worker = None
-        super().__init__(settings, parent)
+    def __init__(self, parent=None):
+        # 初始化属性
+        self.dism_worker = None
+        
+        # 调用父类构造函数
+        super().__init__(parent)
     
     def get_translation(self, key, default=None):
         """重写 get_translation 以使用正确的部分名称"""
         return self.settings.get_translation("dism_tool", key, default)
     
     def setup_ui(self):
+        # 清除旧布局（如果有）
+        if self.layout():
+            # 清除旧布局中的所有部件
+            while self.layout().count():
+                item = self.layout().takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            
+            # 删除旧布局
+            old_layout = self.layout()
+            QWidget().setLayout(old_layout)  # 将旧布局设置给一个临时部件以便删除
+        
         # 主布局
-        self.main_layout = QVBoxLayout(self)
+        self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(20)
         
         # 标题
         self.title = QLabel(self.get_translation("title"))
-        self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
+        self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0; background-color: transparent;")
         self.main_layout.addWidget(self.title)
         
         # 描述
         self.description = QLabel(self.get_translation("description"))
-        self.description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
+        self.description.setStyleSheet("font-size: 14px; color: #a0a0a0; background-color: transparent;")
         self.main_layout.addWidget(self.description)
         
         # 非Windows系统的警告标签
         if platform.system() != "Windows":
             warning_label = QLabel("⚠️ DISM仅在Windows系统上可用")
-            warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
+            warning_label.setStyleSheet("color: #ff9900; font-weight: bold; background-color: transparent;")
             self.main_layout.addWidget(warning_label)
         
         # 操作组
@@ -158,11 +173,13 @@ class DismToolWidget(BaseComponent):
                 border-radius: 4px;
                 margin-top: 1em;
                 padding-top: 10px;
+                background-color: transparent;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
                 left: 10px;
                 padding: 0 5px;
+                background-color: transparent;
             }
         """)
         operations_layout = QVBoxLayout(self.operations_group)
@@ -172,22 +189,22 @@ class DismToolWidget(BaseComponent):
         
         self.check_health_rb = QRadioButton(self.get_translation("check_health"))
         self.check_health_rb.setChecked(True)
-        self.check_health_rb.setStyleSheet("color: #e0e0e0;")
+        self.check_health_rb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
         operations_layout.addWidget(self.check_health_rb)
         self.operation_group.addButton(self.check_health_rb)
         
         self.scan_health_rb = QRadioButton(self.get_translation("scan_health"))
-        self.scan_health_rb.setStyleSheet("color: #e0e0e0;")
+        self.scan_health_rb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
         operations_layout.addWidget(self.scan_health_rb)
         self.operation_group.addButton(self.scan_health_rb)
         
         self.restore_health_rb = QRadioButton(self.get_translation("restore_health"))
-        self.restore_health_rb.setStyleSheet("color: #e0e0e0;")
+        self.restore_health_rb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
         operations_layout.addWidget(self.restore_health_rb)
         self.operation_group.addButton(self.restore_health_rb)
         
         self.cleanup_image_rb = QRadioButton(self.get_translation("cleanup_image"))
-        self.cleanup_image_rb.setStyleSheet("color: #e0e0e0;")
+        self.cleanup_image_rb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
         operations_layout.addWidget(self.cleanup_image_rb)
         self.operation_group.addButton(self.cleanup_image_rb)
         
@@ -220,6 +237,7 @@ class DismToolWidget(BaseComponent):
         
         # 按钮容器（用于右对齐）
         button_container = QWidget()
+        button_container.setStyleSheet("background-color: transparent;")
         button_layout = QHBoxLayout(button_container)
         button_layout.setContentsMargins(0, 0, 0, 0)
         button_layout.addItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
@@ -229,7 +247,7 @@ class DismToolWidget(BaseComponent):
         
         # 日志输出
         self.log_label = QLabel(self.get_translation("log_output"))
-        self.log_label.setStyleSheet("color: #a0a0a0; margin-top: 10px;")
+        self.log_label.setStyleSheet("color: #a0a0a0; margin-top: 10px; background-color: transparent;")
         self.main_layout.addWidget(self.log_label)
         
         self.log_output = QTextEdit()
@@ -247,6 +265,12 @@ class DismToolWidget(BaseComponent):
         
         # 设置日志的最小高度
         self.log_output.setMinimumHeight(200)
+        
+        # 设置布局
+        self.setLayout(self.main_layout)
+        
+        # 确保样式正确应用
+        self.setAttribute(Qt.WA_StyledBackground, True)
     
     def start_operation(self):
         """开始选定的DISM操作"""
@@ -270,10 +294,10 @@ class DismToolWidget(BaseComponent):
         self.log_output.append(f"开始操作: {operation}")
         
         # 启动工作线程
-        self.worker = DismThread(operation)
-        self.worker.progress_updated.connect(self.update_log)
-        self.worker.operation_completed.connect(self.operation_completed)
-        self.worker.start()
+        self.dism_worker = DismThread(operation)
+        self.dism_worker.progress_updated.connect(self.update_log)
+        self.dism_worker.operation_completed.connect(self.operation_completed)
+        self.dism_worker.start()
     
     def update_log(self, message):
         """更新日志输出"""

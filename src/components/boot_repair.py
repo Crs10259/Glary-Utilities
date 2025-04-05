@@ -5,8 +5,11 @@ import subprocess
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QLabel, QTextEdit, QProgressBar, QMessageBox,
                              QGroupBox, QRadioButton, QCheckBox, QTabWidget,
-                             QTableWidget, QTableWidgetItem)
+                             QTableWidget, QTableWidgetItem, QFrame, QSizePolicy,
+                             QSpacerItem, QHeaderView)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
+from components.base_component import BaseComponent
+from PyQt5.QtGui import QBrush, QColor
 
 class BootRepairThread(QThread):
     """Thread for running boot repair operations in the background"""
@@ -185,382 +188,295 @@ class BootRepairThread(QThread):
             self.update_log.emit("Boot repair is only available on Windows.")
             self.update_progress.emit(100)
 
-class BootRepairWidget(QWidget):
+class BootRepairWidget(BaseComponent):
     """Widget for boot repair operations"""
-    def __init__(self, settings, parent=None):
+    def __init__(self, parent=None):
+        # 初始化属性
+        self.boot_worker = None
+        
+        # 调用父类构造函数
         super().__init__(parent)
-        self.settings = settings
-        self.repair_thread = None
-        self.setup_ui()
         
     def setup_ui(self):
-        """Setup the UI components"""
-        main_layout = QVBoxLayout(self)
+        """设置UI元素"""
+        # 创建布局但不直接设置为self的布局
+        main_layout = QVBoxLayout()
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(15)
         
-        # Title and description
-        title = QLabel(self.get_translation("title", "Boot Repair"))
-        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
-        main_layout.addWidget(title)
+        # 标题
+        self.title = QLabel(self.get_translation("title", "启动修复工具"))
+        self.title.setStyleSheet("font-size: 24px; font-weight: bold;")
+        main_layout.addWidget(self.title)
         
-        description = QLabel(self.get_translation("description", "Repair Windows startup issues..."))
-        description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
-        description.setWordWrap(True)
-        main_layout.addWidget(description)
+        # 描述
+        self.description = QLabel(self.get_translation("description", "此工具可以修复常见的Windows启动问题。"))
+        self.description.setStyleSheet("font-size: 14px;")
+        self.description.setWordWrap(True)
+        main_layout.addWidget(self.description)
         
-        # Warning message
-        warning = QLabel(self.get_translation("warning", "⚠️ WARNING: Boot repair operations..."))
-        warning.setStyleSheet("color: #ff9900; font-weight: bold;")
-        warning.setWordWrap(True)
-        main_layout.addWidget(warning)
+        # 选项卡
+        self.tabs = QTabWidget()
         
-        # Repair options group
-        repair_group = QGroupBox(self.get_translation("repair_options", "Repair Options"))
-        repair_group.setStyleSheet("""
-            QGroupBox {
-                color: #e0e0e0;
-                font-weight: bold;
-                border: 1px solid #3a3a3a;
-                border-radius: 4px;
-                margin-top: 1em;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-                background-color: #1e1e1e;
-            }
-        """)
-        repair_layout = QVBoxLayout(repair_group)
+        # 创建主修复选项卡
+        self.repair_tab = QWidget()
+        repair_layout = QVBoxLayout(self.repair_tab)
         
-        # MBR repair option
-        self.mbr_checkbox = QCheckBox(self.get_translation("mbr", "Repair Master Boot Record (MBR)"))
-        self.mbr_checkbox.setStyleSheet("color: #e0e0e0;")
-        self.mbr_checkbox.setChecked(True)
-        repair_layout.addWidget(self.mbr_checkbox)
+        # 修复选项组
+        self.options_group = QGroupBox(self.get_translation("repair_options", "修复选项"))
+        options_layout = QVBoxLayout(self.options_group)
         
-        # BCD repair option
-        self.bcd_checkbox = QCheckBox(self.get_translation("bcd", "Repair Boot Configuration Data (BCD)"))
-        self.bcd_checkbox.setStyleSheet("color: #e0e0e0;")
-        self.bcd_checkbox.setChecked(True)
-        repair_layout.addWidget(self.bcd_checkbox)
+        # 修复选项单选按钮
+        self.repair_mbr_rb = QRadioButton(self.get_translation("repair_mbr", "修复主引导记录 (MBR)"))
+        self.repair_mbr_rb.setChecked(True)
+        options_layout.addWidget(self.repair_mbr_rb)
         
-        # Boot Manager repair option
-        self.bootmgr_checkbox = QCheckBox(self.get_translation("bootmgr", "Repair Boot Manager"))
-        self.bootmgr_checkbox.setStyleSheet("color: #e0e0e0;")
-        self.bootmgr_checkbox.setChecked(True)
-        repair_layout.addWidget(self.bootmgr_checkbox)
+        self.repair_bcd_rb = QRadioButton(self.get_translation("repair_bcd", "修复启动配置数据 (BCD)"))
+        options_layout.addWidget(self.repair_bcd_rb)
         
-        # Windows loader repair option
-        self.winload_checkbox = QCheckBox(self.get_translation("winload", "Repair Windows Loader"))
-        self.winload_checkbox.setStyleSheet("color: #e0e0e0;")
-        self.winload_checkbox.setChecked(True)
-        repair_layout.addWidget(self.winload_checkbox)
+        self.repair_bootmgr_rb = QRadioButton(self.get_translation("repair_bootmgr", "修复 bootmgr"))
+        options_layout.addWidget(self.repair_bootmgr_rb)
         
-        main_layout.addWidget(repair_group)
+        self.repair_winload_rb = QRadioButton(self.get_translation("repair_winload", "修复 winload.exe"))
+        options_layout.addWidget(self.repair_winload_rb)
         
-        # Action buttons
-        buttons_layout = QHBoxLayout()
+        self.full_repair_rb = QRadioButton(self.get_translation("full_repair", "完整启动修复"))
+        options_layout.addWidget(self.full_repair_rb)
         
-        self.start_button = QPushButton(self.get_translation("start_repair", "Start Repair"))
-        self.start_button.setStyleSheet("""
-            QPushButton {
-                background-color: #00a8ff;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 10px 20px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #0096e0;
-            }
-            QPushButton:pressed {
-                background-color: #0085c7;
-            }
-            QPushButton:disabled {
-                background-color: #555555;
-                color: #888888;
-            }
-        """)
-        buttons_layout.addWidget(self.start_button)
+        # 将选项组添加到修复选项卡
+        repair_layout.addWidget(self.options_group)
         
-        self.stop_button = QPushButton(self.get_translation("stop", "Stop"))
-        self.stop_button.setStyleSheet("""
-            QPushButton {
-                background-color: #ff5555;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 10px 20px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #ff3333;
-            }
-            QPushButton:pressed {
-                background-color: #cc0000;
-            }
-            QPushButton:disabled {
-                background-color: #555555;
-                color: #888888;
-            }
-        """)
+        # 修复按钮
+        self.repair_button = QPushButton(self.get_translation("start_repair", "开始修复"))
+        self.repair_button.clicked.connect(self.start_repair)
+        
+        # 停止按钮
+        self.stop_button = QPushButton(self.get_translation("stop_repair", "停止修复"))
+        self.stop_button.clicked.connect(self.stop_repair)
         self.stop_button.setEnabled(False)
-        buttons_layout.addWidget(self.stop_button)
         
-        buttons_layout.addStretch()
-        main_layout.addLayout(buttons_layout)
+        # 按钮布局
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.repair_button)
+        button_layout.addWidget(self.stop_button)
         
-        # Progress section
-        progress_label = QLabel(self.get_translation("log_output", "Operation Log"))
-        progress_label.setStyleSheet("color: #a0a0a0; margin-top: 10px;")
-        main_layout.addWidget(progress_label)
+        repair_layout.addLayout(button_layout)
+        
+        # 进度条
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        repair_layout.addWidget(self.progress)
+        
+        # 日志输出
+        self.log_label = QLabel(self.get_translation("log_output", "日志输出"))
+        repair_layout.addWidget(self.log_label)
         
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
-        self.log_output.setStyleSheet("""
-            QTextEdit {
-                background-color: #2a2a2a;
-                color: #e0e0e0;
-                border: 1px solid #3a3a3a;
-                border-radius: 4px;
-                padding: 5px;
-            }
-        """)
-        self.log_output.setMinimumHeight(200)
-        main_layout.addWidget(self.log_output)
+        repair_layout.addWidget(self.log_output)
         
-        # Connect signals
-        self.start_button.clicked.connect(self.start_repair)
-        self.stop_button.clicked.connect(self.stop_repair)
+        # 创建启动管理选项卡
+        self.startup_tab = QWidget()
+        self.setup_startup_manager_tab(self.startup_tab)
         
-        # Add initial message
-        self.log_output.append(self.get_translation("ready_message", "Ready to perform boot repair operations. Select options and click Start Repair."))
+        # 将选项卡添加到选项卡控件
+        self.tabs.addTab(self.repair_tab, self.get_translation("repair_tab", "启动修复"))
+        self.tabs.addTab(self.startup_tab, self.get_translation("startup_tab", "启动项管理"))
+        
+        # 将选项卡控件添加到主布局
+        main_layout.addWidget(self.tabs)
+        
+        # 最后设置布局
+        self.setLayout(main_layout)
+        
+        # 添加初始消息
+        self.log_output.append(self.get_translation("ready_message", "准备执行启动修复操作。选择选项并点击开始修复。"))
     
     def setup_startup_manager_tab(self, tab):
-        # Tab layout
+        """设置启动项管理选项卡"""
         layout = QVBoxLayout(tab)
+        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(10)
         
-        # Description
-        desc_label = QLabel(self.get_translation("startup_description"))
-        desc_label.setObjectName("startup_desc_label")
-        desc_label.setWordWrap(True)
-        desc_label.setStyleSheet("margin-bottom: 20px;")
-        layout.addWidget(desc_label)
+        # 描述
+        description = QLabel(self.get_translation("startup_desc", "管理Windows启动项，启用或禁用自启动程序。"))
+        description.setStyleSheet("font-size: 14px;")
+        description.setWordWrap(True)
+        layout.addWidget(description)
         
-        # Startup items list
-        list_group = QGroupBox(self.get_translation("startup_items"))
-        list_group.setObjectName("startup_items_group")
-        list_layout = QVBoxLayout(list_group)
+        # 启动项表格
+        self.startup_table = QTableWidget()
+        self.startup_table.setColumnCount(4)
+        self.startup_table.setHorizontalHeaderLabels([
+            self.get_translation("startup_name", "名称"),
+            self.get_translation("startup_path", "路径"),
+            self.get_translation("startup_status", "状态"),
+            self.get_translation("startup_type", "类型")
+        ])
         
-        self.startup_list = QTableWidget()
-        self.startup_list.setObjectName("startup_list")
-        self.startup_list.setColumnCount(4)
-        self.startup_list.setHorizontalHeaderLabels(["Name", "Publisher", "Status", "Impact"])
-        self.startup_list.horizontalHeader().setStretchLastSection(True)
-        self.startup_list.verticalHeader().setVisible(False)
-        self.startup_list.setSelectionBehavior(QTableWidget.SelectRows)
-        self.startup_list.setSelectionMode(QTableWidget.SingleSelection)
-        self.startup_list.setEditTriggers(QTableWidget.NoEditTriggers)
-        list_layout.addWidget(self.startup_list)
+        # 设置表格属性
+        self.startup_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.startup_table.setEditTriggers(QTableWidget.NoEditTriggers)
+        self.startup_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.startup_table.setAlternatingRowColors(True)
+        layout.addWidget(self.startup_table)
         
-        # Refresh button
-        self.refresh_button = QPushButton(self.get_translation("refresh_list"))
-        self.refresh_button.setObjectName("refresh_button")
+        # 按钮区域
+        button_layout = QHBoxLayout()
+        
+        # 刷新按钮
+        self.refresh_button = QPushButton(self.get_translation("refresh", "刷新列表"))
         self.refresh_button.clicked.connect(self.refresh_startup_items)
-        list_layout.addWidget(self.refresh_button)
+        button_layout.addWidget(self.refresh_button)
         
-        layout.addWidget(list_group)
-        
-        # Action buttons
-        buttons_layout = QHBoxLayout()
-        
-        self.enable_button = QPushButton(self.get_translation("enable"))
-        self.enable_button.setObjectName("enable_button")
+        # 启用/禁用按钮
+        self.enable_button = QPushButton(self.get_translation("enable", "启用"))
         self.enable_button.clicked.connect(self.enable_startup_item)
-        buttons_layout.addWidget(self.enable_button)
+        button_layout.addWidget(self.enable_button)
         
-        self.disable_button = QPushButton(self.get_translation("disable"))
-        self.disable_button.setObjectName("disable_button")
+        self.disable_button = QPushButton(self.get_translation("disable", "禁用"))
         self.disable_button.clicked.connect(self.disable_startup_item)
-        buttons_layout.addWidget(self.disable_button)
+        button_layout.addWidget(self.disable_button)
         
-        self.delete_button = QPushButton(self.get_translation("delete"))
-        self.delete_button.setObjectName("delete_button")
+        # 删除按钮
+        self.delete_button = QPushButton(self.get_translation("delete", "删除"))
         self.delete_button.clicked.connect(self.delete_startup_item)
-        buttons_layout.addWidget(self.delete_button)
+        button_layout.addWidget(self.delete_button)
         
-        layout.addLayout(buttons_layout)
+        layout.addLayout(button_layout)
         
-        # Load startup items
-        self.refresh_startup_items()
+        # 加载示例数据
+        self.load_demo_startup_items()
         
+        # 连接选择信号
+        self.startup_table.itemSelectionChanged.connect(self.update_button_states)
+        
+        # 初始化按钮状态
+        self.update_button_states()
+
+    def load_demo_startup_items(self):
+        """加载演示用的启动项数据"""
+        self.startup_table.setRowCount(0)  # 清除现有行
+        
+        demo_items = [
+            ["Microsoft Edge", "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe", "已启用", "注册表"],
+            ["Spotify", "C:\\Users\\AppData\\Roaming\\Spotify\\Spotify.exe", "已启用", "启动文件夹"],
+            ["Steam", "C:\\Program Files\\Steam\\steam.exe", "已禁用", "注册表"],
+            ["Discord", "C:\\Users\\AppData\\Local\\Discord\\app-1.0.9002\\Discord.exe", "已启用", "任务计划程序"],
+            ["OneDrive", "C:\\Program Files\\Microsoft OneDrive\\OneDrive.exe", "已禁用", "注册表"],
+        ]
+        
+        for item in demo_items:
+            row = self.startup_table.rowCount()
+            self.startup_table.insertRow(row)
+            
+            for col, text in enumerate(item):
+                self.startup_table.setItem(row, col, QTableWidgetItem(text))
+                
+            # 为已禁用项设置不同的颜色
+            if item[2] == "已禁用":
+                for col in range(4):
+                    self.startup_table.item(row, col).setForeground(QBrush(QColor("#888888")))
+
     def refresh_startup_items(self):
-        """Refresh the list of startup items"""
-        try:
-            self.startup_list.setRowCount(0)
-            
-            if platform.system() != "Windows":
-                # Add a note for non-Windows systems
-                self.startup_list.setRowCount(1)
-                self.startup_list.setItem(0, 0, QTableWidgetItem("Startup Manager is only available on Windows"))
-                self.startup_list.setSpan(0, 0, 1, 4)
-                return
-            
-            # Get startup items from registry
-            import winreg
-            
-            # Registry keys for startup items
-            reg_keys = [
-                (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run"),
-                (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run"),
-                (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\RunOnce"),
-                (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\RunOnce")
-            ]
-            
-            row = 0
-            
-            # Get startup items from registry
-            for hkey, key_path in reg_keys:
-                try:
-                    with winreg.OpenKey(hkey, key_path) as key:
-                        # Get number of values in the key
-                        num_values = winreg.QueryInfoKey(key)[1]
-                        
-                        for i in range(num_values):
-                            try:
-                                # Get name and value of each entry
-                                name, value, _ = winreg.EnumValue(key, i)
-                                
-                                # Add to table
-                                self.startup_list.insertRow(row)
-                                self.startup_list.setItem(row, 0, QTableWidgetItem(name))
-                                self.startup_list.setItem(row, 1, QTableWidgetItem("N/A"))
-                                self.startup_list.setItem(row, 2, QTableWidgetItem("Enabled"))
-                                self.startup_list.setItem(row, 3, QTableWidgetItem("Low"))
-                                
-                                row += 1
-                            except Exception as e:
-                                print(f"Error getting startup item: {e}")
-                except Exception as e:
-                    print(f"Error opening registry key: {e}")
-            
-            # Get startup items from start menu
-            startup_dir = os.path.join(
-                os.environ.get('APPDATA', ''),
-                r"Microsoft\Windows\Start Menu\Programs\Startup"
-            )
-            
-            if os.path.exists(startup_dir):
-                for item in os.listdir(startup_dir):
-                    item_path = os.path.join(startup_dir, item)
-                    if os.path.isfile(item_path) and item.endswith('.lnk'):
-                        # Add to table
-                        self.startup_list.insertRow(row)
-                        self.startup_list.setItem(row, 0, QTableWidgetItem(item))
-                        self.startup_list.setItem(row, 1, QTableWidgetItem("N/A"))
-                        self.startup_list.setItem(row, 2, QTableWidgetItem("Enabled"))
-                        self.startup_list.setItem(row, 3, QTableWidgetItem("Low"))
-                        
-                        row += 1
-            
-            if row == 0:
-                # No startup items found
-                self.startup_list.setRowCount(1)
-                self.startup_list.setItem(0, 0, QTableWidgetItem("No startup items found"))
-                self.startup_list.setSpan(0, 0, 1, 4)
-        except Exception as e:
-            print(f"Error refreshing startup items: {e}")
+        """刷新启动项列表"""
+        self.log_output.append(self.get_translation("refreshing", "正在刷新启动项列表..."))
+        # 在实际应用中，这里应该查询系统中的启动项
+        # 现在我们只是重新加载示例数据
+        self.load_demo_startup_items()
+        self.log_output.append(self.get_translation("refresh_complete", "刷新完成"))
     
     def enable_startup_item(self):
-        """Enable selected startup item"""
-        if platform.system() != "Windows":
-            QMessageBox.warning(self, "Not Supported", "Startup Manager is only available on Windows")
-            return
-        
-        try:
-            # Get selected row
-            selected_row = self.startup_list.currentRow()
-            if selected_row < 0:
-                QMessageBox.warning(self, "No Selection", "Please select a startup item to enable")
+        """启用选中的启动项"""
+        selected_rows = self.get_selected_rows()
+        if not selected_rows:
                 return
             
-            item_name = self.startup_list.item(selected_row, 0).text()
+        for row in selected_rows:
+            item = self.startup_table.item(row, 0)
+            name = item.text()
+            self.log_output.append(self.get_translation("enabling", f"正在启用 {name}..."))
             
-            # Simple simulation for now
-            QMessageBox.information(self, "Startup Item Enabled", f"The startup item '{item_name}' has been enabled.")
+            # 更新状态
+            status_item = self.startup_table.item(row, 2)
+            status_item.setText("已启用")
             
-            # Update status in table
-            self.startup_list.item(selected_row, 2).setText("Enabled")
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Error enabling startup item: {str(e)}")
+            # 恢复正常颜色
+            for col in range(4):
+                self.startup_table.item(row, col).setForeground(QBrush(QColor("#000000")))
+                
+        self.update_button_states()
     
     def disable_startup_item(self):
-        """Disable selected startup item"""
-        if platform.system() != "Windows":
-            QMessageBox.warning(self, "Not Supported", "Startup Manager is only available on Windows")
-            return
-        
-        try:
-            # Get selected row
-            selected_row = self.startup_list.currentRow()
-            if selected_row < 0:
-                QMessageBox.warning(self, "No Selection", "Please select a startup item to disable")
+        """禁用选中的启动项"""
+        selected_rows = self.get_selected_rows()
+        if not selected_rows:
                 return
             
-            item_name = self.startup_list.item(selected_row, 0).text()
+        for row in selected_rows:
+            item = self.startup_table.item(row, 0)
+            name = item.text()
+            self.log_output.append(self.get_translation("disabling", f"正在禁用 {name}..."))
             
-            # Simple simulation for now
-            QMessageBox.information(self, "Startup Item Disabled", f"The startup item '{item_name}' has been disabled.")
+            # 更新状态
+            status_item = self.startup_table.item(row, 2)
+            status_item.setText("已禁用")
             
-            # Update status in table
-            self.startup_list.item(selected_row, 2).setText("Disabled")
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Error disabling startup item: {str(e)}")
+            # 设置灰色
+            for col in range(4):
+                self.startup_table.item(row, col).setForeground(QBrush(QColor("#888888")))
+                
+        self.update_button_states()
     
     def delete_startup_item(self):
-        """Delete selected startup item"""
-        if platform.system() != "Windows":
-            QMessageBox.warning(self, "Not Supported", "Startup Manager is only available on Windows")
+        """删除选中的启动项"""
+        selected_rows = self.get_selected_rows()
+        if not selected_rows:
             return
         
-        try:
-            # Get selected row
-            selected_row = self.startup_list.currentRow()
-            if selected_row < 0:
-                QMessageBox.warning(self, "No Selection", "Please select a startup item to delete")
-                return
+        # 从底部开始删除，避免索引变化问题
+        for row in sorted(selected_rows, reverse=True):
+            item = self.startup_table.item(row, 0)
+            name = item.text()
+            self.log_output.append(self.get_translation("deleting", f"正在删除 {name}..."))
+            self.startup_table.removeRow(row)
             
-            item_name = self.startup_list.item(selected_row, 0).text()
+        self.update_button_states()
+
+    def get_selected_rows(self):
+        """获取选中的行索引"""
+        selected_indexes = self.startup_table.selectedIndexes()
+        if not selected_indexes:
+            return []
             
-            # Confirm deletion
-            reply = QMessageBox.question(self, "Confirm Deletion", 
-                                       f"Are you sure you want to delete the startup item '{item_name}'?",
-                                       QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        # 提取不重复的行索引
+        rows = set()
+        for index in selected_indexes:
+            rows.add(index.row())
             
-            if reply == QMessageBox.Yes:
-                # Simple simulation for now
-                QMessageBox.information(self, "Startup Item Deleted", f"The startup item '{item_name}' has been deleted.")
-                
-                # Remove from table
-                self.startup_list.removeRow(selected_row)
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Error deleting startup item: {str(e)}")
+        return list(rows)
+
+    def update_button_states(self):
+        """更新按钮的启用/禁用状态"""
+        has_selection = bool(self.get_selected_rows())
+        self.enable_button.setEnabled(has_selection)
+        self.disable_button.setEnabled(has_selection)
+        self.delete_button.setEnabled(has_selection)
     
     def start_repair(self):
         """Start the boot repair process"""
         # Determine which repair option is selected
-        if self.mbr_checkbox.isChecked():
+        if self.repair_mbr_rb.isChecked():
             repair_type = "mbr"
-        elif self.bcd_checkbox.isChecked():
+        elif self.repair_bcd_rb.isChecked():
             repair_type = "bcd"
-        elif self.bootmgr_checkbox.isChecked():
+        elif self.repair_bootmgr_rb.isChecked():
             repair_type = "bootmgr"
-        elif self.winload_checkbox.isChecked():
+        elif self.repair_winload_rb.isChecked():
             repair_type = "winload"
+        elif self.full_repair_rb.isChecked():
+            repair_type = "full"
         
         # Check if we're on Windows
         if platform.system() != "Windows":
@@ -580,37 +496,37 @@ class BootRepairWidget(QWidget):
             self.log_output.append(f"Starting {repair_type.upper()} boot repair...")
             
             # Reset progress bar
-            self.progress_bar.setValue(0)
+            self.progress.setValue(0)
             
             # Create and start thread
-            self.repair_thread = BootRepairThread(repair_type)
-            self.repair_thread.update_progress.connect(self.update_progress)
-            self.repair_thread.update_log.connect(self.update_log)
-            self.repair_thread.finished_operation.connect(self.repair_finished)
-            self.repair_thread.start()
+            self.boot_worker = BootRepairThread(repair_type)
+            self.boot_worker.update_progress.connect(self.update_progress)
+            self.boot_worker.update_log.connect(self.update_log)
+            self.boot_worker.finished_operation.connect(self.repair_finished)
+            self.boot_worker.start()
             
             # Update UI
-            self.start_button.setEnabled(False)
+            self.repair_button.setEnabled(False)
             self.stop_button.setEnabled(True)
     
     def stop_repair(self):
         """Stop the boot repair process"""
-        if self.repair_thread and self.repair_thread.is_running:
+        if self.boot_worker and self.boot_worker.is_running:
             reply = QMessageBox.question(self, 'Confirm Stop', 
                                         "Are you sure you want to stop the repair process?\n"
                                         "This may leave your system in an inconsistent state.",
                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
             
             if reply == QMessageBox.Yes:
-                self.repair_thread.terminate()
-                self.repair_thread.wait()
+                self.boot_worker.terminate()
+                self.boot_worker.wait()
                 
                 self.update_log("Repair process stopped by user.")
                 self.repair_finished(False, "Operation cancelled")
     
     def update_progress(self, value):
         """Update the progress bar"""
-        self.progress_bar.setValue(value)
+        self.progress.setValue(value)
     
     def update_log(self, message):
         """Update the log output"""
@@ -623,11 +539,11 @@ class BootRepairWidget(QWidget):
     def repair_finished(self, success, message):
         """Handle repair completion"""
         # Re-enable the start button
-        self.start_button.setEnabled(True)
+        self.repair_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         
         # Set progress to 100%
-        self.progress_bar.setValue(100)
+        self.progress.setValue(100)
         
         # Show message
         if success:
@@ -671,12 +587,12 @@ class BootRepairWidget(QWidget):
             repair_group.setTitle(self.get_translation("operations", "Repair Options"))
         
         # 更新单选按钮
-        self.mbr_checkbox.setText(self.get_translation("fix_mbr", "Repair Master Boot Record (MBR)"))
-        self.bcd_checkbox.setText(self.get_translation("rebuild_bcd", "Repair Boot Configuration Data (BCD)"))
-        self.bootmgr_checkbox.setText(self.get_translation("fix_boot", "Repair Boot Manager"))
+        self.repair_mbr_rb.setText(self.get_translation("fix_mbr", "Repair Master Boot Record (MBR)"))
+        self.repair_bcd_rb.setText(self.get_translation("rebuild_bcd", "Repair Boot Configuration Data (BCD)"))
+        self.repair_bootmgr_rb.setText(self.get_translation("fix_boot", "Repair Boot Manager"))
         
         # 更新按钮
-        self.start_button.setText(self.get_translation("repair_button", "Start Repair"))
+        self.repair_button.setText(self.get_translation("repair_button", "Start Repair"))
         self.stop_button.setText(self.get_translation("stop_button", "Stop"))
         
         # 更新日志组

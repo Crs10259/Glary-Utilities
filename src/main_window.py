@@ -1,27 +1,35 @@
 import os
 import sys
-from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-                            QLabel, QPushButton, QStackedWidget, QTabWidget,
-                            QFrame, QSplitter, QToolButton, QStyleFactory,
-                            QAction, QMenu, QMenuBar, QStatusBar, QToolBar,
-                            QSizePolicy, QDialog, QTextBrowser, QDialogButtonBox,
-                            QGraphicsDropShadowEffect)
-from PyQt5.QtCore import Qt, QSize, QPropertyAnimation, QEasingCurve, QTimer, pyqtSignal
-from PyQt5.QtGui import QIcon, QPixmap, QFont, QColor, QPalette, QCursor
+import platform
+import subprocess
+import time
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtWidgets import QToolTip, QApplication
+import logging
+import weakref
+import json
 
+from components.base_component import BaseComponent
 from components.dashboard import DashboardWidget
 from components.system_cleaner import SystemCleanerWidget
-from components.gpu_info import GPUInfoWidget
-from components.system_repair import SystemRepairWidget
-from components.dism_tool import DISMToolWidget
-from components.network_reset import NetworkResetWidget
 from components.disk_check import DiskCheckWidget
 from components.boot_repair import BootRepairWidget
 from components.virus_scan import VirusScanWidget
+from components.system_repair import SystemRepairWidget
+from components.dism_tool import DismToolWidget
+from components.network_reset import NetworkResetWidget
 from components.system_info import SystemInfoWidget
 from components.settings import SettingsWidget
 from components.icons import Icon
-from animations import AnimationUtils
+from utils.animations import AnimationUtils
+from utils.settings_manager import Settings
+from utils.theme_manager import ThemeManager
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("GlaryUtilities")
 
 class MainWindow(QMainWindow):
     """主应用程序窗口"""
@@ -33,6 +41,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         
         self.settings = settings
+        self.theme_manager = ThemeManager()
         
         # Initialize dictionaries
         self.page_indices = {}
@@ -54,11 +63,11 @@ class MainWindow(QMainWindow):
         # 验证翻译 - 查找缺失的键
         missing_translations = self.settings.validate_translations(raise_error=False)
         if missing_translations:
-            print("警告: 找到缺失的翻译!")
+            print("Warning: Found missing translations!")
             for language, sections in missing_translations.items():
-                print(f"\n语言: {language}")
+                print(f"\nLanguage: {language}")
                 for section, keys in sections.items():
-                    print(f"  部分: {section}")
+                    print(f"  Section: {section}")
                     for key in keys:
                         print(f"    - {key}")
         
@@ -70,14 +79,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Glary Utilities")
         self.setMinimumSize(1000, 700)
         
-        # 设置窗口样式
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #1e1e1e;  /* 背景颜色 */
-                border: 2px solid #00a8ff;  /* 边框颜色 */
-                border-radius: 10px;         /* 边框圆角 */
-            }
-        """)
+        # 设置窗口样式 - 移除具体样式，将在apply_theme中设置
         
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -96,11 +98,6 @@ class MainWindow(QMainWindow):
         
         self.content_area = QStackedWidget()
         self.content_area.setObjectName("contentArea")
-        self.content_area.setStyleSheet("""
-            #contentArea {
-                background-color: #1e1e1e;
-            }
-        """)
         
         self.splitter.addWidget(self.sidebar)
         self.splitter.addWidget(self.content_area)
@@ -115,14 +112,27 @@ class MainWindow(QMainWindow):
         # 添加到主布局，确保填满整个窗口
         self.main_layout.addWidget(self.splitter, 1)  # 设置伸展因子
         
+        # 创建状态栏
         self.status_bar = QStatusBar()
-        self.status_bar.setStyleSheet("""
-            QStatusBar {
-                background-color: #007acc;
-                color: white;
-            }
-        """)
         self.setStatusBar(self.status_bar)
+        
+        # 添加状态栏指示器
+        self.status_indicator = QLabel()
+        self.status_indicator.setFixedSize(12, 12)
+        self.status_indicator.setStyleSheet("background-color: #4CAF50; border-radius: 6px;")
+        
+        self.status_text = QLabel()
+        self.status_text.setStyleSheet("color: white; margin-left: 5px;")
+        
+        status_layout = QHBoxLayout()
+        status_layout.setContentsMargins(5, 2, 5, 2)
+        status_layout.addWidget(self.status_indicator)
+        status_layout.addWidget(self.status_text)
+        status_layout.addStretch()
+        
+        status_widget = QWidget()
+        status_widget.setLayout(status_layout)
+        self.status_bar.addWidget(status_widget, 1)
         
         self.setup_content_area()
         self.setup_menu_bar()
@@ -131,66 +141,223 @@ class MainWindow(QMainWindow):
         
         default_tab = self.settings.get_setting("default_tab", "Dashboard")
         self.set_active_page(default_tab)
+
+        self.show_status_message(self.settings.get_translation("general", "welcome"), 5000)
         
-        self.status_bar.showMessage("欢迎使用 Glary Utilities", 5000)
+        # 应用窗口阴影效果
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setBlurRadius(20)
         shadow_effect.setXOffset(5)
         shadow_effect.setYOffset(5)
         shadow_effect.setColor(QColor(0, 0, 0, 160))  # 半透明黑色阴影
         self.setGraphicsEffect(shadow_effect)
+        
+        # 使用淡入动画显示窗口
+        self.setWindowOpacity(0.0)
+        self.fade_in_effect = QPropertyAnimation(self, b"windowOpacity")
+        self.fade_in_effect.setDuration(800)
+        self.fade_in_effect.setStartValue(0.0)
+        self.fade_in_effect.setEndValue(1.0)
+        self.fade_in_effect.setEasingCurve(QEasingCurve.OutCubic)
+        self.fade_in_effect.start()
 
     def create_toolbar(self):
         """创建顶部工具栏"""
         self.toolbar = QToolBar()
         self.toolbar.setMovable(False)
         self.toolbar.setIconSize(QSize(22, 22))
-        self.toolbar.setStyleSheet("""
-            QToolBar {
-                background-color: #2d2d30;
-                border-bottom: 1px solid #3a3a3a;
-                spacing: 5px;
-            }
-            QToolButton {
-                background-color: transparent;
-                border: none;
-                border-radius: 2px;
-                color: #cccccc;
-                padding: 5px;
-            }
-            QToolButton:hover {
-                background-color: #3a3a3a;
-            }
-            QToolButton:pressed {
-                background-color: #007acc;
-            }
-        """)
+        
+        # 创建标题标签
+        self.title_label = QLabel("Dashboard")
+        self.title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-left: 10px;")
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        
+        # 创建工具栏图标和添加动画效果
         if Icon.Home.Exist:    
-            self.home_action = QAction(QIcon(Icon.Home.Path), "主页", self)
-            self.home_action.triggered.connect(lambda: self.set_active_page("Dashboard"))
+            self.home_action = self.create_animated_action(
+                QIcon(Icon.Home.Path), 
+                self.settings.get_translation("general", "dashboard"), 
+                lambda: self.set_active_page("Dashboard")
+            )
             self.toolbar.addAction(self.home_action)
         
         if Icon.Cleaner.Exist:
-            self.clean_action = QAction(QIcon(Icon.Cleaner.Path), "系统清理", self)
-            self.clean_action.triggered.connect(lambda: self.set_active_page("System Cleaner"))
+            self.clean_action = self.create_animated_action(
+                QIcon(Icon.Cleaner.Path), 
+                self.settings.get_translation("general", "system_cleaner"), 
+                lambda: self.set_active_page("System Cleaner")
+            )
             self.toolbar.addAction(self.clean_action)
         
         if Icon.Disk.Exist:
-            self.disk_action = QAction(QIcon(Icon.Disk.Path), "磁盘检查", self)
-            self.disk_action.triggered.connect(lambda: self.set_active_page("Disk Check"))
+            self.disk_action = self.create_animated_action(
+                QIcon(Icon.Disk.Path), 
+                self.settings.get_translation("general", "disk_check"), 
+                lambda: self.set_active_page("Disk Check")
+            )
             self.toolbar.addAction(self.disk_action)
         
+        if Icon.Boot.Exist:
+            self.boot_action = self.create_animated_action(
+                QIcon(Icon.Boot.Path), 
+                self.settings.get_translation("general", "boot_repair"), 
+                lambda: self.set_active_page("Boot Repair")
+            )
+            self.toolbar.addAction(self.boot_action)
+        
         if Icon.Virus.Exist:
-            self.virus_action = QAction(QIcon(Icon.Virus.Path), "病毒扫描", self)
-            self.virus_action.triggered.connect(lambda: self.set_active_page("Virus Scan"))
+            self.virus_action = self.create_animated_action(
+                QIcon(Icon.Virus.Path), 
+                self.settings.get_translation("general", "virus_scan"), 
+                lambda: self.set_active_page("Virus Scan")
+            )
             self.toolbar.addAction(self.virus_action)
+
+        # 添加标题到中间
+        self.toolbar.addWidget(spacer)
+        self.toolbar.addWidget(self.title_label)
+        
+        # 添加右侧空白和设置按钮
+        spacer2 = QWidget()
+        spacer2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.toolbar.addWidget(spacer2)
         
         if Icon.Settings.Exist:
-            self.settings_action = QAction(QIcon(Icon.Settings.Path), "设置", self)
-            self.settings_action.triggered.connect(lambda: self.set_active_page("Settings"))
+            self.settings_action = self.create_animated_action(
+                QIcon(Icon.Settings.Path), 
+                self.settings.get_translation("general", "settings"), 
+                lambda: self.set_active_page("Settings")
+            )
             self.toolbar.addAction(self.settings_action)
         
         self.addToolBar(self.toolbar)
+    
+    def create_animated_action(self, icon, text, callback):
+        """创建带有动画效果的工具栏操作"""
+        action = QAction(icon, text, self)
+        action.triggered.connect(callback)
+        
+        # 获取该操作对应的QToolButton
+        action.button = None
+        
+        # 在下一个事件循环中查找按钮
+        QTimer.singleShot(0, lambda: self.find_action_button(action))
+        
+        return action
+    
+    def find_action_button(self, action):
+        """查找与特定操作关联的工具栏按钮"""
+        for button in self.toolbar.findChildren(QToolButton):
+            if button.defaultAction() == action:
+                action.button = button
+                
+                # 添加悬停效果
+                original_style = button.styleSheet()
+                original_icon_size = button.iconSize()  # 保存初始图标大小
+                
+                # 保存动画引用以便能够停止之前的动画
+                if not hasattr(button, '_hover_animation'):
+                    button._hover_animation = None
+                
+                def enter_event(e, btn=button):
+                    # 如果存在运行中的动画，先停止它
+                    if hasattr(btn, '_hover_animation') and btn._hover_animation is not None:
+                        try:
+                            if btn._hover_animation().state() == QAbstractAnimation.Running:
+                                btn._hover_animation().stop()
+                        except (RuntimeError, ReferenceError):
+                            # 如果动画对象已经被删除，清空引用
+                            btn._hover_animation = None
+                    
+                    # 创建缩放动画
+                    anim = QPropertyAnimation(btn, b"iconSize")
+                    # 使用弱引用存储动画对象
+                    btn._hover_animation = weakref.ref(anim)
+                    anim.setDuration(150)  # 减少动画时间以避免延迟感
+                    anim.setStartValue(btn.iconSize())
+                    anim.setEndValue(QSize(28, 28))  # 稍微放大图标
+                    anim.setEasingCurve(QEasingCurve.OutCubic)  # 使用更平滑的缓动曲线
+                    anim.start(QAbstractAnimation.DeleteWhenStopped)
+                    
+                    # 设置悬停样式
+                    accent_color = self.palette().color(QPalette.Highlight).name()
+                    btn.setStyleSheet(f"""
+                        QToolButton {{
+                            border-radius: 5px;
+                            padding: 5px;
+                            border-bottom: 2px solid {accent_color};
+                        }}
+                    """)
+                    
+                    QToolTip.showText(
+                        btn.mapToGlobal(QPoint(btn.width()/2, btn.height())), 
+                        btn.defaultAction().text()
+                    )
+                
+                def leave_event(e, btn=button):
+                    # 如果存在运行中的动画，先停止它
+                    if hasattr(btn, '_hover_animation') and btn._hover_animation is not None:
+                        try:
+                            if btn._hover_animation() and btn._hover_animation().state() == QAbstractAnimation.Running:
+                                btn._hover_animation().stop()
+                        except (RuntimeError, ReferenceError):
+                            # 如果动画对象已经被删除，清空引用
+                            btn._hover_animation = None
+                    
+                    # 创建缩放动画（恢复原始大小）
+                    anim = QPropertyAnimation(btn, b"iconSize")
+                    # 使用弱引用存储动画对象
+                    btn._hover_animation = weakref.ref(anim)
+                    anim.setDuration(150)  # 减少动画时间
+                    anim.setStartValue(btn.iconSize())
+                    anim.setEndValue(original_icon_size)  # 使用保存的初始大小
+                    anim.setEasingCurve(QEasingCurve.OutCubic)  # 使用更平滑的缓动曲线
+                    anim.start(QAbstractAnimation.DeleteWhenStopped)
+                    
+                    # 恢复原始样式
+                    btn.setStyleSheet(original_style)
+                    
+                    # 确保移除底部边框
+                    QTimer.singleShot(50, lambda: btn.setStyleSheet(original_style))
+                
+                # 替换原始的悬停事件处理
+                button.enterEvent = enter_event
+                button.leaveEvent = leave_event
+                
+                # 添加点击动画
+                original_mouse_press = button.mousePressEvent
+                
+                def press_animation(e, btn=button):
+                    # 创建按下动画
+                    anim = QPropertyAnimation(btn, b"iconSize")
+                    anim.setDuration(100)
+                    anim.setStartValue(btn.iconSize())
+                    anim.setEndValue(QSize(20, 20))  # 稍微缩小图标
+                    anim.start(QAbstractAnimation.DeleteWhenStopped)
+                    
+                    # 调用原始的鼠标按下事件
+                    original_mouse_press(e)
+                
+                button.mousePressEvent = press_animation
+                
+                # 替换原始的鼠标释放事件
+                original_mouse_release = button.mouseReleaseEvent
+                
+                def release_animation(e, btn=button):
+                    # 创建释放动画 - 恢复到原始大小而不是固定值
+                    anim = QPropertyAnimation(btn, b"iconSize")
+                    anim.setDuration(200)
+                    anim.setStartValue(btn.iconSize())
+                    anim.setEndValue(original_icon_size)  # 使用保存的初始大小
+                    anim.setEasingCurve(QEasingCurve.OutBack)
+                    anim.start(QAbstractAnimation.DeleteWhenStopped)
+                    
+                    # 调用原始的鼠标释放事件
+                    original_mouse_release(e)
+                
+                button.mouseReleaseEvent = release_animation
+                break
     
     def setup_sidebar(self):
         """设置应用程序侧边栏"""
@@ -198,13 +365,6 @@ class MainWindow(QMainWindow):
         self.sidebar = QWidget()
         self.sidebar.setObjectName("sidebar")
         self.sidebar.setFixedWidth(220)
-        self.sidebar.setStyleSheet("""
-            #sidebar {
-                background-color: #252525;
-                border-right: 1px solid #3a3a3a;
-                border-radius: 0px;
-            }
-        """)
         
         # 侧边栏布局
         sidebar_layout = QVBoxLayout(self.sidebar)
@@ -214,157 +374,186 @@ class MainWindow(QMainWindow):
         # 工具列表组
         self.sidebar_group = QFrame()
         self.sidebar_group.setObjectName("sidebarGroup")
-        self.sidebar_group.setStyleSheet("""
-            #sidebarGroup {
-                background-color: transparent;
-                border: none;
-            }
-        """)
         
-        # 工具列表布局
+        # 创建布局
         sidebar_group_layout = QVBoxLayout(self.sidebar_group)
-        sidebar_group_layout.setContentsMargins(0, 0, 0, 0)
-        sidebar_group_layout.setSpacing(5)
+        sidebar_group_layout.setContentsMargins(0, 10, 0, 10)
+        sidebar_group_layout.setSpacing(8)
         
-        # 添加按钮 - 使用布局而不是硬编码位置
-        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "dashboard")), "Home", sidebar_group_layout)
-        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "system_cleaner")), "Cleaner", sidebar_group_layout)
-        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "gpu_information")), "GPU", sidebar_group_layout)
-        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "system_repair")), "Repair", sidebar_group_layout)
-        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "dism_tool")), "Dism", sidebar_group_layout)
-        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "network_reset")), "Network", sidebar_group_layout)
-        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "disk_check")), "Disk", sidebar_group_layout)
-        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "boot_repair")), "Boot", sidebar_group_layout)
-        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "virus_scan")), "Virus", sidebar_group_layout)
-        self.create_sidebar_button(self.tr(self.settings.get_translation("general", "system_information")), "SystemInfo", sidebar_group_layout)
+        # 添加侧边栏标题
+        title_label = QLabel("Glary Utilities")
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold; margin-bottom: 15px; padding: 5px;")
+        title_label.setAlignment(Qt.AlignCenter)
+        sidebar_layout.addWidget(title_label)
         
-        # 添加工具列表到侧边栏
+        # 应用程序功能类别标题
+        # common_tools_label = QLabel(self.settings.get_translation("general", "common_tools"))
+        # common_tools_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #aaaaaa; padding: 5px;")
+        # sidebar_layout.addWidget(common_tools_label)
+        
+        # 添加主要功能按钮
+        self.page_buttons["Dashboard"] = self.create_sidebar_button("Dashboard", "Home", sidebar_group_layout)
+        self.page_buttons["System Cleaner"] = self.create_sidebar_button("System Cleaner", "Cleaner", sidebar_group_layout)
+        self.page_buttons["Disk Check"] = self.create_sidebar_button("Disk Check", "Disk", sidebar_group_layout)
+        self.page_buttons["Virus Scan"] = self.create_sidebar_button("Virus Scan", "Virus", sidebar_group_layout)
+        
+        # 系统工具类别标题
+        # system_tools_label = QLabel(self.settings.get_translation("general", "system_tools"))
+        # system_tools_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #aaaaaa; margin-top: 15px; padding: 5px;")
+        # sidebar_layout.addWidget(system_tools_label)
+        
+        # 添加系统工具按钮
+        self.page_buttons["Boot Repair"] = self.create_sidebar_button("Boot Repair", "Boot", sidebar_group_layout)
+        self.page_buttons["System Repair"] = self.create_sidebar_button("System Repair", "Repair", sidebar_group_layout)
+        self.page_buttons["DISM Tool"] = self.create_sidebar_button("DISM Tool", "Dism", sidebar_group_layout)
+        self.page_buttons["Network Reset"] = self.create_sidebar_button("Network Reset", "Network", sidebar_group_layout)
+        
+        # 信息与设置类别标题
+        # info_settings_label = QLabel(self.settings.get_translation("general", "info_settings"))
+        # info_settings_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #aaaaaa; margin-top: 15px; padding: 5px;")
+        # sidebar_layout.addWidget(info_settings_label)
+        
+        # 添加信息与设置按钮
+        self.page_buttons["System Info"] = self.create_sidebar_button("System Info", "SystemInfo", sidebar_group_layout)
+        # self.page_buttons["Settings"] = self.create_sidebar_button("Settings", "Settings", sidebar_group_layout)
+        
         sidebar_layout.addWidget(self.sidebar_group)
         
-        # 标题（App名称）- 移至底部
-        # app_title = QLabel("Glary Utilities")
-        # app_title.setStyleSheet("color: #e0e0e0; font-size: 18px; font-weight: bold;")
+        # 底部版本信息
+        version_label = QLabel("v1.0.0")
+        version_label.setStyleSheet("color: #888888; font-size: 12px;")
+        version_label.setAlignment(Qt.AlignCenter)
         
-        # 添加伸缩项将设置按钮推到底部
-        sidebar_layout.addStretch()
-        # sidebar_layout.addWidget(app_title)
-        
-        # 在侧边栏底部添加设置按钮
-        self.settings_button = QPushButton(self.tr(self.settings.get_translation("general", "settings")))
-        self.settings_button.setObjectName("settingsButton")
-        self.settings_button.setCursor(QCursor(Qt.PointingHandCursor))
-        self.settings_button.setStyleSheet("""
-            #settingsButton {
-                background-color: #3a3a3a;
-                color: #e0e0e0;
-                border: none;
-                border-radius: 6px;
-                text-align: left;
-                padding: 10px 15px;
-                font-size: 14px;
-                margin-bottom: 10px;
-            }
-            #settingsButton:hover {
-                background-color: #454545;
-            }
-            #settingsButton:pressed {
-                background-color: #505050;
-            }
-        """)
-        
-        # Add settings icon if available
-        if Icon.Settings.Exist:
-            settings_icon = QIcon(Icon.Settings.Path)
-            if not settings_icon.isNull():
-                self.settings_button.setIcon(settings_icon)
-                self.settings_button.setIconSize(QSize(18, 18))
-        
-        # Connect settings button
-        self.settings_button.clicked.connect(lambda: self.set_active_page("Settings"))
-        
-        # Add settings button to bottom of sidebar
-        sidebar_layout.addWidget(self.settings_button)
-        
-        # 将侧边栏添加到主布局
-        self.main_layout.addWidget(self.sidebar)
+        sidebar_layout.addStretch(1)  # 添加可拉伸的空间，推送版本标签到底部
+        sidebar_layout.addWidget(version_label)
 
     def create_sidebar_button(self, text, icon_name, parent_layout):
         """创建侧边栏按钮"""
-        button = QPushButton(text)
-        button.setObjectName(f"{text.lower().replace(' ', '_')}_btn")
-        button.setCursor(QCursor(Qt.PointingHandCursor))
-        button.setStyleSheet("""
+        button = QPushButton(self.settings.get_translation("general", text.lower().replace(' ', '_')))
+        button.setCheckable(True)
+        button.setObjectName(f"sidebar_btn_{text.lower().replace(' ', '_')}")
+        button.setProperty("page", text)  # 用于识别对应的页面
+        button.setMinimumHeight(40)
+        button.setCursor(Qt.PointingHandCursor)
+        
+        # 增加圆角和样式
+        base_style = """
             QPushButton {
-                background-color: transparent;
-                color: #a0a0a0;
-                border: none;
-                border-radius: 6px;
                 text-align: left;
-                padding: 10px 15px;
+                padding-left: 15px;
+                border: none;
+                border-radius: 8px;
+                color: #bbbbbb;
                 font-size: 14px;
+                background-color: transparent;
             }
             QPushButton:hover {
-                background-color: #353535;
-                color: #e0e0e0;
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
             }
             QPushButton:checked {
-                background-color: #454545;
-                color: #ffffff;
+                background-color: palette(highlight);
+                color: white;
                 font-weight: bold;
             }
+        """
+        button.setStyleSheet(base_style)
+        
+        # 尝试设置图标
+        icon_attr = getattr(Icon, icon_name, None)
+        if icon_attr and hasattr(icon_attr, 'Exist') and icon_attr.Exist:
+            button.setIcon(QIcon(getattr(icon_attr, 'Path')))
+            button.setIconSize(QSize(20, 20))
+            # 保存原始样式并添加带有图标的样式
+            button.setStyleSheet(base_style + """
+                QPushButton {
+                    padding-left: 10px;
+            }
         """)
-        button.setCheckable(True)
-        button.setAutoExclusive(True)
         
-        # 添加图标（如果可用）
-        icon_path = None
-        if icon_name == "Home":
-            icon_path = Icon.Home.Path if Icon.Home.Exist else None
-            page_name = "Dashboard"
-        elif icon_name == "Cleaner":
-            icon_path = Icon.Cleaner.Path if Icon.Cleaner.Exist else None
-            page_name = "System Cleaner"
-        elif icon_name == "GPU":
-            icon_path = Icon.GPU.Path if Icon.GPU.Exist else None
-            page_name = "GPU Information"
-        elif icon_name == "Repair":
-            icon_path = Icon.Repair.Path if Icon.Repair.Exist else None
-            page_name = "System Repair"
-        elif icon_name == "Dism":
-            icon_path = Icon.Dism.Path if Icon.Dism.Exist else None
-            page_name = "DISM Tool"
-        elif icon_name == "Network":
-            icon_path = Icon.Network.Path if Icon.Network.Exist else None
-            page_name = "Network Reset"
-        elif icon_name == "Disk":
-            icon_path = Icon.Disk.Path if Icon.Disk.Exist else None
-            page_name = "Disk Check"
-        elif icon_name == "Boot":
-            icon_path = Icon.Boot.Path if Icon.Boot.Exist else None
-            page_name = "Boot Repair"
-        elif icon_name == "Virus":
-            icon_path = Icon.Virus.Path if Icon.Virus.Exist else None
-            page_name = "Virus Scan"
-        elif icon_name == "SystemInfo":
-            icon_path = Icon.SystemInfo.Path if Icon.SystemInfo.Exist else None
-            page_name = "System Information"
-        else:
-            page_name = text  # Default fallback
+        # 保存原始样式和动画引用
+        button._base_style = button.styleSheet()
+        button._hover_animation = None
         
-        if icon_path:
-            icon = QIcon(icon_path)
-            if not icon.isNull():
-                button.setIcon(icon)
-                button.setIconSize(QSize(18, 18))
+        # 创建悬停进入动画
+        def on_hover_enter(event):
+            if not button.isChecked():
+                # 停止任何正在运行的动画
+                if hasattr(button, '_hover_animation') and button._hover_animation is not None:
+                    try:
+                        if button._hover_animation() and button._hover_animation().state() == QAbstractAnimation.Running:
+                            button._hover_animation().stop()
+                    except (RuntimeError, ReferenceError):
+                        # 如果动画对象已经被删除，清空引用
+                        button._hover_animation = None
+                
+                # 创建样式字符串
+                hover_style = base_style
+                if icon_attr and hasattr(icon_attr, 'Exist') and icon_attr.Exist:
+                    hover_style += """
+                        QPushButton {
+                            padding-left: 10px;
+                            color: white;
+                            background-color: rgba(255, 255, 255, 0.1);
+                        }
+                    """
+                else:
+                    hover_style += """
+                        QPushButton {
+                            color: white;
+                            background-color: rgba(255, 255, 255, 0.1);
+                        }
+                    """
+                
+                # 直接设置样式，减少不必要的动画
+                button.setStyleSheet(hover_style)
+                
+        # 创建悬停离开动画
+        def on_hover_leave(event):
+            if not button.isChecked():
+                # 停止任何正在运行的动画
+                if hasattr(button, '_hover_animation') and button._hover_animation is not None:
+                    try:
+                        if button._hover_animation() and button._hover_animation().state() == QAbstractAnimation.Running:
+                            button._hover_animation().stop()
+                    except (RuntimeError, ReferenceError):
+                        # 如果动画对象已经被删除，清空引用
+                        button._hover_animation = None
+                
+                # 创建样式字符串
+                leave_style = base_style
+                if icon_attr and hasattr(icon_attr, 'Exist') and icon_attr.Exist:
+                    leave_style += """
+                        QPushButton {
+                            padding-left: 10px;
+                        }
+                    """
+                
+                # 直接设置样式，减少不必要的动画
+                button.setStyleSheet(leave_style)
+                
+        # 连接悬停事件
+        button.enterEvent = on_hover_enter
+        button.leaveEvent = on_hover_leave
+        
+        # 页面切换处理
+        def on_clicked(checked, page=text):
+            # 停止任何正在运行的动画
+            if hasattr(button, '_hover_animation') and button._hover_animation is not None:
+                try:
+                    if button._hover_animation() and button._hover_animation().state() == QAbstractAnimation.Running:
+                        button._hover_animation().stop()
+                except (RuntimeError, ReferenceError):
+                    # 如果动画对象已经被删除，清空引用
+                    button._hover_animation = None
+            # 设置活动页面
+            self.set_active_page(page)
+        
+        # 连接按钮点击事件
+        button.clicked.connect(on_clicked)
         
         # 添加到布局
         parent_layout.addWidget(button)
-        
-        # 将按钮添加到页面名称到按钮的映射
-        self.page_buttons[page_name] = button
-        
-        # 连接点击事件
-        button.clicked.connect(lambda: self.set_active_page(page_name))
         
         return button
 
@@ -383,58 +572,58 @@ class MainWindow(QMainWindow):
         self.setup_content_pages()
 
     def setup_content_pages(self):
-        """Setup content pages for each menu option"""
-        # Dashboard
-        self.dashboard = DashboardWidget(self.settings)
+        """设置内容页面"""
+        # 创建所有页面
+        self.dashboard = DashboardWidget()
         self.content_area.addWidget(self.dashboard)
         self.page_indices["Dashboard"] = self.content_area.count() - 1
         
         # System Cleaner
-        self.system_cleaner = SystemCleanerWidget(self.settings)
+        self.system_cleaner = SystemCleanerWidget()
         self.content_area.addWidget(self.system_cleaner)
         self.page_indices["System Cleaner"] = self.content_area.count() - 1
         
         # GPU Information
-        self.gpu_info = GPUInfoWidget(self.settings)
-        self.content_area.addWidget(self.gpu_info)
-        self.page_indices["GPU Information"] = self.content_area.count() - 1
+        # self.gpu_info = GPUInfoWidget()
+        # self.content_area.addWidget(self.gpu_info)
+        # self.page_indices["GPU Information"] = self.content_area.count() - 1
         
         # System Repair
-        self.system_repair = SystemRepairWidget(self.settings)
+        self.system_repair = SystemRepairWidget()
         self.content_area.addWidget(self.system_repair)
         self.page_indices["System Repair"] = self.content_area.count() - 1
         
         # DISM Tool
-        self.dism_tool = DISMToolWidget(self.settings)
+        self.dism_tool = DismToolWidget()
         self.content_area.addWidget(self.dism_tool)
         self.page_indices["DISM Tool"] = self.content_area.count() - 1
         
         # Network Reset
-        self.network_reset = NetworkResetWidget(self.settings)
+        self.network_reset = NetworkResetWidget()
         self.content_area.addWidget(self.network_reset)
         self.page_indices["Network Reset"] = self.content_area.count() - 1
         
         # Disk Check
-        self.disk_check = DiskCheckWidget(self.settings)
+        self.disk_check = DiskCheckWidget()
         self.content_area.addWidget(self.disk_check)
         self.page_indices["Disk Check"] = self.content_area.count() - 1
         
         # Boot Repair
-        self.boot_repair = BootRepairWidget(self.settings)
+        self.boot_repair = BootRepairWidget()
         self.content_area.addWidget(self.boot_repair)
         self.page_indices["Boot Repair"] = self.content_area.count() - 1
         
         # Virus Scan
-        self.virus_scan = VirusScanWidget(self.settings)
+        self.virus_scan = VirusScanWidget()
         self.content_area.addWidget(self.virus_scan)
         self.page_indices["Virus Scan"] = self.content_area.count() - 1
         
         # System Information
-        self.system_info = SystemInfoWidget(self.settings)
+        self.system_info = SystemInfoWidget()
         self.content_area.addWidget(self.system_info)
-        self.page_indices["System Information"] = self.content_area.count() - 1
+        self.page_indices["System Info"] = self.content_area.count() - 1
         
-        # Settings
+        # Settings - 注意：SettingsWidget不是BaseComponent的子类
         self.settings_page = SettingsWidget(self.settings)
         self.content_area.addWidget(self.settings_page)
         self.page_indices["Settings"] = self.content_area.count() - 1
@@ -447,7 +636,7 @@ class MainWindow(QMainWindow):
         self.fade_in_animation.setStartValue(0.7)
         self.fade_in_animation.setEndValue(1.0)
         self.fade_in_animation.setEasingCurve(QEasingCurve.OutCubic)
-    
+
     def setup_menu_bar(self):
         """设置菜单栏"""
         self.menu_bar = QMenuBar(self)
@@ -501,24 +690,15 @@ class MainWindow(QMainWindow):
     
     def apply_theme(self):
         """应用主题设置"""
-        theme = self.settings.get_setting("theme", "深色")
+        # 获取当前主题名称
+        theme_name = self.settings.get_setting("theme", "dark")
         
-        # 应用主题
-        if theme == "深色":
-            self.apply_dark_theme()
-        elif theme == "浅色":
-            self.apply_light_theme()
-        elif theme == "蓝色主题":
-            self.apply_blue_theme()
-        elif theme == "绿色主题":
-            self.apply_green_theme()
-        elif theme == "紫色主题":
-            self.apply_purple_theme()
-        elif theme == "自定义":
-            self.apply_custom_theme()
-        else:
-            self.apply_dark_theme()  # 默认为深色主题
-            
+        # 设置主题管理器当前主题
+        self.theme_manager.set_current_theme(theme_name)
+        
+        # 应用样式表
+        self.setStyleSheet(self.theme_manager.generate_style_sheet())
+        
         # 应用透明度
         self.apply_transparency()
         
@@ -544,28 +724,6 @@ class MainWindow(QMainWindow):
         for child in widget.findChildren(QWidget):
             self.refresh_component_theme(child)
 
-    def lighten_color(self, color, amount=20):
-        """调亮或调暗十六进制颜色
-        
-        Args:
-            color: 十六进制颜色代码 (如 "#1e1e1e")
-            amount: 亮度调整量 (-100到100)
-        
-        Returns:
-            新的十六进制颜色代码
-        """
-        try:
-            c = QColor(color)
-            h, s, l, a = c.getHslF()
-            
-            # 调整亮度
-            l = max(0, min(1, l + amount / 100.0))
-            
-            c.setHslF(h, s, l, a)
-            return c.name()
-        except:
-            return color
-
     def apply_window_icon(self):
         """应用窗口图标"""
         # 检查图标是否存在
@@ -581,25 +739,124 @@ class MainWindow(QMainWindow):
  
     
     def set_active_page(self, page_name):
-        """Set the active page in the content area"""
-        # Ensure page_name is in the page_indices dictionary
-        if page_name in self.page_indices:
-            # Show the selected page
-            self.content_area.setCurrentIndex(self.page_indices[page_name])
+        """设置活动页面"""
+        # 如果页面名称相同，则不执行任何操作
+        if hasattr(self, 'current_page') and self.current_page == page_name:
+            return
             
-            # Update button states if page_buttons is available
-            if hasattr(self, 'page_buttons'):
-                for name, index in self.page_indices.items():
-                    button = self.page_buttons.get(name, None)
-                    if button:
-                        button.setChecked(name == page_name)
+        previous_page = getattr(self, 'current_page', None)
+        self.current_page = page_name
+        
+        # 更新侧边栏按钮状态
+        for button in self.findChildren(QPushButton):
+            if hasattr(button, 'property') and button.property("page") == page_name:
+                button.setChecked(True)
+                # 停止该按钮的任何正在运行的动画
+                if hasattr(button, '_hover_animation') and button._hover_animation is not None:
+                    try:
+                        if button._hover_animation() and button._hover_animation().state() == QAbstractAnimation.Running:
+                            button._hover_animation().stop()
+                    except (RuntimeError, ReferenceError):
+                        # 如果动画对象已经被删除，清空引用
+                        button._hover_animation = None
+            elif hasattr(button, 'property') and button.property("page"):
+                button.setChecked(False)
+                
+        # 停止所有正在运行的页面切换动画
+        if hasattr(self, '_page_animation') and self._page_animation is not None:
+            try:
+                if isinstance(self._page_animation, QParallelAnimationGroup) and self._page_animation.state() == QAbstractAnimation.Running:
+                    self._page_animation.stop()
+            except (RuntimeError, ReferenceError):
+                # 如果动画对象已经被删除，清空引用
+                self._page_animation = None
+        
+        # 检查页面是否存在于页面索引中
+        if page_name not in self.page_indices:
+            logging.error(f"页面 '{page_name}' 不存在")
+            return
             
-            # Fade in animation
-            self.fade_in_animation.setDuration(300)
-            self.fade_in_animation.setStartValue(0.5)
-            self.fade_in_animation.setEndValue(1.0)
-            self.fade_in_animation.setEasingCurve(QEasingCurve.OutQuad)
-            self.fade_in_animation.start()
+        # 记录当前可见页面的索引和目标索引  
+        current_index = self.content_area.currentIndex()
+        target_index = self.page_indices[page_name]
+        
+        # 更新状态栏提示
+        self.status_bar.showMessage(f"{self.settings.get_translation('general', 'switched_to', 'Switched to')} {page_name}", 2000)
+        
+        # 如果当前没有活动页面或点击的是当前页面，直接设置
+        if current_index == -1 or current_index == target_index:
+            self.content_area.setCurrentIndex(target_index)
+            self._update_page_content(page_name, target_index)
+            return
+            
+        # 创建页面切换动画
+        self._page_animation = QParallelAnimationGroup()
+        
+        # 当前页面和目标页面
+        current_widget = self.content_area.widget(current_index)
+        target_widget = self.content_area.widget(target_index)
+        
+        # 确定动画方向（左或右）
+        direction = 1 if target_index > current_index else -1
+        
+        # 当前页面淡出动画
+        fade_out = QPropertyAnimation(current_widget, b"geometry")
+        fade_out.setDuration(200)
+        current_geo = current_widget.geometry()
+        fade_out.setStartValue(current_geo)
+        fade_out.setEndValue(QRect(
+            current_geo.x() - direction * current_geo.width(),
+            current_geo.y(),
+            current_geo.width(),
+            current_geo.height()
+        ))
+        fade_out.setEasingCurve(QEasingCurve.OutCubic)
+        
+        # 目标页面淡入动画
+        fade_in = QPropertyAnimation(target_widget, b"geometry")
+        fade_in.setDuration(200)
+        target_geo = target_widget.geometry()
+        fade_in.setStartValue(QRect(
+            target_geo.x() + direction * target_geo.width(),
+            target_geo.y(),
+            target_geo.width(),
+            target_geo.height()
+        ))
+        fade_in.setEndValue(target_geo)
+        fade_in.setEasingCurve(QEasingCurve.OutCubic)
+        
+        # 添加动画到组
+        self._page_animation.addAnimation(fade_out)
+        self._page_animation.addAnimation(fade_in)
+        
+        # 准备目标页面
+        target_widget.show()
+        
+        # 在动画结束时切换页面并更新内容
+        def animation_finished():
+            self.content_area.setCurrentIndex(target_index)
+            self._update_page_content(page_name, target_index)
+            
+        # 连接动画完成信号
+        self._page_animation.finished.connect(animation_finished)
+        
+        # 启动动画
+        self._page_animation.start(QAbstractAnimation.DeleteWhenStopped)
+    
+    def _update_page_content(self, page_name, target_index):
+        """更新页面内容和标题"""
+        # 更新活动页面的内容（如果需要）
+        active_widget = self.content_area.widget(target_index)
+        
+        # 更新窗口标题
+        self.setWindowTitle(f"Glary Utilities - {page_name}")
+        
+        # 更新主工具栏标题
+        self.title_label.setText(self.settings.get_translation("general", page_name.lower().replace(' ', '_')))
+        
+        # 如果页面有刷新方法，则调用它
+        if hasattr(active_widget, 'refresh'):
+            active_widget.refresh()
     
     def change_language(self, language):
         """Handle language changes"""
@@ -649,13 +906,28 @@ class MainWindow(QMainWindow):
         AnimationUtils.highlight(self.central_widget, duration=300)
     
     def refresh_all_components(self):
-        """刷新所有组件以反映语言更改"""
+        """刷新所有组件"""
+        # 循环浏览所有内容页面并更新它们
         for i in range(self.content_area.count()):
             widget = self.content_area.widget(i)
-            if i == self.content_area.currentIndex():
-                AnimationUtils.pulse(widget, duration=300)
-                if hasattr(widget, 'refresh_language') and callable(getattr(widget, 'refresh_language')):
-                    widget.refresh_language()
+            # 如果组件有refresh_language方法，调用它
+            if hasattr(widget, 'refresh_language') and callable(getattr(widget, 'refresh_language')):
+                QTimer.singleShot(i * 10, lambda w=widget: w.refresh_language())  # 延迟执行以避免UI冻结
+                
+        # 更新所有侧边栏按钮
+        for button in self.findChildren(QPushButton):
+            if hasattr(button, 'property') and button.property("page"):
+                page_name = button.property("page")
+                button.setText(self.settings.get_translation("general", page_name.lower().replace(' ', '_')))
+                
+        # 更新工具栏
+        self.update_ui_texts()
+                
+        # 强制重绘整个UI
+        self.update()
+        
+        # 处理任何等待的事件，确保UI即时更新
+        QApplication.processEvents()
     
     def check_all_translations(self):
         """检查所有组件中的所有翻译是否存在
@@ -1007,197 +1279,43 @@ class MainWindow(QMainWindow):
         else:
             # 完全不透明时无需设置透明背景
             self.setAttribute(Qt.WA_TranslucentBackground, False)
-
-    def apply_dark_theme(self):
-        """应用深色主题"""
-        bg_color = "#1e1e1e"
-        text_color = "#e0e0e0"
-        accent_color = "#00a8ff"
-        self._apply_theme_colors(bg_color, text_color, accent_color)
     
-    def apply_light_theme(self):
-        """应用浅色主题"""
-        bg_color = "#f0f0f0"
-        text_color = "#333333"
-        accent_color = "#007acc"
-        self._apply_theme_colors(bg_color, text_color, accent_color)
-    
-    def apply_blue_theme(self):
-        """应用蓝色主题"""
-        bg_color = "#0d1117"
-        text_color = "#e6edf3"
-        accent_color = "#58a6ff"
-        self._apply_theme_colors(bg_color, text_color, accent_color)
-    
-    def apply_green_theme(self):
-        """应用绿色主题"""
-        bg_color = "#0f1610"
-        text_color = "#e6edf3"
-        accent_color = "#4caf50"
-        self._apply_theme_colors(bg_color, text_color, accent_color)
-    
-    def apply_purple_theme(self):
-        """应用紫色主题"""
-        bg_color = "#13111d"
-        text_color = "#e6edf3"
-        accent_color = "#9c27b0"
-        self._apply_theme_colors(bg_color, text_color, accent_color)
-    
-    def apply_custom_theme(self):
-        """应用自定义主题"""
-        bg_color = self.settings.get_setting("custom_bg_color", "#1e1e1e")
-        text_color = self.settings.get_setting("custom_text_color", "#e0e0e0")
-        accent_color = self.settings.get_setting("custom_accent_color", "#00a8ff")
-        self._apply_theme_colors(bg_color, text_color, accent_color)
-    
-    def _apply_theme_colors(self, bg_color, text_color, accent_color):
-        """应用主题颜色"""
-        # 生成辅助颜色
-        bg_lighter = self.lighten_color(bg_color, 10)
-        bg_darker = self.lighten_color(bg_color, -10)
+    def show_status_message(self, message, timeout=0):
+        """在状态栏显示消息，带有动画效果"""
+        # 设置状态文本
+        self.status_text.setText(message)
         
-        # 为整个应用程序设置样式表
-        self.setStyleSheet(f"""
-            QMainWindow {{
-                background-color: {bg_color};
-                color: {text_color};
-            }}
-            QWidget {{
-                background-color: transparent;
-                color: {text_color};
-            }}
-            QLabel {{
-                color: {text_color};
-            }}
-            QPushButton {{
-                background-color: {bg_lighter};
-                color: {text_color};
-                border: 1px solid {accent_color};
-                border-radius: 6px;
-                padding: 5px 10px;
-            }}
-            QPushButton:hover {{
-                background-color: {self.lighten_color(bg_lighter, 10)};
-                border: 1px solid {self.lighten_color(accent_color, 10)};
-            }}
-            QPushButton:pressed {{
-                background-color: {self.lighten_color(bg_lighter, -5)};
-            }}
-            QPushButton:disabled {{
-                background-color: {bg_darker};
-                color: {self.lighten_color(bg_color, 30)};
-                border: 1px solid {self.lighten_color(bg_color, 20)};
-            }}
-            QGroupBox {{
-                color: {self.lighten_color(text_color, -10)};
-                font-weight: bold;
-                border: 1px solid {accent_color};
-                border-radius: 6px;
-                margin-top: 1em;
-                padding-top: 10px;
-            }}
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-                background-color: {bg_color};
-            }}
-            QCheckBox, QRadioButton {{
-                color: {text_color};
-            }}
-            QCheckBox::indicator, QRadioButton::indicator {{
-                width: 16px;
-                height: 16px;
-                background-color: {bg_lighter};
-                border: 1px solid {accent_color};
-                border-radius: 3px;
-            }}
-            QCheckBox::indicator:checked, QRadioButton::indicator:checked {{
-                background-color: {accent_color};
-            }}
-            QLineEdit, QTextEdit, QListWidget, QTableWidget, QComboBox {{
-                background-color: {bg_lighter};
-                color: {text_color};
-                border: 1px solid {accent_color};
-                border-radius: 6px;
-                padding: 3px;
-            }}
-            QLineEdit:focus, QTextEdit:focus, QComboBox:focus {{
-                border: 1px solid {self.lighten_color(accent_color, 15)};
-            }}
-            QTextEdit {{
-                background-color: {bg_lighter};
-                color: {text_color};
-            }}
-            QTableWidget {{
-                background-color: {bg_lighter};
-                alternate-background-color: {self.lighten_color(bg_lighter, 5)};
-                gridline-color: {self.lighten_color(accent_color, -20)};
-                border: 1px solid {accent_color};
-                border-radius: 6px;
-            }}
-            QTableWidget QHeaderView::section {{
-                background-color: {bg_darker};
-                color: {text_color};
-                border: 1px solid {accent_color};
-                padding: 4px;
-            }}
-            QProgressBar {{
-                border: 1px solid {accent_color};
-                border-radius: 6px;
-                background-color: {bg_lighter};
-                text-align: center;
-                color: {text_color};
-            }}
-            QProgressBar::chunk {{
-                background-color: {accent_color};
-                border-radius: 5px;
-            }}
-            QTabWidget::pane {{
-                border: 1px solid {accent_color};
-                background-color: {bg_color};
-                border-radius: 6px;
-            }}
-            QTabBar::tab {{
-                background-color: {bg_lighter};
-                color: {self.lighten_color(text_color, -10)};
-                border: 1px solid {accent_color};
-                border-bottom: none;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                padding: 8px 12px;
-                margin-right: 4px;
-            }}
-            QTabBar::tab:selected {{
-                background-color: {bg_color};
-                color: {text_color};
-            }}
-            QTabBar::tab:hover {{
-                background-color: {self.lighten_color(bg_lighter, 10)};
-            }}
-            QScrollBar {{
-                background-color: {bg_color};
-                width: 12px;
-                height: 12px;
-                border-radius: 6px;
-            }}
-            QScrollBar::handle {{
-                background-color: {self.lighten_color(bg_color, 30)};
-                border-radius: 5px;
-                min-height: 30px;
-            }}
-            QScrollBar::handle:hover {{
-                background-color: {accent_color};
-            }}
-            QScrollBar::add-line, QScrollBar::sub-line {{
-                width: 0px;
-                height: 0px;
-            }}
-            QScrollBar::add-page, QScrollBar::sub-page {{
-                background-color: {bg_color};
-            }}
-            QStatusBar {{
-                background-color: {accent_color};
-                color: white;
-            }}
-        """) 
+        # 创建状态指示器的动画
+        pulse_anim = QPropertyAnimation(self.status_indicator, b"styleSheet")
+        pulse_anim.setDuration(500)
+        pulse_anim.setLoopCount(2)
+        
+        # 设置起始颜色
+        pulse_anim.setStartValue("background-color: #4CAF50; border-radius: 6px;")
+        # 设置结束颜色
+        pulse_anim.setEndValue("background-color: #4CAF50; border-radius: 6px; border: 2px solid white;")
+        
+        # 创建文本标签的动画
+        text_anim = QPropertyAnimation(self.status_text, b"styleSheet")
+        text_anim.setDuration(500)
+        text_anim.setStartValue("color: white; margin-left: 5px; font-weight: bold;")
+        text_anim.setEndValue("color: white; margin-left: 5px;")
+        
+        # 创建并行动画组
+        anim_group = QParallelAnimationGroup()
+        anim_group.addAnimation(pulse_anim)
+        anim_group.addAnimation(text_anim)
+        anim_group.start(QAbstractAnimation.DeleteWhenStopped)
+        
+        # 如果设置了超时，则在超时后清除消息
+        if timeout > 0:
+            QTimer.singleShot(timeout, lambda: self.status_text.setText(""))
+            
+            # 创建淡出动画
+            fade_out = QPropertyAnimation(self.status_text, b"styleSheet")
+            fade_out.setDuration(500)
+            fade_out.setStartValue("color: white; margin-left: 5px;")
+            fade_out.setEndValue("color: rgba(255, 255, 255, 0); margin-left: 5px;")
+            
+            # 在超时前稍微延迟执行淡出动画
+            QTimer.singleShot(timeout - 500, lambda: fade_out.start(QAbstractAnimation.DeleteWhenStopped)) 

@@ -72,6 +72,11 @@ def initialize_icons():
 class Icon:
     """Icon manager class that handles all application icons"""
     
+    class Icon:
+        _path = f"{ASSETS_DIR}/icon.png"
+        Path = IconBase.get_path(_path)
+        Exist = IconBase.exists(_path)
+        
     class Home:
         _path = f"{ASSETS_DIR}/home.png"
         Path = IconBase.get_path(_path)
@@ -119,11 +124,6 @@ class Icon:
     
     class Settings:
         _path = f"{ASSETS_DIR}/settings.png"
-        Path = IconBase.get_path(_path)
-        Exist = IconBase.exists(_path)
-    
-    class Icon:
-        _path = f"{ASSETS_DIR}/icon.png"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     

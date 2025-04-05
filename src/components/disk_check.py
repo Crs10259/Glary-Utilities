@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
-from utils.platform_utils import PlatformUtils
+from utils.platform import PlatformUtils
 
 class DiskCheckThread(QThread):
     """Worker thread for disk check operations"""
@@ -149,11 +149,12 @@ class DiskCheckThread(QThread):
             self.operation_completed.emit(False)
 
 class DiskCheckWidget(BaseComponent):
-    def __init__(self, settings, parent=None):
-        self.worker = None
-        # 创建 log_output 属性
-        self.log_output = None
-        super().__init__(settings, parent)
+    def __init__(self, parent=None):
+        # 初始化属性
+        self.disk_worker = None
+        
+        # 调用父类构造函数
+        super().__init__(parent)
     
     def get_translation(self, key, default=None):
         """Override get_translation to use the correct section name"""
@@ -452,10 +453,10 @@ class DiskCheckWidget(BaseComponent):
         self.log_output.append(f"开始对驱动器 {drive} 进行磁盘检查...")
         
         # 启动工作线程
-        self.worker = DiskCheckThread(drive, check_file_system, check_bad_sectors, read_only, "check")
-        self.worker.progress_updated.connect(self.update_log)
-        self.worker.operation_completed.connect(self.operation_completed)
-        self.worker.start()
+        self.disk_worker = DiskCheckThread(drive, check_file_system, check_bad_sectors, read_only, "check")
+        self.disk_worker.progress_updated.connect(self.update_log)
+        self.disk_worker.operation_completed.connect(self.operation_completed)
+        self.disk_worker.start()
     
     def repair_disk(self):
         """Repair disk errors"""
@@ -486,10 +487,10 @@ class DiskCheckWidget(BaseComponent):
             self.log_output.append(f"Starting disk repair for drive {drive}...")
         
         # Start worker thread
-        self.worker = DiskCheckThread(drive, check_file_system, check_bad_sectors, read_only, "repair")
-        self.worker.progress_updated.connect(self.update_log)
-        self.worker.operation_completed.connect(self.operation_completed)
-        self.worker.start()
+        self.disk_worker = DiskCheckThread(drive, check_file_system, check_bad_sectors, read_only, "repair")
+        self.disk_worker.progress_updated.connect(self.update_log)
+        self.disk_worker.operation_completed.connect(self.operation_completed)
+        self.disk_worker.start()
     
     def update_log(self, message):
         """Update the log output"""

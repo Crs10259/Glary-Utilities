@@ -7,15 +7,35 @@ import socket
 import uuid
 import subprocess
 
+
 class Settings:
     """
     Settings manager class that stores settings in a JSON file
     """
-    def __init__(self, app_name="Glary-Utilities"):
+    # 运行模式常量
+    MODE_PRODUCTION = "production"
+    MODE_DEVELOPMENT = "development"
+    MODE_DEBUG = "debug"
+    MODE_TEST = "test"
+    
+    def __init__(self, app_name="Glary-Utilities", mode=None):
         self.app_name = app_name
-        self.settings = {}
+        self.settings = {
+            "language": "English",  # 默认使用英语
+            "theme": "dark",
+            "font_size": 12,
+            "transparency": 100,
+            "enable_notifications": True,
+            "show_tips": True,
+            "maintenance_reminder": True
+        }
         self.translations = {}
         self.current_language = "English"
+        self.mode = mode or self.MODE_PRODUCTION
+        self.error_handlers = {}
+        
+        # 初始化错误处理器
+        self._init_error_handlers()
         
         # Create config directory if it doesn't exist
         self.config_dir = self._get_config_dir()
@@ -29,6 +49,91 @@ class Settings:
         
         # Load translations
         self.load_translations()
+    
+    def _init_error_handlers(self):
+        """初始化错误处理器"""
+        self.error_handlers = {
+            "file_not_found": self._handle_file_not_found,
+            "permission_denied": self._handle_permission_denied,
+            "invalid_json": self._handle_invalid_json,
+            "missing_translation": self._handle_missing_translation,
+            "disk_full": self._handle_disk_full,
+            "network_error": self._handle_network_error
+        }
+    
+    def _handle_error(self, error_type, error_details):
+        """通用错误处理方法"""
+        handler = self.error_handlers.get(error_type)
+        if handler:
+            return handler(error_details)
+        return self._handle_unknown_error(error_type, error_details)
+    
+    def _handle_file_not_found(self, details):
+        """处理文件未找到错误"""
+        error_msg = f"File not found: {details}"  # 输出使用英语
+        if self.mode in [self.MODE_DEVELOPMENT, self.MODE_DEBUG]:
+            error_msg += f"\n调试信息: 当前工作目录: {os.getcwd()}"  # 注释保持中文
+        return error_msg
+    
+    def _handle_permission_denied(self, details):
+        """处理权限错误"""
+        error_msg = f"Permission denied: {details}"  # 输出使用英语
+        if self.mode in [self.MODE_DEVELOPMENT, self.MODE_DEBUG]:
+            error_msg += f"\n调试信息: 当前用户: {os.getenv('USERNAME') or os.getenv('USER')}"  # 注释保持中文
+        return error_msg
+    
+    def _handle_invalid_json(self, details):
+        """处理JSON解析错误"""
+        error_msg = f"Invalid JSON format: {details}"  # 输出使用英语
+        if self.mode in [self.MODE_DEVELOPMENT, self.MODE_DEBUG]:
+            error_msg += "\n调试信息: 请检查JSON语法"  # 注释保持中文
+        return error_msg
+    
+    def _handle_missing_translation(self, details):
+        """处理缺失翻译错误"""
+        error_msg = f"Missing translation: {details}"  # 输出使用英语
+        if self.mode in [self.MODE_DEVELOPMENT, self.MODE_DEBUG]:
+            error_msg += f"\n调试信息: 当前语言: {self.current_language}"  # 注释保持中文
+        return error_msg
+    
+    def _handle_disk_full(self, details):
+        """处理磁盘空间不足错误"""
+        error_msg = f"Disk space insufficient: {details}"  # 输出使用英语
+        if self.mode in [self.MODE_DEVELOPMENT, self.MODE_DEBUG]:
+            try:
+                disk = os.path.dirname(self.settings_file)
+                usage = shutil.disk_usage(disk)
+                error_msg += f"\n调试信息: 可用空间: {self._format_bytes(usage.free)}"
+            except Exception:
+                pass
+        return error_msg
+    
+    def _handle_network_error(self, details):
+        """处理网络错误"""
+        error_msg = f"Network error: {details}"  # 输出使用英语
+        if self.mode in [self.MODE_DEVELOPMENT, self.MODE_DEBUG]:
+            error_msg += "\n调试信息: 请检查网络连接"  # 注释保持中文
+        return error_msg
+    
+    def _handle_unknown_error(self, error_type, details):
+        """处理未知错误"""
+        error_msg = f"Unknown error ({error_type}): {details}"  # 输出使用英语
+        if self.mode in [self.MODE_DEVELOPMENT, self.MODE_DEBUG]:
+            import traceback
+            error_msg += f"\n调试信息: \n{traceback.format_exc()}"
+        return error_msg
+    
+    def is_development_mode(self):
+        """检查是否为开发模式"""
+        return self.mode in [self.MODE_DEVELOPMENT, self.MODE_DEBUG]
+    
+    def is_debug_mode(self):
+        """检查是否为调试模式"""
+        return self.mode == self.MODE_DEBUG
+    
+    def is_test_mode(self):
+        """检查是否为测试模式"""
+        return self.mode == self.MODE_TEST
     
     def _get_config_dir(self):
         """Get the configuration directory for the application"""
@@ -48,28 +153,124 @@ class Settings:
     def load_settings(self):
         """Load settings from the settings file"""
         try:
-            if os.path.exists(self.settings_file):
+            if not os.path.exists(self.settings_file):
+                raise FileNotFoundError(self.settings_file)
+            
+            if not os.access(self.settings_file, os.R_OK):
+                raise PermissionError(f"Cannot read configuration file: {self.settings_file}")
+            
+            try:
                 with open(self.settings_file, 'r', encoding='utf-8') as f:
-                    self.settings = json.load(f)
-                
-                # Set current language
-                self.current_language = self.get_setting("language", "English")
-            else:
-                # Default settings
-                self.settings = self.get_default_settings()
-                self.save_settings()
-        except Exception as e:
-            print(f"Error loading settings: {e}")
-            # If there's an error, use default settings
+                    content = f.read()
+                    if not content.strip():
+                        raise ValueError("Configuration file is empty")
+                    self.settings = json.loads(content)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Configuration file format error: {str(e)}")
+            except UnicodeDecodeError:
+                raise ValueError("Configuration file encoding error, please use UTF-8 encoding")
+            
+            # Set current language
+            self.current_language = self.get_setting("language", "English")
+            
+            # 验证必要的配置项
+            self._validate_settings()
+            
+        except FileNotFoundError:
+            error_msg = self._handle_error("file_not_found", self.settings_file)
+            print(error_msg)
             self.settings = self.get_default_settings()
+            self.save_settings()
+            self._notify_user("Settings file not found, default settings have been created.")
+        
+        except PermissionError as e:
+            error_msg = self._handle_error("permission_denied", str(e))
+            print(error_msg)
+            self.settings = self.get_default_settings()
+            self._notify_user("Cannot access settings file, default settings loaded. Please check file permissions.")
+        
+        except ValueError as e:
+            error_msg = self._handle_error("invalid_json", str(e))
+            print(error_msg)
+            self.settings = self.get_default_settings()
+            self._notify_user("Settings file format error, default settings loaded. Please check file content.")
+        
+        except Exception as e:
+            error_msg = self._handle_error("unknown_error", str(e))
+            print(error_msg)
+            self.settings = self.get_default_settings()
+            self._notify_user("Unknown error occurred while loading settings, default settings loaded.")
+        
+        finally:
+            if not self.settings:
+                self.settings = self.get_default_settings()
+                self._notify_user("Failed to load settings, using default settings.")
+    
+    def _validate_settings(self):
+        """验证设置的有效性"""
+        required_settings = [
+            "language",
+            "theme",
+            "font_size",
+            "icon_size"
+        ]
+        
+        missing_settings = []
+        invalid_settings = []
+        
+        for setting in required_settings:
+            if setting not in self.settings:
+                missing_settings.append(setting)
+            elif not self._is_valid_setting(setting, self.settings[setting]):
+                invalid_settings.append(setting)
+        
+        if missing_settings or invalid_settings:
+            error_msg = ""
+            if missing_settings:
+                error_msg += f"Missing required settings: {', '.join(missing_settings)}. "
+            if invalid_settings:
+                error_msg += f"Invalid settings: {', '.join(invalid_settings)}. "
+            
+            self._notify_user(error_msg + "Using default values.")
+            
+            # 使用默认值填充缺失或无效的设置
+            for setting in missing_settings + invalid_settings:
+                self.settings[setting] = self.get_default_settings()[setting]
+        
+    def _is_valid_setting(self, setting, value):
+        """检查设置值是否有效"""
+        if setting == "language":
+            return value in ["English", "中文"]  # 添加更多支持的语言
+        elif setting == "theme":
+            return value in ["light", "dark", "blue", "green", "purple", "custom"]
+        elif setting == "font_size":
+            return isinstance(value, int) and 8 <= value <= 24
+        elif setting == "icon_size":
+            return isinstance(value, int) and 16 <= value <= 64
+        return True  # 对于其他设置，默认为有效
     
     def save_settings(self):
         """Save settings to the settings file"""
         try:
+            # 确保目录存在
+            os.makedirs(os.path.dirname(self.settings_file), exist_ok=True)
+            
             with open(self.settings_file, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=4, ensure_ascii=False)
+            
+            print("Settings saved successfully.")
+        except PermissionError:
+            error_msg = self._handle_error("permission_denied", self.settings_file)
+            print(error_msg)
+            self._notify_user("Cannot save settings, permission denied. Please check file permissions.")
+        except IOError as e:
+            error_msg = self._handle_error("io_error", str(e))
+            print(error_msg)
+            self._notify_user("IO error occurred while saving settings. Please check disk space and file system.")
         except Exception as e:
-            print(f"Error saving settings: {e}")
+            error_msg = self._handle_error("unknown_error", str(e))
+            print(error_msg)
+            self._notify_user("Unknown error occurred while saving settings.")
     
     def get_default_settings(self):
         """Get default settings for the application"""
@@ -120,6 +321,13 @@ class Settings:
             self.current_language = value
             # Reload translations
             self.load_translations()
+            
+    def reset_settings(self):
+        """重置所有设置为默认值"""
+        self.settings = self.get_default_settings()
+        # 保存默认设置
+        self.save_settings()
+        print("所有设置已重置为默认值")
     
     def load_translations(self):
         """Load translations from language files"""
@@ -128,12 +336,12 @@ class Settings:
             self.translations = {}
             
             # List of supported languages
-            languages = ["English", "中文"]
+            languages = ["English", "简体中文"]
             
             # Map language names to file names
             language_files = {
                 "English": "en.json",
-                "中文": "zh.json"
+                "简体中文": "zh.json"
             }
             
             # Base directory for translations
@@ -147,7 +355,6 @@ class Settings:
                     if os.path.exists(file_path):
                         with open(file_path, 'r', encoding='utf-8') as f:
                             self.translations[language] = json.load(f)
-                            
         except Exception as e:
             print(f"Error loading translations: {e}")
     
@@ -161,9 +368,6 @@ class Settings:
             
         Returns:
             Translated text
-            
-        Raises:
-            KeyError: If translation key is missing and no default provided
         """
         # Get translations for the current language
         lang_translations = self.translations.get(self.current_language, {})
@@ -184,17 +388,23 @@ class Settings:
             if translation:
                 return translation
         
-        # If still not found and no default is provided, raise KeyError
-        if default is None:
-            # Only print an error in console instead of raising exception if debugging
-            if self.get_setting("debug_mode", False):
-                print(f"Missing translation key: '{section}.{key}'")
-                return key
-            else:
-                raise KeyError(f"Missing translation: '{section}.{key}'")
-        
-        # Return the default
-        return default
+        # If still not found, log the missing translation and return default or key
+        self._log_missing_translation(section, key)
+        return default if default is not None else key
+
+    def _log_missing_translation(self, section, key):
+        """记录缺失的翻译"""
+        log_message = f"Missing translation: '{section}.{key}' (Language: {self.current_language})"
+        print(log_message)  # 可以替换为更复杂的日志记录机制
+        if self.is_development_mode():
+            self._notify_user(f"Developer note: {log_message}")
+
+    def _notify_user(self, message):
+        """通知用户（可以根据实际情况实现，如显示对话框或状态栏消息）"""
+        print(f"User notification: {message}")
+        # TODO: 实现实际的用户通知机制，例如：
+        if hasattr(self, 'main_window') and self.main_window:
+            self.main_window.show_notification(message)
     
     def check_missing_translations(self):
         """Check for missing translations across all components
@@ -276,14 +486,14 @@ class Settings:
         try:
             # 检查参数有效性
             if info_type is None:
-                return "参数无效"
+                return "Invalid parameter"
             
             if info_type == "cpu":
                 return platform.processor()
             
             elif info_type == "memory":
                 mem = psutil.virtual_memory()
-                return f"总计: {self._format_bytes(mem.total)}, 可用: {self._format_bytes(mem.available)}, 已使用: {mem.percent}%"
+                return f"Total: {self._format_bytes(mem.total)}, Available: {self._format_bytes(mem.available)}, Used: {mem.percent}%"
             
             elif info_type == "disk":
                 
@@ -296,22 +506,22 @@ class Settings:
                         try:
                             # 检查路径是否存在
                             if not os.path.exists(partition.mountpoint):
-                                disk_info.append(f"{partition.device} - 挂载点不存在")
+                                disk_info.append(f"{partition.device} - Mount point does not exist")
                                 continue
                        
                             # 检查是否可访问
                             if not os.access(partition.mountpoint, os.R_OK):
-                                disk_info.append(f"{partition.device} ({partition.mountpoint}) - 无访问权限")
+                                disk_info.append(f"{partition.device} ({partition.mountpoint}) - No access permission")
                                 continue
                    
                             # 获取磁盘使用情况
                             usage = psutil.disk_usage(partition.mountpoint)
                             
-                            disk_info.append(f"{partition.device} ({partition.mountpoint}) - 总计: {self._format_bytes(usage.total)}, 已使用: {self._format_bytes(usage.used)} ({usage.percent}%)")
+                            disk_info.append(f"{partition.device} ({partition.mountpoint}) - Total: {self._format_bytes(usage.total)}, Used: {self._format_bytes(usage.used)} ({usage.percent}%)")
                         except PermissionError:
-                            disk_info.append(f"{partition.device} ({partition.mountpoint}) - 权限错误")
+                            disk_info.append(f"{partition.device} ({partition.mountpoint}) - Permission error")
                         except FileNotFoundError:
-                            disk_info.append(f"{partition.device} ({partition.mountpoint}) - 路径不存在")
+                            disk_info.append(f"{partition.device} ({partition.mountpoint}) - Path does not exist")
                         except OSError as e:
                             disk_info.append(f"{partition.device} ({partition.mountpoint}) - 操作系统错误: {str(e)}")
                         except Exception as e:
@@ -391,3 +601,5 @@ class Settings:
                 return f"{bytes:.2f} {unit}"
             bytes /= 1024
         return f"{bytes:.2f} PB" 
+    
+    

@@ -8,10 +8,14 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QCheckBox, QLineEdit, QListWidget, QFileDialog,
                             QProgressBar, QTabWidget, QGroupBox, QFormLayout,
                             QListWidgetItem, QTableWidget, QHeaderView, QTextEdit,
-                            QMessageBox)
+                            QMessageBox, QInputDialog)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize
 from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
+from utils.logger import Logger
+
+# 获取logger实例
+logger = Logger().get_logger()
 
 class CleanerWorker(QThread):
     """扫描和清理文件的工作线程"""
@@ -308,15 +312,20 @@ class CleanerWorker(QThread):
             size_bytes /= 1024
 
 class SystemCleanerWidget(BaseComponent):
-    def __init__(self, settings, parent=None):
+    def __init__(self, parent=None):
         # 在调用setup_ui之前初始化属性
-        self.worker = None
+        self.scan_worker = None
+        self.clean_worker = None
         self.scan_results = None
         self.exclusions = []
-        self.extensions = [".tmp", ".temp", ".log", ".old", ".bak", ".dmp", ".dump", ".chk"]
+        self.extensions = []
         
-        # 调用基类构造函数，该构造函数调用setup_ui
-        super().__init__(settings, parent)
+        # 调用父类构造函数
+        super().__init__(parent)
+        
+        # 加载排除项和扩展名
+        self.load_exclusions()
+        self.load_extensions()
     
     def get_translation(self, key, default=None):
         """重写 get_translation 以使用正确的部分名称"""
@@ -328,23 +337,33 @@ class SystemCleanerWidget(BaseComponent):
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(20)
         
-        # 标题
+        # 标题和描述
         self.title = QLabel(self.get_translation("title"))
         self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
         self.main_layout.addWidget(self.title)
         
-        # 描述
         self.description = QLabel(self.get_translation("description"))
         self.description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
+        self.description.setWordWrap(True)
         self.main_layout.addWidget(self.description)
+        
+        # 创建水平分割的主布局区域
+        self.content_layout = QHBoxLayout()
+        self.main_layout.addLayout(self.content_layout, 1)  # 设置伸展因子
+        
+        # 左侧面板 - 选项卡和按钮
+        self.left_panel = QWidget()
+        self.left_panel_layout = QVBoxLayout(self.left_panel)
+        self.left_panel_layout.setContentsMargins(0, 0, 10, 0)
+        self.left_panel.setMaximumWidth(500)  # 限制左侧面板宽度
         
         # 选项卡小部件
         self.tab_widget = QTabWidget()
         self.tab_widget.setStyleSheet("""
             QTabWidget::pane {
                 border: 1px solid #3a3a3a;
+                border-radius: 6px;
                 background-color: #252525;
-                border-radius: 4px;
             }
             QTabBar::tab {
                 background-color: #2a2a2a;
@@ -365,105 +384,157 @@ class SystemCleanerWidget(BaseComponent):
             }
         """)
         
-        # 扫描选项卡
+        # 创建选项卡
         self.scan_tab = QWidget()
-        self.setup_scan_tab()
-        self.tab_widget.addTab(self.scan_tab, self.get_translation("scan_tab"))
-        
-        # 结果选项卡
         self.results_tab = QWidget()
-        self.setup_results_tab()
-        self.tab_widget.addTab(self.results_tab, self.get_translation("results_tab"))
-        
-        # 设置选项卡
         self.settings_tab = QWidget()
+        
+        # 设置选项卡内容
+        self.setup_scan_tab()
+        self.setup_results_tab()
         self.setup_settings_tab()
+        
+        # 添加选项卡到选项卡小部件
+        self.tab_widget.addTab(self.scan_tab, self.get_translation("scan_tab"))
+        self.tab_widget.addTab(self.results_tab, self.get_translation("results_tab"))
         self.tab_widget.addTab(self.settings_tab, self.get_translation("settings_tab"))
         
-        # 将选项卡小部件添加到主布局
-        self.main_layout.addWidget(self.tab_widget)
+        # 添加选项卡小部件到左面板
+        self.left_panel_layout.addWidget(self.tab_widget)
+        
+        # 添加按钮到左面板
+        buttons_layout = QHBoxLayout()
+        
+        self.start_scan_button = QPushButton(self.get_translation("start_scan"))
+        self.start_scan_button.setStyleSheet("""
+            QPushButton {
+                background-color: #00a8ff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #0096e0;
+            }
+            QPushButton:pressed {
+                background-color: #0085c7;
+            }
+            QPushButton:disabled {
+                background-color: #555555;
+                color: #888888;
+            }
+        """)
+        self.start_scan_button.clicked.connect(self.start_scan)
+        buttons_layout.addWidget(self.start_scan_button)
+        
+        self.stop_button = QPushButton(self.get_translation("stop"))
+        self.stop_button.setEnabled(False)
+        self.stop_button.setStyleSheet("""
+            QPushButton {
+                background-color: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #c0392b;
+            }
+            QPushButton:pressed {
+                background-color: #a93226;
+            }
+            QPushButton:disabled {
+                background-color: #555555;
+                color: #888888;
+            }
+        """)
+        self.stop_button.clicked.connect(self.stop_scan)
+        buttons_layout.addWidget(self.stop_button)
+        
+        self.clean_button = QPushButton(self.get_translation("clean_selected"))
+        self.clean_button.setEnabled(False)
+        self.clean_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2ecc71;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #27ae60;
+            }
+            QPushButton:pressed {
+                background-color: #229954;
+            }
+            QPushButton:disabled {
+                background-color: #555555;
+                color: #888888;
+            }
+        """)
+        self.clean_button.clicked.connect(self.start_clean)
+        buttons_layout.addWidget(self.clean_button)
+        
+        self.left_panel_layout.addLayout(buttons_layout)
+        
+        # 添加左面板到主内容布局
+        self.content_layout.addWidget(self.left_panel)
+        
+        # 右侧面板 - 日志和进度
+        self.right_panel = QWidget()
+        self.right_panel_layout = QVBoxLayout(self.right_panel)
+        self.right_panel_layout.setContentsMargins(10, 0, 0, 0)
+        
+        # 日志标签和滚动区域
+        log_label = QLabel(self.get_translation("log_output"))
+        log_label.setStyleSheet("color: #e0e0e0; font-weight: bold;")
+        self.right_panel_layout.addWidget(log_label)
+        
+        self.log_text = QTextEdit()
+        self.log_text.setReadOnly(True)
+        self.log_text.setMinimumHeight(400)  # 增加日志区域高度
+        self.log_text.setStyleSheet("""
+            QTextEdit {
+                background-color: #1e1e1e;
+                color: #e0e0e0;
+                border: 1px solid #3a3a3a;
+                border-radius: 4px;
+                font-family: monospace;
+                font-size: 12px;
+                line-height: 1.5;
+            }
+        """)
+        self.right_panel_layout.addWidget(self.log_text, 1)  # 设置伸展因子
         
         # 进度条
         self.progress_bar = QProgressBar()
-        self.progress_bar.setMinimum(0)
-        self.progress_bar.setMaximum(100)
+        self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(True)
         self.progress_bar.setStyleSheet("""
             QProgressBar {
+                background-color: #2a2a2a;
+                color: white;
                 border: 1px solid #3a3a3a;
                 border-radius: 4px;
-                color: white;
-                background-color: #2a2a2a;
                 text-align: center;
             }
             QProgressBar::chunk {
                 background-color: #00a8ff;
-                border-radius: 4px;
+                border-radius: 3px;
             }
         """)
-        self.main_layout.addWidget(self.progress_bar)
+        self.right_panel_layout.addWidget(self.progress_bar)
         
-        # 威胁发现
-        threats_group = QGroupBox(self.get_translation("threats_found", "检测到的威胁"))
-        threats_group.setObjectName("threats_group")
-        threats_layout = QVBoxLayout(threats_group)
+        # 添加右面板到主内容布局
+        self.content_layout.addWidget(self.right_panel, 1)  # 设置伸展因子，优先给右面板更多空间
         
-        self.threats_table = QTableWidget(0, 3)
-        self.threats_table.setObjectName("threats_table")
-        self.threats_table.setHorizontalHeaderLabels([
-            self.get_translation("file", "文件"),
-            self.get_translation("threat_type", "威胁类型"),
-            self.get_translation("status", "状态")
-        ])
-        self.threats_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.threats_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self.threats_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        threats_layout.addWidget(self.threats_table)
-        self.main_layout.addWidget(threats_group)
-        
-        # 日志输出
-        log_group = QGroupBox(self.get_translation("log_output", "扫描日志"))
-        log_group.setObjectName("log_group")
-        log_layout = QVBoxLayout(log_group)
-        
-        self.log_text = QTextEdit()
-        self.log_text.setObjectName("log_text")
-        self.log_text.setReadOnly(True)
-        log_layout.addWidget(self.log_text)
-        self.main_layout.addWidget(log_group)
-        
-        # 操作按钮
-        buttons_layout = QHBoxLayout()
-        buttons_layout.addStretch()
-        
-        self.start_button = QPushButton(self.get_translation("scan_button"))
-        self.start_button.setObjectName("start_button")
-        self.start_button.setMinimumWidth(120)
-        buttons_layout.addWidget(self.start_button)
-        
-        self.stop_button = QPushButton(self.get_translation("stop_button"))
-        self.stop_button.setObjectName("stop_button")
-        self.stop_button.setEnabled(False)
-        self.stop_button.setMinimumWidth(120)
-        buttons_layout.addWidget(self.stop_button)
-        
-        self.fix_button = QPushButton(self.get_translation("clean_threats"))
-        self.fix_button.setObjectName("fix_button")
-        self.fix_button.setEnabled(False)
-        self.fix_button.setMinimumWidth(120)
-        buttons_layout.addWidget(self.fix_button)
-        
-        self.main_layout.addLayout(buttons_layout)
-        
-        # 连接信号
-        self.start_button.clicked.connect(self.start_scan)
-        self.stop_button.clicked.connect(self.stop_scan)
-        self.fix_button.clicked.connect(self.fix_threats)
-        
-        # 初始设置
-        ready_message = self.get_translation("ready_to_scan", "系统清理工具准备就绪。选择清理选项并单击'开始扫描'。")
-        self.log_text.append(ready_message)
+        # 初始化默认内容
+        self.log_text.append(self.get_translation("welcome_message", "The cleaning tool is ready. Please select the cleaning options and click 'Start Scan'。"))
     
     def setup_scan_tab(self):
         """设置扫描选项卡"""
@@ -645,136 +716,99 @@ class SystemCleanerWidget(BaseComponent):
     
     def setup_settings_tab(self):
         """设置设置选项卡"""
-        layout = QVBoxLayout(self.settings_tab)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(15)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(10, 10, 10, 10)
         
-        # Exclusions group
+        # 创建排除组
         self.exclusions_group = QGroupBox(self.get_translation("exclusions"))
-        self.exclusions_group.setStyleSheet("""
-            QGroupBox {
-                color: #c0c0c0;
-                font-weight: bold;
-                border: 1px solid #3a3a3a;
-                border-radius: 4px;
-                margin-top: 1em;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-            }
-        """)
-        exclusions_layout = QVBoxLayout(self.exclusions_group)
+        exclusions_layout = QVBoxLayout()
         
-        # Exclusions list
         self.exclusions_list = QListWidget()
-        self.exclusions_list.setStyleSheet("""
-            QListWidget {
-                background-color: #2a2a2a;
-                border: 1px solid #3a3a3a;
-                border-radius: 4px;
-                color: #e0e0e0;
-            }
-            QListWidget::item {
-                padding: 6px;
-                border-bottom: 1px solid #303030;
-            }
-            QListWidget::item:selected {
-                background-color: #353535;
-            }
-            QListWidget::item:hover {
-                background-color: #303030;
-            }
-        """)
-        exclusions_layout.addWidget(self.exclusions_list)
         
-        # Exclusion buttons
+        # 从设置加载排除项
+        for item in self.exclusions:
+            self.exclusions_list.addItem(item)
+        
+        # 排除项按钮
         exclusion_buttons = QWidget()
         exclusion_buttons_layout = QHBoxLayout(exclusion_buttons)
         exclusion_buttons_layout.setContentsMargins(0, 0, 0, 0)
         
         self.add_exclusion_button = QPushButton(self.get_translation("add"))
         self.add_exclusion_button.clicked.connect(self.add_exclusion)
-        exclusion_buttons_layout.addWidget(self.add_exclusion_button)
         
         self.remove_exclusion_button = QPushButton(self.get_translation("remove"))
         self.remove_exclusion_button.clicked.connect(self.remove_exclusion)
+        
+        exclusion_buttons_layout.addWidget(self.add_exclusion_button)
         exclusion_buttons_layout.addWidget(self.remove_exclusion_button)
         
+        exclusions_layout.addWidget(self.exclusions_list)
         exclusions_layout.addWidget(exclusion_buttons)
         
+        self.exclusions_group.setLayout(exclusions_layout)
         layout.addWidget(self.exclusions_group)
         
-        # Extensions group
+        # 创建扩展名组
         self.extensions_group = QGroupBox(self.get_translation("file_extensions"))
-        self.extensions_group.setStyleSheet("""
-            QGroupBox {
-                color: #c0c0c0;
-                font-weight: bold;
-                border: 1px solid #3a3a3a;
-                border-radius: 4px;
-                margin-top: 1em;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-            }
-        """)
-        extensions_layout = QVBoxLayout(self.extensions_group)
+        extensions_layout = QVBoxLayout()
         
-        # Extensions list
+        # 添加输入框用于输入扩展名
+        input_layout = QHBoxLayout()
+        self.extension_input = QLineEdit()
+        self.extension_input.setPlaceholderText(self.get_translation("add_extension_placeholder", "输入文件扩展名 (例如 .tmp)"))
+        self.extension_input.returnPressed.connect(self.add_extension)
+        
+        self.add_extension_button = QPushButton(self.get_translation("add"))
+        self.add_extension_button.clicked.connect(self.add_extension)
+        
+        input_layout.addWidget(self.extension_input)
+        input_layout.addWidget(self.add_extension_button)
+        
+        extensions_layout.addLayout(input_layout)
+        
         self.extensions_list = QListWidget()
-        self.extensions_list.setStyleSheet("""
-            QListWidget {
-                background-color: #2a2a2a;
-                border: 1px solid #3a3a3a;
-                border-radius: 4px;
-                color: #e0e0e0;
-            }
-            QListWidget::item {
-                padding: 6px;
-                border-bottom: 1px solid #303030;
-            }
-            QListWidget::item:selected {
-                background-color: #353535;
-            }
-            QListWidget::item:hover {
-                background-color: #303030;
-            }
-        """)
-        extensions_layout.addWidget(self.extensions_list)
         
-        # Extension buttons
+        # 从设置加载扩展名列表
+        for ext in self.extensions:
+            self.extensions_list.addItem(ext)
+        
+        # 扩展名按钮
         extension_buttons = QWidget()
         extension_buttons_layout = QHBoxLayout(extension_buttons)
         extension_buttons_layout.setContentsMargins(0, 0, 0, 0)
         
-        self.add_extension_button = QPushButton(self.get_translation("add"))
-        self.add_extension_button.clicked.connect(self.add_extension)
-        extension_buttons_layout.addWidget(self.add_extension_button)
-        
         self.remove_extension_button = QPushButton(self.get_translation("remove"))
         self.remove_extension_button.clicked.connect(self.remove_extension)
+        
         extension_buttons_layout.addWidget(self.remove_extension_button)
         
+        extensions_layout.addWidget(self.extensions_list)
         extensions_layout.addWidget(extension_buttons)
         
+        self.extensions_group.setLayout(extensions_layout)
         layout.addWidget(self.extensions_group)
         
-        # Add some default extensions
-        default_extensions = [".tmp", ".temp", ".log", ".old", ".bak", ".cache"]
-        for ext in default_extensions:
-            if ext not in self.extensions:
-                self.extensions.append(ext)
-                self.extensions_list.addItem(ext)
+        # 设置标签的布局
+        self.settings_tab.setLayout(layout)
+        
+        # 检查是否有预设的扩展名，如果没有则添加默认扩展名
+        if not self.extensions or len(self.extensions) == 0:
+            # 添加一些默认扩展名
+            default_extensions = [".tmp", ".temp", ".log", ".old", ".bak", ".cache", ".dmp", ".dump", ".chk"]
+            
+            # 遍历默认扩展名并添加到列表中
+            for ext in default_extensions:
+                if ext not in self.extensions:
+                    self.extensions.append(ext)
+                    self.extensions_list.addItem(ext)
+            
+            # 保存默认扩展名到设置
+            self.save_extensions()
     
     def start_scan(self):
         """开始扫描过程"""
-        # Get scan options
+        # 获取扫描选项
         options = {
             "temp_files": self.temp_files_check.isChecked(),
             "recycle_bin": self.recycle_bin_check.isChecked(),
@@ -782,24 +816,24 @@ class SystemCleanerWidget(BaseComponent):
             "log_files": self.log_files_check.isChecked()
         }
         
-        # Clear previous results
+        # 清除之前的结果
         self.results_list.clear()
         self.items_found_value.setText("0")
         self.space_value.setText("0 B")
         self.scan_results = None
         self.clean_button.setEnabled(False)
         
-        # Disable scan button during scan
+        # 扫描期间禁用扫描按钮
         self.start_scan_button.setEnabled(False)
         self.start_scan_button.setText(self.get_translation("scanning"))
         
-        # Start worker thread
-        self.worker = CleanerWorker(options, self.exclusions, self.extensions, "scan")
-        self.worker.progress_updated.connect(self.update_progress)
-        self.worker.scan_completed.connect(self.scan_completed)
-        self.worker.start()
+        # 启动工作线程
+        self.scan_worker = CleanerWorker(options, self.exclusions, self.extensions, "scan")
+        self.scan_worker.progress_updated.connect(self.update_progress)
+        self.scan_worker.scan_completed.connect(self.scan_completed)
+        self.scan_worker.start()
         
-        # Update UI to show scan is in progress
+        # 更新UI以显示扫描正在进行中
         self.stop_button.setEnabled(True)
     
     def update_progress(self, progress, status):
@@ -844,10 +878,10 @@ class SystemCleanerWidget(BaseComponent):
         self.clean_button.setText(self.get_translation("cleaning"))
         
         # Start worker thread
-        self.worker = CleanerWorker({"files": self.scan_results["files"]}, self.exclusions, self.extensions, "clean")
-        self.worker.progress_updated.connect(self.update_progress)
-        self.worker.clean_completed.connect(self.clean_completed)
-        self.worker.start()
+        self.clean_worker = CleanerWorker({"files": self.scan_results["files"]}, self.exclusions, self.extensions, "clean")
+        self.clean_worker.progress_updated.connect(self.update_progress)
+        self.clean_worker.clean_completed.connect(self.clean_completed)
+        self.clean_worker.start()
     
     def clean_completed(self, results):
         """处理清理完成"""
@@ -870,10 +904,25 @@ class SystemCleanerWidget(BaseComponent):
     
     def add_exclusion(self):
         """添加文件或目录到排除列表"""
-        dir_path = QFileDialog.getExistingDirectory(self, "选择要排除的目录")
-        if dir_path and dir_path not in self.exclusions:
-            self.exclusions.append(dir_path)
-            self.exclusions_list.addItem(dir_path)
+        # 使用文件对话框选择文件或目录
+        dir_path = QFileDialog.getExistingDirectory(
+            self,
+            self.get_translation("select_directory", "选择要排除的目录"),
+            os.path.expanduser("~")
+        )
+        
+        # 如果用户选择了目录
+        if dir_path:
+            if dir_path not in self.exclusions:
+                self.exclusions.append(dir_path)
+                self.exclusions_list.addItem(dir_path)
+                # 添加成功后显示确认消息
+                self.log_text.append(self.get_translation("exclusion_added", f"已添加排除项: {dir_path}"))
+                # 立即保存到设置
+                self.save_exclusions()
+            else:
+                # 如果路径已存在，显示提示消息
+                self.log_text.append(self.get_translation("exclusion_exists", f"排除项 {dir_path} 已存在"))
     
     def remove_exclusion(self):
         """从排除列表中删除文件或目录"""
@@ -885,15 +934,36 @@ class SystemCleanerWidget(BaseComponent):
                 self.exclusions_list.takeItem(row)
                 if item_text in self.exclusions:
                     self.exclusions.remove(item_text)
+                    # 添加移除确认消息
+                    self.log_text.append(self.get_translation("exclusion_removed", f"已移除排除项: {item_text}"))
+            
+            # 立即保存到设置
+            self.save_exclusions()
     
     def add_extension(self):
-        """添加文件扩展名到列表"""
-        # Simple dialog for extension input would go here
-        # For now, just add a default
-        extension = ".tmp"  # This should come from user input
-        if extension and extension not in self.extensions:
-            self.extensions.append(extension)
-            self.extensions_list.addItem(extension)
+        """添加文件扩展名到过滤列表"""
+        # 获取目前选定的文本并去除前导点
+        text = self.extension_input.text().strip()
+        if text:
+            # 确保扩展名格式正确
+            extension = text if text.startswith('.') else '.' + text
+            
+            # 避免重复添加
+            if extension not in self.extensions:
+                self.extensions.append(extension)
+                self.extensions_list.addItem(extension)
+                # 添加成功后显示确认消息
+                self.log_text.append(f"已添加扩展名: {extension}")
+                # 切换到设置选项卡以显示新添加的扩展名
+                self.tab_widget.setCurrentIndex(2)
+                # 保存到设置
+                self.save_extensions()
+            else:
+                # 显示扩展名已存在的消息
+                self.log_text.append(f"扩展名 {extension} 已存在")
+            
+            # 清空输入框
+            self.extension_input.clear()
     
     def remove_extension(self):
         """从列表中删除文件扩展名"""
@@ -905,6 +975,11 @@ class SystemCleanerWidget(BaseComponent):
                 self.extensions_list.takeItem(row)
                 if item_text in self.extensions:
                     self.extensions.remove(item_text)
+                    # 添加移除确认消息
+                    self.log_text.append(self.get_translation("extension_removed", f"已移除扩展名: {item_text}"))
+            
+            # 立即保存到设置
+            self.save_extensions()
     
     def format_size(self, size_bytes):
         """将字节格式化为人类可读的大小"""
@@ -949,8 +1024,8 @@ class SystemCleanerWidget(BaseComponent):
     
     def stop_scan(self):
         """停止正在进行的扫描过程"""
-        if self.worker and hasattr(self.worker, 'stop'):
-            self.worker.stop()
+        if self.scan_worker and hasattr(self.scan_worker, 'stop'):
+            self.scan_worker.stop()
             self.log_text.append(self.get_translation("scan_stopped", "扫描已停止"))
             
             # Re-enable scan button
@@ -975,3 +1050,47 @@ class SystemCleanerWidget(BaseComponent):
         if reply == QMessageBox.Yes:
             # 开始清理过程
             self.start_clean() 
+
+    def load_exclusions(self):
+        """从设置加载排除项列表"""
+        try:
+            saved_exclusions = self.settings.get_setting("system_cleaner_exclusions", [])
+            if saved_exclusions:
+                self.exclusions = saved_exclusions
+                # 更新UI列表
+                self.exclusions_list.clear()
+                for excl in self.exclusions:
+                    self.exclusions_list.addItem(excl)
+                logger.debug(f"已加载 {len(self.exclusions)} 个排除项")
+        except Exception as e:
+            logger.error(f"加载排除项失败: {str(e)}")
+    
+    def save_exclusions(self):
+        """保存排除项列表到设置"""
+        try:
+            self.settings.set_setting("system_cleaner_exclusions", self.exclusions)
+            logger.debug(f"已保存 {len(self.exclusions)} 个排除项")
+        except Exception as e:
+            logger.error(f"保存排除项失败: {str(e)}")
+
+    def load_extensions(self):
+        """从设置加载扩展名列表"""
+        try:
+            saved_extensions = self.settings.get_setting("system_cleaner_extensions", [])
+            if saved_extensions:
+                self.extensions = saved_extensions
+                # 更新UI列表
+                self.extensions_list.clear()
+                for ext in self.extensions:
+                    self.extensions_list.addItem(ext)
+                logger.debug(f"已加载 {len(self.extensions)} 个扩展名")
+        except Exception as e:
+            logger.error(f"加载扩展名失败: {str(e)}")
+    
+    def save_extensions(self):
+        """保存扩展名列表到设置"""
+        try:
+            self.settings.set_setting("system_cleaner_extensions", self.extensions)
+            logger.debug(f"已保存 {len(self.extensions)} 个扩展名")
+        except Exception as e:
+            logger.error(f"保存扩展名失败: {str(e)}") 
