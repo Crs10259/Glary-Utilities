@@ -21,9 +21,9 @@ class GlaryUtilitiesApp:
         self.argv = argv
         self.logger = Logger().get_logger()
         self.exception_handler = ExceptionHandler()
-        self.settings: Optional[Settings] = None
-        self.app: Optional[QApplication] = None
-        self.window: Optional[MainWindow] = None
+        self.settings = None
+        self.app = None
+        self.window = None
         
     def parse_arguments(self) -> Dict[str, bool]:
         """Parse command line arguments"""
@@ -45,32 +45,9 @@ class GlaryUtilitiesApp:
         self.app.setApplicationName("Glary Utilities")
         self.app.setOrganizationName("Glarysoft")
         
-        # Set application icon
-        if Icon.Icon.Exist:
-            app_icon = QIcon(Icon.Icon.Path)
-            if not app_icon.isNull():
-                self.app.setWindowIcon(app_icon)
-            else:
-                self.logger.warning(f"Failed to load application icon: {Icon.Icon.Path}")
-                
-        # Optimize startup performance
-        self.app.setStartDragDistance(20)  # Reduce drag sensitivity
-        self.app.setStartDragTime(500)     # Increase drag start time
-        
-    def initialize_settings(self, args: Dict[str, bool]) -> None:
-        """Initialize and configure settings"""
+        # Initialize settings
         self.settings = Settings()
         
-        # Reset settings if requested
-        if args["reset_settings"]:
-            self.settings.reset_settings()
-            self.logger.info("Settings have been reset to defaults.")
-            
-        # Enable debug mode if requested
-        if args["debug_mode"]:
-            self.settings.set_setting("debug_mode", True)
-            self.logger.info("Debug mode enabled")
-    
     def handle_translations(self, args: Dict[str, bool]) -> bool:
         """Handle translation checking
         
@@ -106,9 +83,6 @@ class GlaryUtilitiesApp:
             
             # Setup application
             self.setup_application()
-            
-            # Initialize settings
-            self.initialize_settings(args)
             
             # Create main window
             self.window = MainWindow(self.settings)

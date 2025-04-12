@@ -628,7 +628,7 @@ class VirusScanWidget(BaseComponent):
         self.stats_label.setText(message)
         print(f"[Virus Scan] {message}")
 
-    def add_threat(self, file_path, threat_type):
+    def add_threat(self, file_path: str, threat_type: str) -> None:
         """将检测到的威胁添加到结果表格"""
         row = self.result_table.rowCount()
         self.result_table.insertRow(row)
