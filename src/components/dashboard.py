@@ -1,17 +1,23 @@
 import os
 import sys
-import psutil
 import platform
+import psutil
 import shutil
-from collections import deque
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                            QFrame, QPushButton, QSizePolicy, QSpacerItem,
-                            QProgressBar, QGridLayout)
-from PyQt5.QtCore import Qt, QSize, QTimer, QMargins
-from PyQt5.QtGui import QIcon, QFont, QColor, QPalette, QPainter, QPen
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QGridLayout, QSpacerItem, QSizePolicy, QFrame, QProgressBar,
+    QToolButton, QApplication, QGraphicsDropShadowEffect
+)
+from PyQt5.QtCore import Qt, QTimer, QSize, QRectF, QPropertyAnimation, QEasingCurve, QMargins
+from PyQt5.QtGui import (
+    QColor, QPainter, QPainterPath, QIcon, QBrush, QPen, QFont, QCursor,
+    QLinearGradient, QPalette
+)
 from PyQt5.QtChart import QChart, QChartView, QLineSeries, QValueAxis
-from components.base_component import BaseComponent
-from components.icons import Icon
+
+from .base_component import BaseComponent
+from .icons import Icon
+from collections import deque
 
 # 最大数据点数量
 MAX_DATA_POINTS = 60  # 60个数据点 = 2分钟，每2秒一个数据点
@@ -21,15 +27,22 @@ class ChartTile(QFrame):
     def __init__(self, title, icon_path=None, chart_color="#00a8ff", parent=None):
         super().__init__(parent)
         self.setObjectName("chartTile")
-        self.setStyleSheet("""
-            #chartTile {
+        self.setStyleSheet(f"""
+            #chartTile {{
                 background-color: #2d2d2d;
-                border-radius: 8px;
+                border-radius: 12px;
                 border: 1px solid #3a3a3a;
-            }
+            }}
         """)
         self.setMinimumHeight(200)
         self.chart_color = chart_color
+        
+        # 添加阴影效果
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(15)
+        shadow.setColor(QColor(0, 0, 0, 80))
+        shadow.setOffset(0, 2)
+        self.setGraphicsEffect(shadow)
         
         # 设置尺寸策略，确保在窗口调整大小时正常伸展
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -39,19 +52,27 @@ class ChartTile(QFrame):
         
         # 创建布局
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(10, 10, 10, 10)
+        self.layout.setContentsMargins(15, 15, 15, 15)
         
         # 标题容器
         title_container = QHBoxLayout()
         
+        # 如果提供了图标路径且存在，则添加图标
+        if icon_path and os.path.exists(icon_path):
+            icon = QIcon(icon_path)
+            if not icon.isNull():
+                self.icon_label = QLabel()
+                self.icon_label.setPixmap(icon.pixmap(QSize(24, 24)))
+                title_container.addWidget(self.icon_label)
+        
         # 标题标签
         self.title_label = QLabel(title)
-        self.title_label.setStyleSheet(f"color: {chart_color}; font-size: 14px; font-weight: bold;")
+        self.title_label.setStyleSheet(f"color: {chart_color}; font-size: 16px; font-weight: bold; background-color: transparent;")
         title_container.addWidget(self.title_label)
         
         # 当前值标签（右对齐）
         self.value_label = QLabel("0%")
-        self.value_label.setStyleSheet(f"color: {chart_color}; font-size: 18px; font-weight: bold;")
+        self.value_label.setStyleSheet(f"color: {chart_color}; font-size: 24px; font-weight: bold; background-color: transparent;")
         self.value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         title_container.addWidget(self.value_label)
         
@@ -66,8 +87,16 @@ class ChartTile(QFrame):
         
         # 创建图表系列
         self.series = QLineSeries()
-        self.series.setColor(QColor(chart_color))
+        pen = QPen(QColor(chart_color))
+        pen.setWidth(3)  # 增加线宽
+        self.series.setPen(pen)
         self.chart.addSeries(self.series)
+        
+        # 添加渐变填充
+        gradient = QLinearGradient(0, 0, 0, 400)
+        gradient.setColorAt(0, QColor(chart_color).lighter(150))
+        gradient.setColorAt(1, QColor(chart_color).darker(150))
+        self.series.setBrush(QBrush(gradient))
         
         # 创建X轴（时间）
         self.axis_x = QValueAxis()
@@ -98,20 +127,12 @@ class ChartTile(QFrame):
         for i in range(MAX_DATA_POINTS):
             self.data_points.append(0)
             self.series.append(i, 0)
-            
-        # 如果提供了图标路径且存在，则添加图标
-        if icon_path and os.path.exists(icon_path):
-            icon = QIcon(icon_path)
-            if not icon.isNull():
-                self.icon_label = QLabel()
-                self.icon_label.setPixmap(icon.pixmap(QSize(24, 24)))
-                title_container.insertWidget(0, self.icon_label)
     
     def update_value(self, value):
         """更新显示的值和图表"""
         # 更新文本显示
         if isinstance(value, float):
-            self.value_label.setText(f"{value:.1f}%")
+                self.value_label.setText(f"{value:.1f}%")
         else:
             self.value_label.setText(str(value))
         
@@ -133,39 +154,77 @@ class ChartTile(QFrame):
         
         # 更新图表数据
         self.series.clear()
-        for i, point in enumerate(self.data_points):
+        
+        # 平滑数据点（简单平均）以使图表看起来更平滑
+        smoothed_points = self._smooth_data(list(self.data_points), 3)
+        
+        for i, point in enumerate(smoothed_points):
             self.series.append(i, point)
             
         # 如果需要，调整Y轴范围
         max_value = max(self.data_points)
         if max_value > 0:
-            # 将上限设置为最大值的下一个25的倍数
+            # 将上限设置为最大值的下一个25的倍数，并添加一点额外空间
             upper_limit = ((int(max_value) // 25) + 1) * 25
             self.axis_y.setRange(0, max(100, upper_limit))
+    
+    def _smooth_data(self, data_points, window_size=3):
+        """简单的移动平均平滑算法
+        
+        Args:
+            data_points: 要平滑的数据点列表
+            window_size: 移动窗口大小
+            
+        Returns:
+            平滑后的数据点列表
+        """
+        if window_size < 2:
+            return data_points
+            
+        result = []
+        for i in range(len(data_points)):
+            # 计算窗口的起始和结束位置
+            start = max(0, i - window_size // 2)
+            end = min(len(data_points), i + window_size // 2 + 1)
+            # 计算窗口内的平均值
+            window = data_points[start:end]
+            result.append(sum(window) / len(window))
+            
+        return result
         
 class ActionTile(QFrame):
     """自定义样式的操作块小部件"""
-    def __init__(self, title, description, icon_path=None, parent=None):
+    def __init__(self, title, description, icon_path=None, parent=None, color="#4285F4"):
         super().__init__(parent)
         self.setObjectName("actionTile")
-        self.setStyleSheet("""
-            #actionTile {
+        self.color = color
+        
+        self.setStyleSheet(f"""
+            #actionTile {{
                 background-color: #2d2d2d;
-                border-radius: 8px;
+                border-radius: 12px;
                 border: none;
-            }
-            #actionTile:hover {
+            }}
+            #actionTile:hover {{
                 background-color: #353535;
-                border: none;
-            }
+                border-left: 4px solid {color};
+            }}
         """)
+        
+        # 添加阴影效果
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(15)
+        shadow.setColor(QColor(0, 0, 0, 80))
+        shadow.setOffset(0, 2)
+        self.setGraphicsEffect(shadow)
+        
         self.setMinimumHeight(100)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setCursor(Qt.PointingHandCursor)
         
         # 创建布局
         self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(15, 15, 15, 15)
+        self.layout.setContentsMargins(18, 18, 18, 18)
         
         # 如果提供了图标路径且存在，则添加图标
         if icon_path and os.path.exists(icon_path):
@@ -173,7 +232,7 @@ class ActionTile(QFrame):
                 icon = QIcon(icon_path)
                 if not icon.isNull():
                     self.icon_label = QLabel()
-                    pixmap = icon.pixmap(QSize(32, 32))
+                    pixmap = icon.pixmap(QSize(42, 42))
                     if not pixmap.isNull():
                         self.icon_label.setPixmap(pixmap)
                         self.layout.addWidget(self.icon_label)
@@ -189,10 +248,10 @@ class ActionTile(QFrame):
         
         # 标题标签
         self.title_label = QLabel(title)
-        self.title_label.setStyleSheet("color: #e0e0e0; font-size: 16px; font-weight: bold;")
+        self.title_label.setStyleSheet(f"color: {color}; font-size: 18px; font-weight: bold; background-color: transparent;")
         
         self.desc_label = QLabel(description)
-        self.desc_label.setStyleSheet("color: #a0a0a0; font-size: 12px;")
+        self.desc_label.setStyleSheet("color: #a0a0a0; font-size: 13px; background-color: transparent;")
         self.desc_label.setWordWrap(True)
         
         self.text_container.addWidget(self.title_label)
@@ -206,7 +265,7 @@ class ActionTile(QFrame):
                 arrow_icon = QIcon(Icon.Arrow.Path)
                 if not arrow_icon.isNull():
                     self.arrow_label = QLabel()
-                    arrow_pixmap = arrow_icon.pixmap(QSize(16, 16))
+                    arrow_pixmap = arrow_icon.pixmap(QSize(18, 18))
                     if not arrow_pixmap.isNull():
                         self.arrow_label.setPixmap(arrow_pixmap)
                         self.layout.addWidget(self.arrow_label, 0, Qt.AlignRight)
@@ -239,13 +298,24 @@ class DashboardWidget(BaseComponent):
     def setup_ui(self):
         # 主布局
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(20, 20, 20, 20)
-        self.main_layout.setSpacing(20)
+        self.main_layout.setContentsMargins(25, 25, 25, 25)
+        self.main_layout.setSpacing(25)
+        
+        # 仪表板标题和欢迎消息
+        title_container = QHBoxLayout()
         
         # 仪表板标题
         self.title = QLabel(self.get_translation("system_status"))
-        self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
-        self.main_layout.addWidget(self.title)
+        self.title.setStyleSheet("font-size: 28px; font-weight: bold; color: #e0e0e0; background-color: transparent;")
+        title_container.addWidget(self.title)
+        
+        # 欢迎消息，右对齐
+        self.welcome_label = QLabel("Welcome to Glary Utilities")
+        self.welcome_label.setStyleSheet("color: #a0a0a0; font-size: 16px; background-color: transparent;")
+        self.welcome_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        title_container.addWidget(self.welcome_label)
+        
+        self.main_layout.addLayout(title_container)
         
         # 系统统计部分
         self.create_system_stats_section()
@@ -257,41 +327,50 @@ class DashboardWidget(BaseComponent):
         self.main_layout.addStretch(1)
     
     def create_system_stats_section(self):
+        # 统计标题
+        stats_title = QLabel(self.get_translation("system_resources"))
+        stats_title.setStyleSheet("font-size: 22px; font-weight: bold; color: #e0e0e0; margin-top: 10px; background-color: transparent;")
+        self.main_layout.addWidget(stats_title)
+        
         # 统计容器
         self.stats_frame = QFrame()
         self.stats_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.stats_layout = QGridLayout(self.stats_frame)
         self.stats_layout.setContentsMargins(0, 0, 0, 0)
-        self.stats_layout.setSpacing(15)
+        self.stats_layout.setSpacing(20)
         
         # CPU 使用情况图表
+        cpu_icon_path = "resources/icons/cpu.svg"
         self.cpu_chart = ChartTile(
             self.get_translation("cpu_usage"), 
-            Icon.CPU.Path,
+            cpu_icon_path if os.path.exists(cpu_icon_path) else Icon.CPU.Path,
             chart_color="#E74856"  # 红色，模拟Windows Task Manager CPU图表
         )
         self.stats_layout.addWidget(self.cpu_chart, 0, 0)
         
         # 内存使用情况图表
+        memory_icon_path = "resources/icons/memory.svg"
         self.memory_chart = ChartTile(
             self.get_translation("memory_usage"), 
-            Icon.Memory.Path,
+            memory_icon_path if os.path.exists(memory_icon_path) else Icon.Memory.Path,
             chart_color="#00B7C3"  # 青色，模拟Windows Task Manager内存图表
         )
         self.stats_layout.addWidget(self.memory_chart, 0, 1)
         
         # 磁盘使用情况图表
+        disk_icon_path = "resources/icons/disk.svg"
         self.disk_chart = ChartTile(
             self.get_translation("disk_usage"), 
-            Icon.Disk.Path,
+            disk_icon_path if os.path.exists(disk_icon_path) else Icon.Disk.Path,
             chart_color="#FFB900"  # 黄色，模拟Windows Task Manager磁盘图表
         )
         self.stats_layout.addWidget(self.disk_chart, 1, 0)
         
         # 温度图表
+        temp_icon_path = "resources/icons/temperature.svg"
         self.temp_chart = ChartTile(
             self.get_translation("system_temperature"), 
-            Icon.Temperature.Path,
+            temp_icon_path if os.path.exists(temp_icon_path) else Icon.Temperature.Path,
             chart_color="#10893E"  # 绿色，模拟Windows Task Manager温度图表
         )
         self.stats_layout.addWidget(self.temp_chart, 1, 1)
@@ -302,7 +381,7 @@ class DashboardWidget(BaseComponent):
     def create_quick_access_section(self):
         # 快速访问标题
         self.quick_title = QLabel(self.get_translation("quick_access"))
-        self.quick_title.setStyleSheet("font-size: 20px; font-weight: bold; color: #e0e0e0;")
+        self.quick_title.setStyleSheet("font-size: 22px; font-weight: bold; color: #e0e0e0; margin-top: 10px; background-color: transparent;")
         self.main_layout.addWidget(self.quick_title)
         
         # 快速访问容器
@@ -310,37 +389,45 @@ class DashboardWidget(BaseComponent):
         self.quick_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.quick_layout = QGridLayout(self.quick_frame)
         self.quick_layout.setContentsMargins(0, 0, 0, 0)
-        self.quick_layout.setSpacing(15)
+        self.quick_layout.setSpacing(20)
         
         # 优化系统块
+        optimize_icon_path = "resources/icons/optimize.svg"
         self.optimize_tile = ActionTile(
             self.get_translation("optimize_system"),
             "Speed up your system by fixing issues",  # 通过修复问题加速系统
-            None if not Icon.Optimize.Exist else Icon.Optimize.Path
+            optimize_icon_path if os.path.exists(optimize_icon_path) else (None if not Icon.Optimize.Exist else Icon.Optimize.Path),
+            color="#4285F4"  # Google Blue
         )
         self.quick_layout.addWidget(self.optimize_tile, 0, 0)
         
         # 清理垃圾块
+        clean_icon_path = "resources/icons/clean.svg"
         self.clean_tile = ActionTile(
             self.get_translation("clean_junk"),
             "Free up disk space by removing unnecessary files",  # 通过删除不必要的文件释放磁盘空间
-            None if not Icon.Clean.Exist else Icon.Clean.Path
+            clean_icon_path if os.path.exists(clean_icon_path) else (None if not Icon.Clean.Exist else Icon.Clean.Path),
+            color="#EA4335"  # Google Red
         )
         self.quick_layout.addWidget(self.clean_tile, 0, 1)
         
         # 病毒扫描块
+        virus_icon_path = "resources/icons/virus.svg"
         self.virus_tile = ActionTile(
             self.get_translation("scan_system"),
             "Scan your system for viruses and malware",  # 扫描系统中的病毒和恶意软件
-            None if not Icon.Virus.Exist else Icon.Virus.Path
+            virus_icon_path if os.path.exists(virus_icon_path) else (None if not Icon.Virus.Exist else Icon.Virus.Path),
+            color="#FBBC05"  # Google Yellow
         )
         self.quick_layout.addWidget(self.virus_tile, 1, 0)
         
         # 获取系统信息块
+        info_icon_path = "resources/icons/info.svg"
         self.info_tile = ActionTile(
             self.get_translation("get_system_info"),
             "Get system information",  # 获取系统信息
-            None if not Icon.Info.Exist else Icon.Info.Path
+            info_icon_path if os.path.exists(info_icon_path) else (None if not Icon.Info.Exist else Icon.Info.Path),
+            color="#34A853"  # Google Green
         )
         self.quick_layout.addWidget(self.info_tile, 1, 1)
         
@@ -380,19 +467,48 @@ class DashboardWidget(BaseComponent):
             self.disk_chart.update_value("Error")  # 错误
             print(f"Error getting disk usage: {e}")  # 获取磁盘使用情况时出错
         
-        # 温度（如果可用）
+        # 温度检测 - 增强版
+        self._update_temperature()
+    
+    def _update_temperature(self):
+        """更新温度显示，使用更全面的检测方法"""
         try:
+            # 首先检查psutil是否支持温度传感器
             if hasattr(psutil, "sensors_temperatures"):
                 temps = psutil.sensors_temperatures()
                 if temps:
+                    # 优先级顺序：CPU > 核心温度 > GPU > 其他
+                    for priority_sensor in ['coretemp', 'cpu_thermal', 'cpu-thermal', 'k10temp', 'acpitz', 'nvme']:
+                        if priority_sensor in temps:
+                            for entry in temps[priority_sensor]:
+                                if entry.current > 0:
+                                    self.temp_chart.update_value(f"{entry.current}°C")
+                                    return
+                    
+                    # 如果没有找到优先级高的传感器，使用第一个可用的
                     for name, entries in temps.items():
                         for entry in entries:
                             if entry.current > 0:
-                                self.temp_chart.update_value(entry.current)
+                                self.temp_chart.update_value(f"{entry.current}°C")
                                 return
+                                
+            # 尝试Windows特定的WMI方法（需要安装wmi包）
+            if platform.system() == 'Windows':
+                try:
+                    import wmi
+                    w = wmi.WMI(namespace="root\\wmi")
+                    temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
+                    temperature = (temperature_info.CurrentTemperature / 10.0) - 273.15  # 转换为摄氏度
+                    self.temp_chart.update_value(f"{temperature:.1f}°C")
+                    return
+                except (ImportError, Exception):
+                    pass
+                    
+            # 如果所有方法都失败，显示N/A
+                self.temp_chart.update_value("N/A")
+        except Exception as e:
             self.temp_chart.update_value("N/A")
-        except:
-            self.temp_chart.update_value("N/A")
+            print(f"Error getting temperature: {e}")  # 获取温度时出错
     
     def navigate_to_page(self, page_index):
         """在主窗口中导航到特定页面"""
@@ -419,6 +535,7 @@ class DashboardWidget(BaseComponent):
     def refresh_language(self):
         # 更新UI文本元素
         self.title.setText(self.get_translation("system_status"))
+        self.welcome_label.setText(self.get_translation("welcome_message"))
         self.quick_title.setText(self.get_translation("quick_access"))
         
         # 更新图表标题
@@ -446,7 +563,8 @@ class DashboardWidget(BaseComponent):
         keys = [
             "system_status", "cpu_usage", "memory_usage", "disk_usage",
             "system_temperature", "quick_access", "optimize_system", 
-            "clean_junk", "scan_system", "get_system_info"
+            "clean_junk", "scan_system", "get_system_info", 
+            "system_resources", "welcome_message"
         ]
         
         for key in keys:

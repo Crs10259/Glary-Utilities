@@ -17,17 +17,29 @@
         "cancel": "取消",
         "back": "返回",
         "next": "下一步",
-        "finish": "完成",
+        "exit": "退出",
+        "menu": "菜单",
+        "welcome": "欢迎使用Glary Utilities",
+        "minimize": "最小化",
+        "maximize": "最大化",
+        "restore": "还原",
+        "close": "关闭",
         "scan": "扫描",
         "clean": "清理",
         "repair": "修复",
         "check": "检查",
         "reset": "重置",
-        "welcome": "欢迎使用系统维护工具！",
         "common_tools": "常用工具",
         "system_tools": "系统工具",
         "info_settings": "信息设置",
-        "switched_to": "已切换到"
+        "switched_to": "已切换至",
+        "progress": "进度",
+        "log_label": "扫描日志",
+        "exclusion_added": "已添加排除项：{path}",
+        "exclusion_removed": "已移除排除项：{path}",
+        "exclusion_exists": "排除项 {path} 已存在",
+        "extension_added": "已添加扩展名：{ext}",
+        "extension_removed": "已移除扩展名：{ext}"
     },
     "menu": {
         "file": "文件",
@@ -49,7 +61,9 @@
         "clean_junk": "清理垃圾文件",
         "scan_virus": "扫描病毒",
         "scan_system": "扫描系统",
-        "get_system_info": "获取系统信息"
+        "get_system_info": "获取系统信息",
+        "system_resources": "系统资源",
+        "welcome_message": "欢迎使用Glary Utilities"
     },
     "system_cleaner": {
         "title": "系统清理",

@@ -565,6 +565,16 @@ class VirusScanWidget(BaseComponent):
             # Reset progress bar
             self.progress.setValue(0)
             
+            # 检查是否启用动画
+            if self.settings.get_setting("enable_animations", True):
+                # 添加扫描动画效果
+                self.progress.setStyleSheet("QProgressBar {border: 1px solid grey; border-radius: 2px; text-align: center;} "
+                                          "QProgressBar::chunk {background-color: #4CAF50; width: 20px;}")
+            else:
+                # 不使用动画特效，使用简单样式
+                self.progress.setStyleSheet("QProgressBar {border: 1px solid grey; border-radius: 2px; text-align: center;} "
+                                          "QProgressBar::chunk {background-color: #4CAF50;}")
+            
             # Create and start thread
             self.scan_thread = VirusScanThread(scan_options)
             self.scan_thread.update_progress.connect(self.update_progress)

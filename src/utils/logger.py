@@ -88,3 +88,8 @@ class Logger:
     def critical(self, message):
         """记录严重错误级别日志"""
         self._logger.critical(message)
+
+def setup_logger():
+    """初始化并配置全局日志记录器"""
+    logger_instance = Logger()
+    return logger_instance.get_logger()

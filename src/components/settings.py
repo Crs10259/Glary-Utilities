@@ -14,37 +14,58 @@ class SettingsWidget(QWidget):
     """应用程序设置的窗口小部件"""
     
     def __init__(self, settings, parent=None) -> None:
+        """初始化设置组件"""
         super().__init__(parent)
         self.settings = settings
+        self.main_window = parent
+        self.background_image_path = ""
         self.theme_manager = ThemeManager()
+        self.animations = AnimationUtils()
         self.setup_ui()
         self.load_settings()
     
     def setup_ui(self) -> None:
-        """设置UI元素"""
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 20, 20, 20)
+        """设置UI界面"""
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(20, 20, 20, 20)
         
-        # 创建选项卡
+        # 创建标签页
         self.tabs = QTabWidget()
-        self.tabs.setObjectName("settings_tabs")
+        self.tabs.setDocumentMode(True)
+        self.tabs.setStyleSheet("""
+            QTabBar::tab {
+                min-width: 100px;
+                padding: 8px 16px;
+            }
+            QTabWidget::pane {
+                border: 1px solid #444;
+                border-radius: 4px;
+                padding: 10px;
+            }
+            QLabel {
+                background-color: transparent;
+            }
+        """)
         
-        # 创建选项卡
+        # 设置标签页
         self.general_tab = QWidget()
         self.scan_tab = QWidget()
         self.advanced_tab = QWidget()
+        self.appearance_tab = QWidget()
         
-        # 设置选项卡
+        # 创建各个选项卡
         self.setup_general_tab()
         self.setup_scan_tab()
         self.setup_advanced_tab()
+        self.setup_appearance_tab()  # 设置外观选项卡
         
-        # 将选项卡添加到小部件
-        self.tabs.addTab(self.general_tab, "常规")
-        self.tabs.addTab(self.scan_tab, "扫描")
-        self.tabs.addTab(self.advanced_tab, "高级")
+        # 添加选项卡到 QTabWidget
+        self.tabs.addTab(self.general_tab, self.get_translation("general", "常规"))
+        self.tabs.addTab(self.scan_tab, self.get_translation("scan", "扫描"))
+        self.tabs.addTab(self.advanced_tab, self.get_translation("advanced", "高级"))
+        self.tabs.addTab(self.appearance_tab, self.get_translation("appearance", "外观"))  # 添加外观选项卡
         
-        layout.addWidget(self.tabs)
+        self.main_layout.addWidget(self.tabs)
         
         # 按钮
         buttons_layout = QHBoxLayout()
@@ -117,7 +138,7 @@ class SettingsWidget(QWidget):
         """)
         buttons_layout.addWidget(self.restore_defaults_button)
         
-        layout.addLayout(buttons_layout)
+        self.main_layout.addLayout(buttons_layout)
         
         # 连接信号
         self.save_button.clicked.connect(self.save_settings)
@@ -274,24 +295,43 @@ class SettingsWidget(QWidget):
         general_layout.addWidget(theme_group)
         
         # 通知组
-        notifications_group = QGroupBox("通知")
-        notifications_group.setObjectName("notifications_group")
-        notifications_group.setStyleSheet("color: #e0e0e0;")
+        notifications_group = QGroupBox(self.get_translation("notifications", "通知"))
+        notifications_group.setStyleSheet(""" 
+            QGroupBox {
+                font-weight: bold;
+                border: 1px solid #3a3a3a;
+                border-radius: 6px;
+                margin-top: 1em;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
         notifications_layout = QVBoxLayout(notifications_group)
+        notifications_layout.setContentsMargins(15, 15, 15, 15)
         
-        self.enable_notifications_checkbox = QCheckBox("启用通知")
+        self.enable_notifications_checkbox = QCheckBox(self.get_translation("enable_notifications", "启用通知"))
         self.enable_notifications_checkbox.setObjectName("enable_notifications_checkbox")
         self.enable_notifications_checkbox.setChecked(True)
         self.enable_notifications_checkbox.setStyleSheet("color: #e0e0e0;")
         notifications_layout.addWidget(self.enable_notifications_checkbox)
         
-        self.show_tips_checkbox = QCheckBox("显示提示")
+        self.show_tips_checkbox = QCheckBox(self.get_translation("show_tips", "显示提示"))
         self.show_tips_checkbox.setObjectName("show_tips_checkbox")
         self.show_tips_checkbox.setChecked(True)
         self.show_tips_checkbox.setStyleSheet("color: #e0e0e0;")
         notifications_layout.addWidget(self.show_tips_checkbox)
         
-        self.maintenance_reminder_checkbox = QCheckBox("维护提醒")
+        self.enable_animations_checkbox = QCheckBox(self.get_translation("enable_animations", "启用动画效果"))
+        self.enable_animations_checkbox.setObjectName("enable_animations_checkbox")
+        self.enable_animations_checkbox.setChecked(True)
+        self.enable_animations_checkbox.setStyleSheet("color: #e0e0e0;")
+        notifications_layout.addWidget(self.enable_animations_checkbox)
+        
+        self.maintenance_reminder_checkbox = QCheckBox(self.get_translation("maintenance_reminder", "维护提醒"))
         self.maintenance_reminder_checkbox.setObjectName("maintenance_reminder_checkbox")
         self.maintenance_reminder_checkbox.setChecked(True)
         self.maintenance_reminder_checkbox.setStyleSheet("color: #e0e0e0;")
@@ -427,15 +467,24 @@ class SettingsWidget(QWidget):
         layout.addWidget(log_group)
         
         # 性能设置
-        performance_group = QGroupBox("性能")
+        performance_group = QGroupBox(self.get_translation("performance_settings", "性能设置"))
         performance_group.setStyleSheet("color: #e0e0e0;")
-        performance_group_layout = QVBoxLayout(performance_group)
+        performance_layout = QVBoxLayout(performance_group)
         
-        self.check_use_multithreading = QCheckBox("使用多线程以加快扫描速度")
-        self.check_use_multithreading.setChecked(True)
+        # 添加启用动画设置选项
+        self.enable_animations_checkbox = QCheckBox(self.get_translation("enable_animations", "启用界面动画效果"))
+        self.enable_animations_checkbox.setChecked(self.settings.get_setting("enable_animations", True))
+        self.enable_animations_checkbox.setStyleSheet("color: #e0e0e0;")
+        self.enable_animations_checkbox.stateChanged.connect(lambda state: self.settings.set_setting("enable_animations", state == Qt.Checked))
+        performance_layout.addWidget(self.enable_animations_checkbox)
+        
+        # 使用多线程选项
+        self.check_use_multithreading = QCheckBox(self.get_translation("use_multithreading", "使用多线程以加快扫描速度"))
+        self.check_use_multithreading.setChecked(self.settings.get_setting("use_multithreading", True))
         self.check_use_multithreading.setStyleSheet("color: #e0e0e0;")
-        performance_group_layout.addWidget(self.check_use_multithreading)
+        performance_layout.addWidget(self.check_use_multithreading)
         
+        # 线程数量设置
         thread_layout = QHBoxLayout()
         thread_label = QLabel("最大线程数：")
         thread_label.setStyleSheet("color: #e0e0e0;")
@@ -447,8 +496,69 @@ class SettingsWidget(QWidget):
         self.spin_max_threads.setStyleSheet("color: #e0e0e0; background-color: #2a2a2a;")
         thread_layout.addWidget(self.spin_max_threads)
         
-        performance_group_layout.addLayout(thread_layout)
+        performance_layout.addLayout(thread_layout)
         layout.addWidget(performance_group)
+    
+    def setup_appearance_tab(self):
+        """设置外观选项卡"""
+        layout = QVBoxLayout(self.appearance_tab)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+        
+        # 主题设置
+        theme_group = QGroupBox(self.get_translation("theme_settings", "主题设置"))
+        theme_layout = QFormLayout(theme_group)
+        theme_layout.setContentsMargins(15, 15, 15, 15)
+        theme_layout.setSpacing(15)
+        
+        # 主题选择器
+        self.theme_combo = QComboBox()
+        self.theme_combo.setMinimumWidth(200)
+        self.theme_combo.setObjectName("theme_combo")
+        
+        # 获取所有主题
+        theme_names = self.theme_manager.get_theme_names()
+        theme_display_names = self.theme_manager.get_theme_display_names()
+        
+        # 添加主题到下拉列表
+        for theme_name in theme_names:
+            display_name = theme_display_names.get(theme_name, theme_name.capitalize())
+            self.theme_combo.addItem(display_name, theme_name)
+        
+        # 设置当前选中的主题
+        current_theme = self.theme_manager.current_theme
+        for i in range(self.theme_combo.count()):
+            if self.theme_combo.itemData(i) == current_theme:
+                self.theme_combo.setCurrentIndex(i)
+                break
+        
+        # 应用主题按钮
+        self.apply_theme_button = QPushButton(self.get_translation("apply_theme", "应用主题"))
+        self.apply_theme_button.setObjectName("apply_theme_button")
+        self.apply_theme_button.clicked.connect(self.apply_theme)
+        
+        # 添加到布局
+        theme_layout.addRow(self.get_translation("select_theme", "选择主题:"), self.theme_combo)
+        theme_layout.addRow("", self.apply_theme_button)
+        
+        # 界面调整设置
+        ui_group = QGroupBox(self.get_translation("ui_settings", "界面设置"))
+        ui_layout = QVBoxLayout(ui_group)
+        ui_layout.setContentsMargins(15, 15, 15, 15)
+        ui_layout.setSpacing(10)
+        
+        # 启用动画复选框
+        self.enable_animations_checkbox = QCheckBox(self.get_translation("enable_animations", "启用动画效果"))
+        self.enable_animations_checkbox.setObjectName("enable_animations_checkbox")
+        self.enable_animations_checkbox.setChecked(True)
+        
+        # 添加到布局
+        ui_layout.addWidget(self.enable_animations_checkbox)
+        
+        # 添加组到主布局
+        layout.addWidget(theme_group)
+        layout.addWidget(ui_group)
+        layout.addStretch(1)
     
     def browse_backup_location(self):
         """打开对话框以选择备份位置"""
@@ -526,41 +636,55 @@ class SettingsWidget(QWidget):
     
     def load_settings(self):
         """从设置管理器加载设置"""
-        # 加载常规设置
-        self.language_combo.setCurrentText(self.settings.get_setting("language", "English"))
-        self.startup_checkbox.setChecked(self.settings.get_setting("start_with_windows", False))
-        self.enable_notifications_checkbox.setChecked(self.settings.get_setting("enable_notifications", True))
-        self.show_tips_checkbox.setChecked(self.settings.get_setting("show_tips", True))
-        self.maintenance_reminder_checkbox.setChecked(self.settings.get_setting("maintenance_reminder", True))
+        # 加载语言设置
+        current_language = self.settings.get_setting("language", "English")
+        index = self.language_combo.findText(current_language)
+        if index >= 0:
+            self.language_combo.setCurrentIndex(index)
         
         # 加载主题设置
-        theme = self.settings.get_setting("theme", "dark")
-        # 查找主题的索引 - 尝试使用数据角色查找
-        index = -1
+        current_theme = self.settings.get_setting("theme", "dark")
+        theme_index = -1
         for i in range(self.theme_combo.count()):
-            if self.theme_combo.itemData(i) == theme:
-                index = i
+            if self.theme_combo.itemData(i) == current_theme:
+                theme_index = i
                 break
-                
-        if index >= 0:
-            self.theme_combo.setCurrentIndex(index)
+        if theme_index >= 0:
+            self.theme_combo.setCurrentIndex(theme_index)
         else:
             self.theme_combo.setCurrentIndex(0)  # 默认dark主题
         
         # 加载透明度设置
-        transparency = self.settings.get_setting("window_transparency", 100)
+        transparency = self.settings.get_setting("transparency", 100)
         self.transparency_slider.setValue(transparency)
         self.transparency_value.setText(f"{transparency}%")
         
         # 设置自定义颜色按钮的初始颜色
         self.update_color_buttons()
         
+        # 加载通知设置
+        enable_notifications = self.settings.get_setting("enable_notifications", True)
+        self.enable_notifications_checkbox.setChecked(enable_notifications)
+        
+        show_tips = self.settings.get_setting("show_tips", True)
+        self.show_tips_checkbox.setChecked(show_tips)
+        
+        # 加载动画设置
+        enable_animations = self.settings.get_setting("enable_animations", True)
+        self.enable_animations_checkbox.setChecked(enable_animations)
+        
+        maintenance_reminder = self.settings.get_setting("maintenance_reminder", True)
+        self.maintenance_reminder_checkbox.setChecked(maintenance_reminder)
+        
+        # 加载自启动设置
+        start_with_windows = self.settings.get_setting("start_with_windows", False)
+        self.startup_checkbox.setChecked(start_with_windows)
+        
         # 加载高级设置
         self.check_backup_before_repair.setChecked(self.settings.get_setting("backup_before_repair", True))
         self.edit_backup_location.setText(self.settings.get_setting("backup_location", 
                                                                  os.path.join(os.environ.get("USERPROFILE", ""), "GlaryBackups")))
         self.check_enable_logging.setChecked(self.settings.get_setting("enable_logging", True))
-        self.check_use_multithreading.setChecked(self.settings.get_setting("use_multithreading", True))
         self.spin_max_threads.setValue(self.settings.get_setting("max_threads", 4))
         
         # 更新扫描设置
@@ -582,42 +706,51 @@ class SettingsWidget(QWidget):
         self.spin_max_threads.setValue(self.settings.get_setting("max_threads", 4))
     
     def save_settings(self):
-        """保存设置到设置管理器"""
-        # 保存常规设置
+        """保存设置"""
+        # 主题设置
+        self.settings.set_setting("theme", self.theme_combo.currentText())
+        accent_color = self.accent_color_button.property("current_color")
+        if accent_color:
+            self.settings.set_setting("accent_color", accent_color)
+        self.settings.set_setting("background_image", self.background_image_path)
+        
+        # 窗口设置
+        self.settings.set_setting("use_system_title_bar", self.system_titlebar_check.isChecked())
+        self.settings.set_setting("window_blur", self.window_blur_check.isChecked())
+        self.settings.set_setting("start_minimized", self.start_minimized_check.isChecked())
+        self.settings.set_setting("close_to_tray", self.close_to_tray_check.isChecked())
+        
+        # 语言设置
         self.settings.set_setting("language", self.language_combo.currentText())
-        self.settings.set_setting("start_with_windows", self.startup_checkbox.isChecked())
-        self.settings.set_setting("enable_notifications", self.enable_notifications_checkbox.isChecked())
-        self.settings.set_setting("show_tips", self.show_tips_checkbox.isChecked())
-        self.settings.set_setting("maintenance_reminder", self.maintenance_reminder_checkbox.isChecked())
         
-        # 保存主题设置 - 使用数据角色的值
-        theme_data = self.theme_combo.currentData()
-        self.settings.set_setting("theme", theme_data)
+        # 性能设置
+        self.settings.set_setting("startup_scan", self.startup_scan_check.isChecked())
         
-        # 保存透明度设置
-        self.settings.set_setting("window_transparency", self.transparency_slider.value())
+        # 清理设置
+        self.settings.set_setting("deep_scan", self.deep_scan_check.isChecked())
+        self.settings.set_setting("auto_clean", self.auto_clean_check.isChecked())
         
-        # 保存高级设置
-        self.settings.set_setting("backup_before_repair", self.check_backup_before_repair.isChecked())
-        self.settings.set_setting("backup_location", self.edit_backup_location.text())
-        self.settings.set_setting("enable_logging", self.check_enable_logging.isChecked())
-        self.settings.set_setting("use_multithreading", self.check_use_multithreading.isChecked())
-        self.settings.set_setting("max_threads", self.spin_max_threads.value())
+        # 更新设置
+        self.settings.set_setting("check_updates", self.check_updates_check.isChecked())
+        self.settings.set_setting("auto_update", self.auto_update_check.isChecked())
         
-        # 保存扫描设置
-        self.settings.set_setting("clean_temp", self.check_clean_temp.isChecked())
-        self.settings.set_setting("clean_recycle", self.check_clean_recycle.isChecked())
-        self.settings.set_setting("clean_browser", self.check_clean_browser.isChecked())
-        self.settings.set_setting("clean_prefetch", self.check_clean_prefetch.isChecked())
-        self.settings.set_setting("clean_logs", self.check_clean_logs.isChecked())
-        self.settings.set_setting("scan_archives", self.check_scan_archives.isChecked())
-        self.settings.set_setting("scan_rootkits", self.check_scan_rootkits.isChecked())
-        self.settings.set_setting("scan_autofix", self.check_scan_autofix.isChecked())
-        self.settings.set_setting("scan_level", self.slider_scan_level.value())
+        # 备份设置
+        self.settings.set_setting("auto_backup", self.auto_backup_check.isChecked())
+        self.settings.set_setting("backup_location", self.backup_location_edit.text())
         
-        # 保存到磁盘
+        # 通知设置
+        self.settings.set_setting("show_notifications", self.show_notifications_check.isChecked())
+        self.settings.set_setting("notification_sound", self.notification_sound_check.isChecked())
+        
+        # 重启时间表设置
+        self.settings.set_setting("schedule_restarts", self.schedule_restarts_check.isChecked())
+        
+        # 保存到文件
         self.settings.save_settings()
         
+        # 更新应用主题
+        self.main_window.apply_theme()
+    
     def reset_settings(self):
         """重置设置为默认值"""
         # 重置常规设置
@@ -680,6 +813,7 @@ class SettingsWidget(QWidget):
         self.tabs.setTabText(0, self.get_translation("general_tab", "常规"))
         self.tabs.setTabText(1, self.get_translation("scan_tab", "扫描"))
         self.tabs.setTabText(2, self.get_translation("advanced_tab", "高级"))
+        self.tabs.setTabText(3, self.get_translation("appearance_tab", "外观"))
         
         # 更新常规选项卡
         general_group = self.findChild(QGroupBox, "general_group")
@@ -769,6 +903,9 @@ class SettingsWidget(QWidget):
         # 高级选项卡翻译
         self.get_translation("advanced_tab")
         
+        # 外观选项卡翻译
+        self.get_translation("appearance_tab")
+        
         # 按钮翻译
         self.get_translation("save_settings")
         self.get_translation("restore_defaults")
@@ -808,9 +945,9 @@ class SettingsWidget(QWidget):
                 print(f"移除状态栏出错: {str(e)}")
         
         # 添加加载动画
-        movie = QMovie("src/assets/images/loading.gif")
+        movie = QMovie("resources/images/loading.gif")
         loading_label = None
-        if movie.isValid():
+        if movie.isValid() and self.settings.get_setting("enable_animations", True):
             loading_label = QLabel(self)
             loading_label.setAlignment(Qt.AlignCenter)
             loading_label.setMovie(movie)
@@ -964,3 +1101,10 @@ class SettingsWidget(QWidget):
         self.bg_color_button.setStyleSheet(f"background-color: {bg_color}; min-width: 80px; min-height: 24px;")
         self.text_color_button.setStyleSheet(f"background-color: {text_color}; min-width: 80px; min-height: 24px;")
         self.accent_color_button.setStyleSheet(f"background-color: {accent_color}; min-width: 80px; min-height: 24px;")
+
+    def apply_theme(self):
+        """应用所选主题"""
+        index = self.theme_combo.currentIndex()
+        if index >= 0:
+            theme_name = self.theme_combo.itemData(index)
+            self.theme_manager.apply_theme(theme_name)

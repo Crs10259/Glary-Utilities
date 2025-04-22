@@ -2,9 +2,16 @@ from PyQt5.QtWidgets import QWidget, QGraphicsOpacityEffect, QGraphicsColorizeEf
 from PyQt5.QtCore import QPropertyAnimation, QSequentialAnimationGroup, QParallelAnimationGroup
 from PyQt5.QtCore import QEasingCurve, Qt, QSize, QPoint, QRect, QAbstractAnimation
 from PyQt5.QtGui import QColor
+from utils.settings_manager import Settings
 
 class AnimationUtils:
     """提供UI动画效果的工具类"""
+    
+    @classmethod
+    def is_animations_enabled(cls):
+        """检查是否启用动画效果"""
+        settings = Settings()
+        return settings.get_setting("enable_animations", True)
     
     @classmethod
     def fade(cls, widget, duration=300, start=1.0, end=0.0, direction="out", callback=None):
@@ -18,49 +25,31 @@ class AnimationUtils:
             direction: "in" 淡入, "out" 淡出, "inout" 淡入后淡出
             callback: 动画完成后的回调函数
         """
-        # 创建不透明度效果
+        # 检查是否启用动画
+        if not cls.is_animations_enabled():
+            # 如果动画禁用，直接设置最终效果并调用回调
+            effect = QGraphicsOpacityEffect(widget)
+            effect.setOpacity(end)
+            widget.setGraphicsEffect(effect)
+            if callback:
+                callback()
+            return None
+            
+        # 正常创建并启动动画
         effect = QGraphicsOpacityEffect(widget)
         widget.setGraphicsEffect(effect)
         
-        if direction == "inout":
-            # 创建序列动画组
-            anim_group = QSequentialAnimationGroup()
-            
-            # 淡出
-            fade_out = QPropertyAnimation(effect, b"opacity")
-            fade_out.setDuration(duration // 2)
-            fade_out.setStartValue(start)
-            fade_out.setEndValue(end)
-            fade_out.setEasingCurve(QEasingCurve.OutQuad)
-            
-            # 淡入
-            fade_in = QPropertyAnimation(effect, b"opacity")
-            fade_in.setDuration(duration // 2)
-            fade_in.setStartValue(end)
-            fade_in.setEndValue(start)
-            fade_in.setEasingCurve(QEasingCurve.InQuad)
-            
-            anim_group.addAnimation(fade_out)
-            anim_group.addAnimation(fade_in)
-            
-            if callback:
-                fade_out.finished.connect(callback)
-            
-            anim_group.start(QAbstractAnimation.DeleteWhenStopped)
-            return anim_group
-        else:
-            # 创建单个动画
-            fade_anim = QPropertyAnimation(effect, b"opacity")
-            fade_anim.setDuration(duration)
-            fade_anim.setStartValue(start if direction == "out" else end)
-            fade_anim.setEndValue(end if direction == "out" else start)
-            fade_anim.setEasingCurve(QEasingCurve.OutQuad if direction == "out" else QEasingCurve.InQuad)
-            
-            if callback:
-                fade_anim.finished.connect(callback)
-            
-            fade_anim.start(QAbstractAnimation.DeleteWhenStopped)
-            return fade_anim
+        anim = QPropertyAnimation(effect, b"opacity")
+        anim.setDuration(duration)
+        anim.setStartValue(start)
+        anim.setEndValue(end)
+        anim.setEasingCurve(QEasingCurve.InOutQuad)
+        
+        if callback:
+            anim.finished.connect(callback)
+        
+        anim.start()
+        return anim
     
     @classmethod
     def slide(cls, widget, duration=300, direction="left", distance=50, callback=None):
@@ -73,6 +62,24 @@ class AnimationUtils:
             distance: 滑动距离(像素)
             callback: 动画完成后的回调函数
         """
+        # 检查是否启用动画
+        if not cls.is_animations_enabled():
+            # 如果动画禁用，直接设置最终位置并调用回调
+            start_pos = widget.pos()
+            end_pos = None
+            if direction == "left":
+                end_pos = start_pos - QPoint(distance, 0)
+            elif direction == "right":
+                end_pos = start_pos + QPoint(distance, 0)
+            elif direction == "up":
+                end_pos = start_pos - QPoint(0, distance)
+            elif direction == "down":
+                end_pos = start_pos + QPoint(0, distance)
+            widget.move(end_pos)
+            if callback:
+                callback()
+            return None
+            
         start_pos = widget.pos()
         end_pos = None
         
@@ -98,29 +105,41 @@ class AnimationUtils:
         return anim
     
     @classmethod
-    def highlight(cls, widget, duration=800, color="#00a8ff"):
-        """高亮动画
-        
-        Args:
-            widget: 要动画的部件
-            duration: 持续时间(毫秒)
-            color: 高亮颜色
-        """
-        effect = QGraphicsColorizeEffect(widget)
-        widget.setGraphicsEffect(effect)
-        
-        highlight_color = QColor(color)
-        highlight_color.setAlphaF(0.3)  # 设置透明度
-        
+    def highlight(cls, widget, duration=400, color="#3498db", fade_out=True):
+        """突出显示widget，通常用于指示更改"""
+        if not widget:
+            return
+            
         # 创建颜色动画
-        color_anim = QPropertyAnimation(effect, b"color")
-        color_anim.setDuration(duration)
-        color_anim.setStartValue(highlight_color)
-        color_anim.setEndValue(QColor(0, 0, 0, 0))  # 完全透明
+        color_anim = QPropertyAnimation(widget, b"styleSheet")
+        color_anim.setDuration(duration // 2)  # 淡入时间
+        
+        # 获取当前样式
+        current_style = widget.styleSheet()
+        
+        # 创建高亮样式
+        highlight_style = current_style + f"background-color: {color};"
+        
+        # 设置动画
+        color_anim.setStartValue(current_style)
+        color_anim.setEndValue(highlight_style)
         color_anim.setEasingCurve(QEasingCurve.OutQuad)
         
-        color_anim.start(QAbstractAnimation.DeleteWhenStopped)
-        return color_anim
+        # 如果需要淡出效果
+        if fade_out:
+            fade_anim = QPropertyAnimation(widget, b"styleSheet")
+            fade_anim.setDuration(duration // 2)  # 淡出时间
+            fade_anim.setStartValue(highlight_style)
+            fade_anim.setEndValue(current_style)
+            fade_anim.setEasingCurve(QEasingCurve.OutQuad)
+            
+            # 创建序列动画组
+            sequence = QSequentialAnimationGroup()
+            sequence.addAnimation(color_anim)
+            sequence.addAnimation(fade_anim)
+            sequence.start(QAbstractAnimation.DeleteWhenStopped)
+        else:
+            color_anim.start(QAbstractAnimation.DeleteWhenStopped)
     
     @classmethod
     def pulse(cls, widget, duration=1000, scale=1.05):
@@ -131,6 +150,10 @@ class AnimationUtils:
             duration: 持续时间(毫秒)
             scale: 缩放比例
         """
+        # 检查是否启用动画
+        if not cls.is_animations_enabled():
+            return None
+            
         orig_geo = widget.geometry()
         
         # 计算放大的几何形状
@@ -156,6 +179,10 @@ class AnimationUtils:
     @classmethod
     def highlight_button(cls, button, duration=800):
         """按钮高亮动画"""
+        # 检查是否启用动画
+        if not cls.is_animations_enabled():
+            return None
+            
         # 保存原始样式
         orig_style = button.styleSheet()
         
@@ -210,6 +237,15 @@ class AnimationUtils:
             duration: 持续时间(毫秒)
             direction: "left", "right"
         """
+        # 检查是否启用动画
+        if not cls.is_animations_enabled():
+            # 如果动画禁用，直接切换页面
+            new_page.show()
+            old_page.hide()
+            # 恢复位置确保正确显示
+            new_page.move(old_page.pos())
+            return None
+            
         # 确保新页面可见
         new_page.show()
         

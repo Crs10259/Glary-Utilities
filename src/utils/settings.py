@@ -29,23 +29,44 @@ class Settings(QObject):
                 except Exception as e:
                     print(f"Error loading translation {file}: {e}")
     
+    def get_config_dir(self):
+        """获取配置目录路径"""
+        if platform.system() == "Windows":
+            return os.path.join(os.environ.get("APPDATA"), "GlaryUtilities")
+        elif platform.system() == "Darwin":  # macOS
+            return os.path.join(os.path.expanduser("~/Library/Application Support"), "GlaryUtilities")
+        else:  # Linux and others
+            return os.path.join(os.path.expanduser("~/.config"), "GlaryUtilities")
+            
     def load_theme(self, theme_name):
-        """加载指定主题的配置"""
-        themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "themes")
+        """加载指定主题的配置数据
+        
+        Args:
+            theme_name (str): 主题名称
+            
+        Returns:
+            dict: 主题配置数据，如果主题不存在则返回None
+        """
+        # 主题文件路径 - 先检查用户自定义主题
+        themes_dir = os.path.join(self.get_config_dir(), "themes")
         theme_file = os.path.join(themes_dir, f"{theme_name}.json")
         
-        # 确保目录存在
-        if not os.path.exists(themes_dir):
-            os.makedirs(themes_dir)
-        
-        # 尝试加载主题文件
-        try:
-            if os.path.exists(theme_file):
-                with open(theme_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+        # 如果自定义主题不存在，尝试加载内置主题
+        if not os.path.exists(theme_file):
+            builtin_themes_dir = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                "resources", "themes"
+            )
+            builtin_theme_file = os.path.join(builtin_themes_dir, f"{theme_name}.json")
+            
+            if os.path.exists(builtin_theme_file):
+                theme_file = builtin_theme_file
             else:
-                print(f"Theme file not found: {theme_file}")
                 return None
+                
+        try:
+            with open(theme_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
         except Exception as e:
             print(f"Error loading theme {theme_name}: {e}")
             return None

@@ -25,6 +25,7 @@ class Settings:
             "theme": "dark",
             "font_size": 12,
             "transparency": 100,
+            "enable_animations": True,  # 默认启用动画效果
             "enable_notifications": True,
             "show_tips": True,
             "maintenance_reminder": True
@@ -600,6 +601,43 @@ class Settings:
             if bytes < 1024:
                 return f"{bytes:.2f} {unit}"
             bytes /= 1024
-        return f"{bytes:.2f} PB" 
+        return f"{bytes:.2f} PB"
+    
+    def load_theme(self, theme_name):
+        """加载指定主题的配置数据
+        
+        Args:
+            theme_name (str): 主题名称
+            
+        Returns:
+            dict: 主题配置数据，如果主题不存在则返回None
+        """
+        try:
+            # 主题文件路径
+            theme_file = os.path.join(self.config_dir, "themes", f"{theme_name}.json")
+            
+            # 如果自定义主题不存在，尝试加载内置主题
+            if not os.path.exists(theme_file):
+                # 相对路径获取内置主题目录
+                current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                builtin_theme_file = os.path.join(
+                    current_dir, "resources", "themes", f"{theme_name}.json"
+                )
+                if os.path.exists(builtin_theme_file):
+                    theme_file = builtin_theme_file
+                else:
+                    # 如果找不到主题，使用默认的暗色主题
+                    if theme_name != "dark":
+                        return self.load_theme("dark")
+                    return None
+                    
+            with open(theme_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            error_msg = self._handle_error("file_not_found", f"Theme file {theme_name}: {str(e)}")
+            print(error_msg)
+            if theme_name != "dark":
+                return self.load_theme("dark")
+            return None
     
     

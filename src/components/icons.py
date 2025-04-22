@@ -7,8 +7,9 @@ from functools import lru_cache
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("Icons")
 
-# Constants
-ASSETS_DIR = "assets/images"
+# Constants - 修改为正确的资源路径
+RESOURCES_DIR = "resources"
+ICONS_DIR = f"{RESOURCES_DIR}/icons"
 
 class IconBase:
     @staticmethod
@@ -16,9 +17,14 @@ class IconBase:
     def exists(path):
         """Check if an icon file exists at the given path"""
         try:
-            # Get the base directory (src folder)
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            full_path = os.path.join(base_dir, path)
+            # 修正文件路径检查方式
+            if os.path.isabs(path):
+                full_path = path
+            else:
+                # 获取项目根目录（不是src目录）
+                base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                full_path = os.path.join(base_dir, path)
+            
             return os.path.exists(full_path) and os.path.isfile(full_path)
         except Exception as e:
             logger.error(f"Error checking if icon exists at {path}: {str(e)}")
@@ -29,21 +35,21 @@ class IconBase:
     def get_path(path):
         """Get the full path to an icon file"""
         try:
-            # Get the base directory (src folder)
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            full_path = os.path.join(base_dir, path)
+            # 修正文件路径获取方式
+            if os.path.isabs(path):
+                full_path = path
+            else:
+                # 获取项目根目录（不是src目录）
+                base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+                full_path = os.path.join(base_dir, path)
             
             # Check if the file exists
             if os.path.exists(full_path) and os.path.isfile(full_path):
                 return full_path
             else:
                 logger.warning(f"Icon file not found: {full_path}")
-                # Return a placeholder or default icon
-                placeholder = os.path.join(base_dir, "assets", "images", "placeholder.png")
-                if os.path.exists(placeholder):
-                    return placeholder
-                else:
-                    return path  # Return original path if placeholder doesn't exist
+                # 返回一个默认图标路径
+                return os.path.join(base_dir, RESOURCES_DIR, "icons", "placeholder.svg")
         except Exception as e:
             logger.error(f"Error getting icon path for {path}: {str(e)}")
             return path
@@ -60,112 +66,126 @@ class IconBase:
 
 def initialize_icons():
     """Initialize all icon paths and check for existence"""
-    # Get the base directory (src folder)
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    assets_dir = os.path.join(base_dir, ASSETS_DIR)
+    # 获取项目根目录（不是src目录）
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    icons_dir = os.path.join(base_dir, ICONS_DIR)
     
-    # Ensure the assets directory exists
-    if not os.path.exists(assets_dir):
-        logger.warning(f"Assets directory not found: {assets_dir}")
-        IconBase.ensure_dir_exists(assets_dir)
+    # 确保图标目录存在
+    if not os.path.exists(icons_dir):
+        logger.warning(f"Icons directory not found: {icons_dir}")
+        IconBase.ensure_dir_exists(icons_dir)
+    
+    # 创建默认图标和占位符图标（如果不存在）
+    placeholder_path = os.path.join(icons_dir, "placeholder.svg")
+    if not os.path.exists(placeholder_path):
+        try:
+            # 创建一个简单的SVG占位符图标
+            with open(placeholder_path, 'w') as f:
+                f.write('''<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <rect width="24" height="24" fill="#cccccc"/>
+                    <text x="12" y="16" font-family="Arial" font-size="12" text-anchor="middle" fill="#666666">?</text>
+                </svg>''')
+            logger.info(f"Created placeholder icon at {placeholder_path}")
+        except Exception as e:
+            logger.error(f"Error creating placeholder icon: {e}")
 
 class Icon:
     """Icon manager class that handles all application icons"""
     
     class Icon:
-        _path = f"{ASSETS_DIR}/icon.png"
+        _path = f"{RESOURCES_DIR}/icons/icon.png"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
         
     class Home:
-        _path = f"{ASSETS_DIR}/home.png"
+        _path = f"{ICONS_DIR}/dashboard.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Cleaner:
-        _path = f"{ASSETS_DIR}/cleaner.png"
+        _path = f"{ICONS_DIR}/clean.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class GPU:
-        _path = f"{ASSETS_DIR}/gpu.png"
+        _path = f"{ICONS_DIR}/cpu.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Repair:
-        _path = f"{ASSETS_DIR}/repair.png"
+        _path = f"{ICONS_DIR}/driver.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Dism:
-        _path = f"{ASSETS_DIR}/dism.png"
+        _path = f"{ICONS_DIR}/optimize.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Network:
-        _path = f"{ASSETS_DIR}/network.png"
+        _path = f"{ICONS_DIR}/disk.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Disk:
-        _path = f"{ASSETS_DIR}/disk.png"
+        _path = f"{ICONS_DIR}/disk.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Boot:
-        _path = f"{ASSETS_DIR}/boot.png"
+        _path = f"{ICONS_DIR}/startup.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Virus:
-        _path = f"{ASSETS_DIR}/virus.png"
+        _path = f"{ICONS_DIR}/virus.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Settings:
-        _path = f"{ASSETS_DIR}/settings.png"
+        _path = f"{ICONS_DIR}/settings.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Arrow:
-        _path = f"{ASSETS_DIR}/arrow.png"
+        _path = f"{ICONS_DIR}/minimize.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Optimize:
-        _path = f"{ASSETS_DIR}/optimize.png"
+        _path = f"{ICONS_DIR}/optimize.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Clean:
-        _path = f"{ASSETS_DIR}/clean.png"
+        _path = f"{ICONS_DIR}/clean.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class CPU:
-        _path = f"{ASSETS_DIR}/cpu.png"
+        _path = f"{ICONS_DIR}/cpu.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Memory:
-        _path = f"{ASSETS_DIR}/memory.png"
+        _path = f"{ICONS_DIR}/memory.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Temperature:
-        _path = f"{ASSETS_DIR}/temperature.png"
+        _path = f"{ICONS_DIR}/temperature.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
     
     class Info:
-        _path = f"{ASSETS_DIR}/info.png"
+        _path = f"{ICONS_DIR}/info.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
         
     class SystemInfo:
-        _path = f"{ASSETS_DIR}/system_info.png"
+        _path = f"{ICONS_DIR}/info.svg"
         Path = IconBase.get_path(_path)
         Exist = IconBase.exists(_path)
 
-# Initialize icons when the module is imported
+# 初始化图标
 initialize_icons()

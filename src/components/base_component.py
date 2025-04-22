@@ -107,14 +107,12 @@ class BaseComponent(QWidget):
             }}
             
             QComboBox::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: center right;
                 border: none;
-                background-color: transparent;
-            }}
-            
-            QComboBox::down-arrow {{
-                image: url(assets/images/down_arrow.png);
-                width: 12px;
-                height: 12px;
+                width: 20px;
+                height: 20px;
+                image: url(resources/images/down_arrow.png);
             }}
             
             QComboBox QAbstractItemView {{
@@ -151,8 +149,7 @@ class BaseComponent(QWidget):
             }}
             
             QCheckBox::indicator:checked {{
-                background-color: {accent_color};
-                image: url(assets/images/checkbox_checked.png);
+                image: url(resources/images/checkbox_checked.png);
             }}
         """)
     

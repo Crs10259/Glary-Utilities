@@ -47,7 +47,7 @@ def build_application(args):
         os.mkdir(dist_dir)
     
     # 确保图标路径存在
-    icon_path = os.path.join(src_dir, 'assets/images/icon.png')
+    icon_path = os.path.join(src_dir, 'resources/icons/icon.png')
     if not os.path.exists(icon_path):
         print(f"警告: 图标文件不存在 {icon_path}，将使用PyInstaller默认图标")
         icon_path = ""
@@ -75,7 +75,7 @@ def build_application(args):
     
     # 添加数据文件
     pyinstaller_args.extend([
-        f"--add-data={os.path.join(src_dir, 'assets')}{os.pathsep}assets",
+        f"--add-data={os.path.join(src_dir, 'resources')}{os.pathsep}resources",
         f"--add-data={os.path.join(src_dir, 'translations')}{os.pathsep}translations",
         "--clean"
     ])

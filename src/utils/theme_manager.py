@@ -2,14 +2,20 @@ import os
 import json
 from typing import Dict, Any, Optional, Tuple, List
 from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtWidgets import QApplication
+from .settings import Settings
 
 
-class ThemeManager:
+class ThemeManager(QObject):
     """
     Manager for application themes with support for custom themes and component-specific styling
     """
     _instance = None
     _initialized = False
+    
+    # 主题变更信号
+    theme_changed = pyqtSignal(str)
     
     def __new__(cls):
         """Singleton pattern implementation"""
@@ -17,18 +23,25 @@ class ThemeManager:
             cls._instance = super(ThemeManager, cls).__new__(cls)
         return cls._instance
     
-    def __init__(self):
+    def __init__(self, parent=None):
         """Initialize theme manager"""
+        super().__init__(parent)
         if ThemeManager._initialized:
             return
             
         self.themes = {}
-        self.default_theme = "dark"
+        self.default_theme = "light"
         self.current_theme = self.default_theme
-        self.themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "themes")
+        self.themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resources", "themes")
+        self.settings = Settings()
+        self.current_theme = self.settings.settings.value("theme", self.default_theme)
         
         # Load all available themes
         self._load_all_themes()
+        
+        # Apply current theme
+        self.apply_theme(self.current_theme)
+        
         ThemeManager._initialized = True
     
     def _load_all_themes(self) -> None:
@@ -64,19 +77,25 @@ class ThemeManager:
     
     def _validate_theme(self, theme_data: Dict[str, Any]) -> bool:
         """Validate theme data structure"""
-        required_fields = ["name", "colors"]
-        required_colors = ["bg_color", "text_color", "accent_color"]
-        
-        # Check for required fields
-        for field in required_fields:
-            if field not in theme_data:
-                return False
-        
-        # Check for required colors
-        if not all(color in theme_data["colors"] for color in required_colors):
-            return False
+        # 支持新的主题格式 (style字符串格式) 和旧的主题格式 (colors字典格式)
+        if "style" in theme_data:
+            # 新的主题格式 - 只需要名称和样式
+            return "name" in theme_data
+        else:
+            # 旧的主题格式 - 需要名称和颜色
+            required_fields = ["name", "colors"]
+            required_colors = ["bg_color", "text_color", "accent_color"]
             
-        return True
+            # Check for required fields
+            for field in required_fields:
+                if field not in theme_data:
+                    return False
+            
+            # Check for required colors
+            if not all(color in theme_data["colors"] for color in required_colors):
+                return False
+                
+            return True
     
     def _create_default_themes(self) -> None:
         """Create default theme files if they don't exist"""
@@ -239,24 +258,27 @@ class ThemeManager:
             with open(theme_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
     
-    def get_theme_names(self) -> List[str]:
-        """Get list of all available theme names"""
+    def get_theme_names(self):
+        """获取所有主题名称列表"""
         return list(self.themes.keys())
-    
-    def get_theme_display_names(self, language: str = "en") -> Dict[str, str]:
-        """Get display names for all themes in the specified language"""
+        
+    def get_theme_display_names(self, language="en"):
+        """获取主题的显示名称"""
         display_names = {}
-        for name, theme in self.themes.items():
-            if "display_name" in theme and language in theme["display_name"]:
-                display_names[name] = theme["display_name"][language]
+        for theme_name, theme_data in self.themes.items():
+            if "name" in theme_data:
+                display_names[theme_name] = theme_data["name"]
             else:
-                display_names[name] = name.capitalize()
+                # 如果没有名称，使用主题名的首字母大写版本
+                display_names[theme_name] = theme_name.capitalize()
         return display_names
     
     def set_current_theme(self, theme_name: str) -> bool:
         """Set the current theme"""
         if theme_name in self.themes:
             self.current_theme = theme_name
+            self.settings.settings.setValue("theme", theme_name)
+            self.theme_changed.emit(theme_name)
             return True
         return False
     
@@ -395,8 +417,8 @@ class ThemeManager:
             QMainWindow {{
                 background-color: {bg_color};
                 color: {text_color};
-                border: 2px solid {accent_color};
-                border-radius: 10px;
+                border: none;
+                border-radius: 12px;
             }}
             QWidget {{
                 background-color: transparent;
@@ -405,16 +427,49 @@ class ThemeManager:
             QLabel {{
                 color: {text_color};
             }}
+            #titleBar {{
+                background-color: {bg_darker};
+                border-top-left-radius: 12px;
+                border-top-right-radius: 12px;
+            }}
+            #minButton, #maxButton, #closeButton {{
+                background-color: transparent;
+                border: none;
+                border-radius: 7px;
+            }}
+            #minButton {{
+                background-color: #ffbd44;
+                border-radius: 7px;
+            }}
+            #minButton:hover {{
+                background-color: #ffce5b;
+            }}
+            #maxButton {{
+                background-color: #00ca56;
+                border-radius: 7px;
+            }}
+            #maxButton:hover {{
+                background-color: #5dde8a;
+            }}
+            #closeButton {{
+                background-color: #ff5f57;
+                border-radius: 7px;
+            }}
+            #closeButton:hover {{
+                background-color: #ff8a84;
+            }}
             QPushButton {{
                 background-color: {bg_lighter};
                 color: {text_color};
                 border: 1px solid {accent_color};
-                border-radius: 6px;
-                padding: 5px 10px;
+                border-radius: 8px;
+                padding: 6px 12px;
+                min-height: 28px;
+                transition: background-color 0.2s, border-color 0.2s;
             }}
             QPushButton:hover {{
-                background-color: {self.lighten_color(bg_lighter, 10)};
-                border: 1px solid {self.lighten_color(accent_color, 10)};
+                background-color: {self.lighten_color(bg_lighter, 15)};
+                border: 1px solid {self.lighten_color(accent_color, 15)};
             }}
             QPushButton:pressed {{
                 background-color: {self.lighten_color(bg_lighter, -5)};
@@ -428,40 +483,64 @@ class ThemeManager:
                 color: {self.lighten_color(text_color, -10)};
                 font-weight: bold;
                 border: 1px solid {accent_color};
-                border-radius: 6px;
-                margin-top: 1em;
-                padding-top: 10px;
+                border-radius: 8px;
+                margin-top: 1.2em;
+                padding-top: 12px;
+                padding-bottom: 6px;
             }}
             QGroupBox::title {{
                 subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
+                left: 12px;
+                padding: 0 8px;
                 background-color: {bg_color};
             }}
             QCheckBox, QRadioButton {{
-                color: {text_color}
+                color: {text_color};
+                spacing: 8px;
             }}
-            QCheckBox::indicator, QRadioButton::indicator {{
-                width: 16px;
-                height: 16px;
+            QCheckBox::indicator {{
+                width: 18px;
+                height: 18px;
                 background-color: {bg_lighter};
                 border: 1px solid {accent_color};
-                border-radius: 3px;
+                border-radius: 4px;
             }}
-            QCheckBox::indicator:checked, QRadioButton::indicator:checked {{
+            QRadioButton::indicator {{
+                width: 18px;
+                height: 18px;
+                background-color: {bg_lighter};
+                border: 1px solid {accent_color};
+                border-radius: 9px;
+            }}
+            QCheckBox::indicator:checked {{
+                background-color: {accent_color};
+                image: url(resources/icons/check.png);
+            }}
+            QRadioButton::indicator:checked {{
+                background-color: {bg_lighter};
+                border: 1px solid {accent_color};
+            }}
+            QRadioButton::indicator:checked::before {{
+                content: "";
+                display: block;
+                width: 10px;
+                height: 10px;
+                margin: 3px;
+                border-radius: 5px;
                 background-color: {accent_color};
             }}
-            QLineEdit, QTextEdit, QListWidget, QTableWidget, QComboBox {{
+            QLineEdit, QTextEdit, QPlainTextEdit, QListWidget, QTableWidget, QComboBox {{
                 background-color: {bg_lighter};
                 color: {text_color};
                 border: 1px solid {accent_color};
-                border-radius: 6px;
-                padding: 3px;
+                border-radius: 8px;
+                padding: 6px;
+                selection-background-color: {self.lighten_color(accent_color, 10)};
             }}
-            QLineEdit:focus, QTextEdit:focus, QComboBox:focus {{
-                border: 1px solid {self.lighten_color(accent_color, 15)};
+            QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus {{
+                border: 1px solid {self.lighten_color(accent_color, 20)};
             }}
-            QTextEdit {{
+            QTextEdit, QPlainTextEdit {{
                 background-color: {bg_lighter};
                 color: {text_color};
             }}
@@ -470,57 +549,64 @@ class ThemeManager:
                 alternate-background-color: {self.lighten_color(bg_lighter, 5)};
                 gridline-color: {self.lighten_color(accent_color, -20)};
                 border: 1px solid {accent_color};
-                border-radius: 6px;
+                border-radius: 8px;
             }}
             QTableWidget QHeaderView::section {{
                 background-color: {bg_darker};
                 color: {text_color};
                 border: 1px solid {accent_color};
-                padding: 4px;
+                padding: 5px;
+                font-weight: bold;
             }}
             QProgressBar {{
                 border: 1px solid {accent_color};
-                border-radius: 6px;
+                border-radius: 8px;
                 background-color: {bg_lighter};
                 text-align: center;
                 color: {text_color};
+                padding: 1px;
+                height: 20px;
             }}
             QProgressBar::chunk {{
                 background-color: {accent_color};
-                border-radius: 5px;
+                border-radius: 7px;
             }}
             QTabWidget::pane {{
                 border: 1px solid {accent_color};
                 background-color: {bg_color};
-                border-radius: 6px;
+                border-radius: 8px;
+                top: -1px;
             }}
             QTabBar::tab {{
                 background-color: {bg_lighter};
                 color: {self.lighten_color(text_color, -10)};
                 border: 1px solid {accent_color};
                 border-bottom: none;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                padding: 8px 12px;
-                margin-right: 4px;
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+                padding: 10px 14px;
+                margin-right: 5px;
+                min-width: 80px;
             }}
             QTabBar::tab:selected {{
                 background-color: {bg_color};
                 color: {text_color};
+                border-bottom-color: {bg_color};
             }}
             QTabBar::tab:hover {{
-                background-color: {self.lighten_color(bg_lighter, 10)};
+                background-color: {self.lighten_color(bg_lighter, 15)};
             }}
             QScrollBar {{
                 background-color: {bg_color};
-                width: 12px;
-                height: 12px;
-                border-radius: 6px;
+                width: 14px;
+                height: 14px;
+                border-radius: 7px;
+                margin: 2px;
             }}
             QScrollBar::handle {{
                 background-color: {self.lighten_color(bg_color, 30)};
-                border-radius: 5px;
-                min-height: 30px;
+                border-radius: 6px;
+                min-height: 40px;
             }}
             QScrollBar::handle:hover {{
                 background-color: {accent_color};
@@ -531,25 +617,29 @@ class ThemeManager:
             }}
             QScrollBar::add-page, QScrollBar::sub-page {{
                 background-color: {bg_color};
+                border-radius: 6px;
             }}
             QStatusBar {{
                 background-color: {accent_color};
                 color: white;
-                border-bottom-left-radius: 8px;
-                border-bottom-right-radius: 8px;
+                border-bottom-left-radius: 12px;
+                border-bottom-right-radius: 12px;
+                min-height: 24px;
             }}
             QToolBar {{
                 background-color: {self.lighten_color(bg_color, 5)};
                 border-bottom: 1px solid {accent_color};
-                spacing: 5px;
-                padding: 5px;
+                spacing: 6px;
+                padding: 6px;
             }}
             QToolButton {{
                 background-color: transparent;
                 border: none;
-                border-radius: 4px;
+                border-radius: 6px;
                 color: {text_color};
-                padding: 5px;
+                padding: 6px;
+                min-width: 24px;
+                min-height: 24px;
             }}
             QToolButton:hover {{
                 background-color: {self.lighten_color(bg_color, 15)};
@@ -561,40 +651,211 @@ class ThemeManager:
                 background-color: {bg_color};
                 color: {text_color};
                 border-bottom: 1px solid {accent_color};
+                border-top-left-radius: 12px;
+                border-top-right-radius: 12px;
             }}
             QMenuBar::item {{
                 background-color: transparent;
-                padding: 5px 10px;
-                border-radius: 4px;
+                padding: 6px 12px;
+                border-radius: 6px;
             }}
             QMenuBar::item:selected {{
                 background-color: {self.lighten_color(bg_color, 10)};
             }}
             QMenu {{
                 background-color: {bg_color};
-                border: 1px solid {accent_color};
-                border-radius: 6px;
                 color: {text_color};
+                border: 1px solid {accent_color};
+                border-radius: 8px;
+                padding: 5px;
             }}
             QMenu::item {{
-                padding: 5px 30px 5px 20px;
-                border: none;
+                background-color: transparent;
+                padding: 8px 25px 8px 20px;
+                border-radius: 4px;
+                margin: 2px 6px;
             }}
             QMenu::item:selected {{
-                background-color: {self.lighten_color(bg_color, 10)};
+                background-color: {self.lighten_color(bg_color, 15)};
             }}
-            #sidebar {{
-                background-color: {self.lighten_color(bg_color, 5)};
-                border-right: 1px solid {accent_color};
-                border-top-left-radius: 8px;
-                border-bottom-left-radius: 8px;
+            QMenu::separator {{
+                height: 1px;
+                background-color: {accent_color};
+                margin: 6px 10px;
             }}
-            #contentArea {{
-                background-color: {bg_color};
+            QComboBox {{
+                background-color: {bg_lighter};
+                color: {text_color};
+                border: 1px solid {accent_color};
+                border-radius: 8px;
+                padding: 6px 12px;
+                min-height: 28px;
+            }}
+            QComboBox::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: right center;
+                width: 20px;
+                border-left: 1px solid {accent_color};
                 border-top-right-radius: 8px;
                 border-bottom-right-radius: 8px;
             }}
+            QComboBox::down-arrow {{
+                image: url(resources/icons/down-arrow.png);
+                width: 16px;
+                height: 16px;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: {bg_lighter};
+                color: {text_color};
+                border: 1px solid {accent_color};
+                border-radius: 8px;
+                selection-background-color: {self.lighten_color(accent_color, 10)};
+            }}
             QSplitter::handle {{
                 background-color: {accent_color};
+                width: 2px;
+                height: 2px;
+            }}
+            QSplitter::handle:hover {{
+                background-color: {self.lighten_color(accent_color, 15)};
+            }}
+            #sidebarScrollArea {{
+                background-color: {bg_darker};
+                border: none;
+                border-bottom-left-radius: 12px;
+            }}
+            #sidebar {{
+                background-color: {bg_darker};
+                border-right: 1px solid {accent_color};
+                padding: 10px;
+            }}
+            #sidebarButton {{
+                background-color: transparent;
+                color: {text_color};
+                border: none;
+                text-align: left;
+                padding: 12px;
+                border-radius: 8px;
+                font-size: 14px;
+            }}
+            #sidebarButton:hover {{
+                background-color: {self.lighten_color(bg_darker, 10)};
+            }}
+            #sidebarButton:checked {{
+                background-color: {accent_color};
+                color: white;
+                font-weight: bold;
+            }}
+            #contentArea {{
+                background-color: {bg_color};
+                border-bottom-right-radius: 12px;
+            }}
+            QHeaderView {{
+                background-color: {bg_darker};
+                color: {text_color};
+            }}
+            QHeaderView::section {{
+                background-color: {bg_darker};
+                color: {text_color};
+                padding: 5px;
+                border: 1px solid {accent_color};
+                border-radius: 0px;
+            }}
+            QHeaderView::section:first {{
+                border-top-left-radius: 8px;
+                border-bottom-left-radius: 0px;
+            }}
+            QHeaderView::section:last {{
+                border-top-right-radius: 8px;
+                border-bottom-right-radius: 0px;
+            }}
+            QListWidget {{
+                background-color: {bg_lighter};
+                border: 1px solid {accent_color};
+                border-radius: 8px;
+                padding: 5px;
+            }}
+            QListWidget::item {{
+                background-color: transparent;
+                color: {text_color};
+                padding: 8px;
+                margin: 2px;
+                border-radius: 4px;
+            }}
+            QListWidget::item:selected {{
+                background-color: {accent_color};
+                color: white;
+            }}
+            QListWidget::item:hover {{
+                background-color: {self.lighten_color(bg_lighter, 10)};
+            }}
+            QDockWidget {{
+                titlebar-close-icon: url(resources/icons/close.png);
+                titlebar-normal-icon: url(resources/icons/undock.png);
+            }}
+            QDockWidget::title {{
+                text-align: center;
+                background-color: {bg_darker};
+                padding: 6px;
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+            }}
+            QDockWidget::close-button, QDockWidget::float-button {{
+                background-color: {bg_darker};
+                border: none;
+                padding: 2px;
+                border-radius: 4px;
+            }}
+            QDockWidget::close-button:hover, QDockWidget::float-button:hover {{
+                background-color: {self.lighten_color(bg_darker, 15)};
             }}
         """ 
+    
+    def apply_theme(self, theme_name):
+        """Apply a theme to the application"""
+        # 如果主题不存在，使用默认主题
+        if theme_name not in self.themes:
+            theme_name = self.default_theme
+            
+        self.current_theme = theme_name
+        self.settings.settings.setValue("theme", theme_name)
+        
+        # 获取主题数据
+        theme_data = self.themes[theme_name]
+        
+        # 应用主题
+        if "style" in theme_data:
+            # 新的主题格式 - 直接应用样式表
+            QApplication.instance().setStyleSheet(theme_data["style"])
+        else:
+            # 旧的主题格式 - 生成样式表
+            style_sheet = self.generate_style_sheet(theme_name)
+            QApplication.instance().setStyleSheet(style_sheet)
+        
+        # 发射主题变更信号
+        self.theme_changed.emit(theme_name)
+    
+    def create_theme(self, theme_name, theme_data):
+        """创建新主题
+        
+        Args:
+            theme_name (str): 主题名称
+            theme_data (dict): 主题数据
+            
+        Returns:
+            bool: 是否成功创建主题
+        """
+        # 确保主题目录存在
+        themes_dir = os.path.join(self.settings.get_config_dir(), "themes")
+        if not os.path.exists(themes_dir):
+            os.makedirs(themes_dir)
+        
+        # 保存主题文件
+        theme_file = os.path.join(themes_dir, f"{theme_name}.json")
+        try:
+            with open(theme_file, 'w', encoding='utf-8') as f:
+                json.dump(theme_data, f, ensure_ascii=False, indent=4)
+            return True
+        except Exception as e:
+            print(f"创建主题失败: {e}")
+            return False 
