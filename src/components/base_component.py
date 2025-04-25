@@ -1,13 +1,13 @@
-from PyQt5.QtWidgets import QWidget, QSizePolicy
-from PyQt5.QtCore import QPropertyAnimation, QEasingCurve, QPoint, Qt
+from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout, QLabel, QCheckBox, QRadioButton, QButtonGroup
+from PyQt5.QtCore import QPropertyAnimation, QEasingCurve, QPoint, Qt, pyqtSignal
 import sys
 import os
 import json
-from PyQt5.QtGui import QColor
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from PyQt5.QtGui import QColor, QFont
 from utils.animations import AnimationUtils
 from utils.settings_manager import Settings
 from utils.theme_manager import ThemeManager
+from config import Icon
 
 class BaseComponent(QWidget):
     """Base component class for all application components"""
@@ -24,6 +24,10 @@ class BaseComponent(QWidget):
         
         # 初始化UI
         self.setup_ui()
+        # 确保复选框状态正确响应
+        self.fix_checkbox_connections()
+        # 确保单选按钮状态正确响应
+        self.fix_radiobutton_connections()
     
     def setup_ui(self):
         """Setup component UI - must be implemented by subclasses"""
@@ -57,10 +61,13 @@ class BaseComponent(QWidget):
         button_hover = button_colors.get("primary_hover", self.theme_manager.lighten_color(accent_color, 10))
         button_pressed = button_colors.get("primary_pressed", self.theme_manager.lighten_color(accent_color, -10))
         
+        # 获取图标路径
+        check_icon_path = Icon.Check.Path
+        down_arrow_path = Icon.DownArrow.Path
+        
         # 应用基本样式
         self.setStyleSheet(f"""
             BaseComponent {{
-                /* 使用透明背景，防止出现蓝色叠加 */
                 background-color: transparent;
                 color: {text_color};
                 border-radius: 8px;
@@ -112,7 +119,7 @@ class BaseComponent(QWidget):
                 border: none;
                 width: 20px;
                 height: 20px;
-                image: url(resources/images/down_arrow.png);
+                image: url("resources/icons/down-arrow.svg");
             }}
             
             QComboBox QAbstractItemView {{
@@ -143,13 +150,59 @@ class BaseComponent(QWidget):
             QCheckBox::indicator {{
                 width: 16px;
                 height: 16px;
-                border: 1px solid {accent_color};
+                border: 2px solid {accent_color};
                 border-radius: 3px;
                 background-color: {bg_lighter};
             }}
             
+            QCheckBox::indicator:unchecked {{
+                background-color: {bg_lighter};
+            }}
+            
             QCheckBox::indicator:checked {{
-                image: url(resources/images/checkbox_checked.png);
+                background-color: {accent_color};
+                image: url({check_icon_path});
+            }}
+            
+            QCheckBox::indicator:unchecked:hover {{
+                border-color: {button_hover};
+                background-color: {self._lighten_color(bg_lighter, 5)};
+            }}
+            
+            QCheckBox::indicator:checked:hover {{
+                background-color: {button_hover};
+            }}
+            
+            QRadioButton {{
+                color: {text_color};
+                spacing: 5px;
+            }}
+            
+            QRadioButton::indicator {{
+                width: 16px;
+                height: 16px;
+                border: 2px solid {accent_color};
+                border-radius: 8px;
+                background-color: {bg_lighter};
+            }}
+            
+            QRadioButton::indicator:unchecked {{
+                background-color: {bg_lighter};
+            }}
+            
+            QRadioButton::indicator:checked {{
+                background-color: {bg_lighter};
+                width: 6px;
+                height: 6px;
+                border: 5px solid {accent_color};
+            }}
+            
+            QRadioButton::indicator:unchecked:hover {{
+                border-color: {button_hover};
+            }}
+            
+            QRadioButton::indicator:checked:hover {{
+                border-color: {button_hover};
             }}
         """)
     
@@ -266,4 +319,121 @@ class BaseComponent(QWidget):
     
     def getComponentName(self):
         """Get component name for identification"""
-        return self.__class__.__name__ 
+        return self.__class__.__name__
+    
+    def fix_checkbox_connections(self):
+        """确保所有复选框正确连接信号和槽"""
+        for checkbox in self.findChildren(QCheckBox):
+            # 断开可能存在的旧连接
+            try:
+                checkbox.stateChanged.disconnect()
+            except:
+                pass
+            
+            # 为每个复选框创建一个更新状态的函数
+            def create_handler(cb):
+                return lambda state: self.update_checkbox_state(cb, state)
+            
+            # 连接新的信号处理函数
+            handler = create_handler(checkbox)
+            checkbox.stateChanged.connect(handler)
+            
+            # Store the handler as an attribute to prevent garbage collection
+            checkbox._state_handler = handler
+    
+    def update_checkbox_state(self, checkbox, state):
+        """更新复选框状态并应用相关设置"""
+        # 获取复选框的对象名称，作为设置键
+        setting_key = checkbox.objectName()
+        
+        # Debug output for troubleshooting
+        print(f"Checkbox state changed: {checkbox.text()} -> {state == Qt.Checked}")
+        
+        # If setting_key is empty, try to use checkbox text as fallback
+        if not setting_key and checkbox.text():
+            # Create a valid setting key from checkbox text
+            setting_key = f"checkbox_{checkbox.text().lower().replace(' ', '_')}"
+            
+        if setting_key:
+            # 将状态保存到设置
+            self.settings.set_setting(setting_key, state == Qt.Checked)
+            self.settings.sync()  # 确保立即保存设置
+    
+    def fix_radiobutton_connections(self):
+        """确保所有单选按钮正确连接信号和槽"""
+        # 处理所有单选按钮
+        for radio in self.findChildren(QRadioButton):
+            # 断开可能存在的旧连接
+            try:
+                radio.toggled.disconnect()
+            except:
+                pass
+            
+            # 为每个单选按钮创建一个更新状态的函数
+            def create_handler(rb):
+                return lambda checked: self.update_radiobutton_state(rb, checked) if checked else None
+            
+            # 连接新的信号处理函数
+            handler = create_handler(radio)
+            radio.toggled.connect(handler)
+            
+            # Store the handler as an attribute to prevent garbage collection
+            radio._toggle_handler = handler
+            
+        # 处理按钮组
+        for button_group in self.findChildren(QButtonGroup):
+            try:
+                button_group.buttonClicked.disconnect()
+            except:
+                pass
+                
+            # 为每个按钮组创建处理函数
+            def create_group_handler(group):
+                return lambda button: self.update_buttongroup_selection(group, button)
+                
+            # 连接新的信号处理函数
+            handler = create_group_handler(button_group)
+            button_group.buttonClicked.connect(handler)
+            
+            # Store the handler
+            button_group._click_handler = handler
+            
+    def update_radiobutton_state(self, radio_button, checked):
+        """更新单选按钮状态并应用相关设置"""
+        if not checked:
+            return  # 只处理选中状态，避免重复处理
+            
+        # 获取单选按钮的对象名称，作为设置键
+        setting_key = radio_button.objectName()
+        
+        # Debug output
+        print(f"Radio button state changed: {radio_button.text()} -> {checked}")
+        
+        # If setting_key is empty, try to use radio button text as fallback
+        if not setting_key and radio_button.text():
+            # Create a valid setting key from radio button text
+            setting_key = f"radio_{radio_button.text().lower().replace(' ', '_')}"
+            
+        if setting_key:
+            # 将状态保存到设置 - 对于单选按钮，保存按钮文本作为值
+            self.settings.set_setting(setting_key, radio_button.text())
+            
+    def update_buttongroup_selection(self, button_group, selected_button):
+        """处理按钮组中的选择变化"""
+        # 获取按钮组的对象名称，作为设置键
+        setting_key = button_group.objectName()
+        
+        # Debug output
+        print(f"Button group selection changed: {setting_key} -> {selected_button.text()}")
+        
+        if setting_key:
+            # 保存所选按钮的ID或文本
+            button_id = button_group.id(selected_button)
+            button_text = selected_button.text()
+            button_obj_name = selected_button.objectName()
+            
+            # 保存按钮ID和文本
+            self.settings.set_setting(f"{setting_key}_id", button_id)
+            self.settings.set_setting(f"{setting_key}_text", button_text)
+            if button_obj_name:
+                self.settings.set_setting(f"{setting_key}_selected", button_obj_name) 

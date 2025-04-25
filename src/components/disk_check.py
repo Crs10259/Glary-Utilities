@@ -3,6 +3,7 @@ import sys
 import platform
 import subprocess
 import re
+import logging
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                             QFrame, QPushButton, QSizePolicy, QSpacerItem,
                             QCheckBox, QTextEdit, QGroupBox, QComboBox,
@@ -11,6 +12,9 @@ from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
 from utils.platform import PlatformUtils
+
+# 配置日志记录器
+logger = logging.getLogger("GlaryUtilities")
 
 class DiskCheckThread(QThread):
     """Worker thread for disk check operations"""
@@ -251,18 +255,24 @@ class DiskCheckWidget(BaseComponent):
         # Checkboxes for check types
         self.file_system_cb = QCheckBox(self.get_translation("file_system"))
         self.file_system_cb.setChecked(True)
+        self.file_system_cb.setObjectName("disk_check_file_system")
         self.file_system_cb.setStyleSheet("color: #e0e0e0;")
+        self.file_system_cb.stateChanged.connect(lambda state: self.on_checkbox_changed("disk_check_file_system", state))
         check_layout.addWidget(self.file_system_cb)
         
         self.bad_sectors_cb = QCheckBox(self.get_translation("bad_sectors"))
         self.bad_sectors_cb.setChecked(False)
+        self.bad_sectors_cb.setObjectName("disk_check_bad_sectors")
         self.bad_sectors_cb.setStyleSheet("color: #e0e0e0;")
+        self.bad_sectors_cb.stateChanged.connect(lambda state: self.on_checkbox_changed("disk_check_bad_sectors", state))
         check_layout.addWidget(self.bad_sectors_cb)
         
         # Read-only mode checkbox
         self.read_only_cb = QCheckBox(self.get_translation("read_only"))
         self.read_only_cb.setChecked(self.settings.get_setting("disk_check_readonly", True))
+        self.read_only_cb.setObjectName("disk_check_readonly")
         self.read_only_cb.setStyleSheet("color: #e0e0e0;")
+        self.read_only_cb.stateChanged.connect(lambda state: self.on_checkbox_changed("disk_check_readonly", state))
         check_layout.addWidget(self.read_only_cb)
         
         self.main_layout.addWidget(self.check_group)
@@ -363,7 +373,7 @@ class DiskCheckWidget(BaseComponent):
         """填充驱动器下拉列表"""
         # 确保log_output已初始化
         if not hasattr(self, 'log_output') or self.log_output is None:
-            print("警告: log_output 尚未初始化")
+            logger.warning("警告: log_output 尚未初始化")
             return
         
         try:
@@ -407,7 +417,7 @@ class DiskCheckWidget(BaseComponent):
                 
         except Exception as e:
             self.log_output.append(f"填充驱动器列表时出错: {str(e)}")
-            print(f"填充驱动器列表时出错: {str(e)}")
+            logger.error(f"填充驱动器列表时出错: {str(e)}")
     
     def check_disk(self):
         """检查磁盘错误"""
@@ -544,4 +554,23 @@ class DiskCheckWidget(BaseComponent):
         
         for key in keys:
             # This will raise KeyError if the key doesn't exist
-            self.get_translation(key, None) 
+            self.get_translation(key, None)
+
+    def on_checkbox_changed(self, checkbox_name, state):
+        """Handle checkbox state change"""
+        checked = state == Qt.Checked
+        print(f"磁盘检查设置: {checkbox_name} = {checked}")
+        
+        # 保存设置
+        self.settings.set_setting(checkbox_name, checked)
+        self.settings.sync()
+        
+        # 更新UI状态
+        if checkbox_name == "disk_check_file_system":
+            self.file_system_cb.setChecked(checked)
+        elif checkbox_name == "disk_check_bad_sectors":
+            self.bad_sectors_cb.setChecked(checked)
+        elif checkbox_name == "disk_check_readonly":
+            self.read_only_cb.setChecked(checked)
+        else:
+            logger.warning(f"未知复选框: {checkbox_name}") 

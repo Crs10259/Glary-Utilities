@@ -7,6 +7,8 @@ import socket
 import uuid
 import subprocess
 
+# 定义翻译文件目录
+TRANSLATIONS_DIR = None
 
 class Settings:
     """
@@ -274,22 +276,22 @@ class Settings:
             self._notify_user("Unknown error occurred while saving settings.")
     
     def get_default_settings(self):
-        """Get default settings for the application"""
+        """返回默认设置"""
         return {
+            # 常规设置
             "language": "English",
-            "theme": "dark",
-            "custom_theme_name": "My Custom Theme",
-            "custom_bg_color": "#1e1e1e",
-            "custom_text_color": "#e0e0e0",
-            "custom_accent_color": "#00a8ff",
-            "accent_color": "Blue",
-            "font_family": "System Default",
-            "font_size": 10,
-            "icon_size": 24,
-            "start_minimized": False,
             "start_with_windows": False,
             "check_updates": True,
-            "minimize_to_tray": True,
+            "auto_update": False,
+            
+            # UI 设置
+            "theme": "dark",
+            "transparency": 100,
+            "enable_animations": False,  # 默认禁用动画
+            "use_system_title_bar": False,
+            "window_blur": True,
+            "start_minimized": False,
+            "close_to_tray": True,
             "show_notifications": True,
             "default_tab": "Dashboard",
             "clean_temp": True,
@@ -337,16 +339,16 @@ class Settings:
             self.translations = {}
             
             # List of supported languages
-            languages = ["English", "简体中文"]
+            languages = ["English", "中文"]
             
             # Map language names to file names
             language_files = {
                 "English": "en.json",
-                "简体中文": "zh.json"
+                "中文": "zh.json"
             }
             
             # Base directory for translations
-            base_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "translations")
+            base_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources", "translations")
             
             # Load translations for all supported languages
             for language in languages:
@@ -356,6 +358,8 @@ class Settings:
                     if os.path.exists(file_path):
                         with open(file_path, 'r', encoding='utf-8') as f:
                             self.translations[language] = json.load(f)
+                    else:
+                        print(f"Warning: Translation file not found: {file_path}")
         except Exception as e:
             print(f"Error loading translations: {e}")
     
@@ -639,5 +643,33 @@ class Settings:
             if theme_name != "dark":
                 return self.load_theme("dark")
             return None
+    
+    def set_language(self, language):
+        """Set the application language
+        
+        Args:
+            language: The language to set
+        """
+        if language in self.translations:
+            self.set_setting("language", language)
+            self.current_language = language
+        else:
+            print(f"Unsupported language: {language}")
+            # 如果不支持该语言，则使用英语
+            self.set_setting("language", "English")
+            self.current_language = "English"
+    
+    def sync(self):
+        """同步设置到磁盘"""
+        try:
+            # 使用save_settings进行实际的同步操作
+            self.save_settings()
+            print("Settings synchronized successfully.")
+            return True
+        except Exception as e:
+            error_msg = self._handle_error("sync_error", str(e))
+            print(error_msg)
+            self._notify_user("Failed to synchronize settings to disk.")
+            return False
     
     

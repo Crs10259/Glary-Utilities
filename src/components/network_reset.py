@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
+from config import Icon
 
 class NetworkResetThread(QThread):
     """Worker thread for network reset operations"""
@@ -188,23 +189,23 @@ class NetworkResetWidget(BaseComponent):
         
         # Checkboxes for operation selection
         self.flush_dns_cb = QCheckBox(self.get_translation("flush_dns"))
+        self.flush_dns_cb.setObjectName("network_flush_dns")
         self.flush_dns_cb.setChecked(True)
-        self.flush_dns_cb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
         operations_layout.addWidget(self.flush_dns_cb)
         
         self.reset_winsock_cb = QCheckBox(self.get_translation("reset_winsock"))
+        self.reset_winsock_cb.setObjectName("network_reset_winsock")
         self.reset_winsock_cb.setChecked(True)
-        self.reset_winsock_cb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
         operations_layout.addWidget(self.reset_winsock_cb)
         
         self.reset_tcp_ip_cb = QCheckBox(self.get_translation("reset_tcp_ip"))
-        self.reset_tcp_ip_cb.setChecked(True)
-        self.reset_tcp_ip_cb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
+        self.reset_tcp_ip_cb.setObjectName("network_reset_tcp_ip")
+        self.reset_tcp_ip_cb.setChecked(False)
         operations_layout.addWidget(self.reset_tcp_ip_cb)
         
         self.reset_firewall_cb = QCheckBox(self.get_translation("reset_firewall"))
+        self.reset_firewall_cb.setObjectName("network_reset_firewall")
         self.reset_firewall_cb.setChecked(False)
-        self.reset_firewall_cb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
         operations_layout.addWidget(self.reset_firewall_cb)
         
         main_layout.addWidget(operations_group)
@@ -273,6 +274,9 @@ class NetworkResetWidget(BaseComponent):
         
         # 确保样式正确应用
         self.setAttribute(Qt.WA_StyledBackground, True)
+        
+        # 应用主题样式
+        self.apply_theme()
     
     def reset_network(self):
         """Reset network settings based on selected operations"""
@@ -322,4 +326,70 @@ class NetworkResetWidget(BaseComponent):
 
     def get_translation(self, key, default=None):
         """Override get_translation to use the correct section name"""
-        return self.settings.get_translation("network_reset", key, default) 
+        return self.settings.get_translation("network_reset", key, default)
+
+    def apply_theme(self):
+        """应用主题样式到组件"""
+        # 首先调用父类的应用主题方法
+        super().apply_theme()
+        
+        # 获取当前主题颜色
+        theme_name = self.settings.get_setting("theme", "dark")
+        theme_data = self.settings.load_theme(theme_name)
+        
+        if theme_data and "colors" in theme_data:
+            bg_color = theme_data["colors"].get("bg_color", "#2d2d2d")
+            text_color = theme_data["colors"].get("text_color", "#dcdcdc")
+            accent_color = theme_data["colors"].get("accent_color", "#007acc")
+            
+            # 创建复选框样式
+            checkbox_style = f"""
+                QCheckBox {{ 
+                    color: {text_color}; 
+                    background-color: transparent; 
+                    spacing: 5px; 
+                    padding: 5px; 
+                    font-size: 13px; 
+                    min-height: 20px; 
+                    margin: 2px 0; 
+                }}
+                
+                QCheckBox::indicator {{ 
+                    width: 16px; 
+                    height: 16px; 
+                    border: 2px solid {accent_color}; 
+                    border-radius: 3px; 
+                    background-color: {bg_color}; 
+                }}
+                
+                QCheckBox::indicator:unchecked {{ 
+                    background-color: {bg_color}; 
+                }}
+                
+                QCheckBox::indicator:checked {{ 
+                    background-color: {accent_color}; 
+                    image: url({Icon.Check.Path}); 
+                }}
+                
+                QCheckBox::indicator:unchecked:hover {{ 
+                    border-color: {self._lighten_color(accent_color, 20)}; 
+                    background-color: {self._lighten_color(bg_color, 10)}; 
+                }}
+                
+                QCheckBox::indicator:checked:hover {{ 
+                    background-color: {self._lighten_color(accent_color, 10)}; 
+                }}
+            """
+            
+            # 应用到各个复选框
+            if hasattr(self, 'flush_dns_cb'):
+                self.flush_dns_cb.setStyleSheet(checkbox_style)
+            if hasattr(self, 'reset_winsock_cb'):
+                self.reset_winsock_cb.setStyleSheet(checkbox_style)
+            if hasattr(self, 'reset_tcp_ip_cb'):
+                self.reset_tcp_ip_cb.setStyleSheet(checkbox_style)
+            if hasattr(self, 'reset_firewall_cb'):
+                self.reset_firewall_cb.setStyleSheet(checkbox_style)
+                
+            # 修复复选框连接
+            self.fix_checkbox_connections() 

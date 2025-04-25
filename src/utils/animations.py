@@ -10,11 +10,30 @@ class AnimationUtils:
     @classmethod
     def is_animations_enabled(cls):
         """检查是否启用动画效果"""
-        settings = Settings()
-        return settings.get_setting("enable_animations", True)
+        try:
+            settings = Settings()
+            # 明确将值转换为布尔值，避免可能的类型问题
+            # 默认为 True (启用动画)
+            enabled = settings.get_setting("enable_animations", True)
+            
+            # 字符串类型转换
+            if isinstance(enabled, str):
+                return enabled.lower() in ('true', 'yes', '1', 'on')
+            # 整数类型转换
+            elif isinstance(enabled, int):
+                return enabled != 0
+            # 直接作为布尔值处理
+            elif isinstance(enabled, bool):
+                return enabled
+            # 其他类型返回默认值True
+            return True
+        except Exception as e:
+            print(f"获取动画设置时出错: {str(e)}")
+            # 出错时默认启用动画
+            return True
     
     @classmethod
-    def fade(cls, widget, duration=300, start=1.0, end=0.0, direction="out", callback=None):
+    def fade(cls, widget, duration=200, start=1.0, end=0.0, direction="out", callback=None):
         """淡入淡出动画
         
         Args:
@@ -28,31 +47,37 @@ class AnimationUtils:
         # 检查是否启用动画
         if not cls.is_animations_enabled():
             # 如果动画禁用，直接设置最终效果并调用回调
-            effect = QGraphicsOpacityEffect(widget)
-            effect.setOpacity(end)
-            widget.setGraphicsEffect(effect)
+            widget.setWindowOpacity(end)
             if callback:
                 callback()
             return None
             
-        # 正常创建并启动动画
-        effect = QGraphicsOpacityEffect(widget)
-        widget.setGraphicsEffect(effect)
-        
-        anim = QPropertyAnimation(effect, b"opacity")
-        anim.setDuration(duration)
+        # 先停止当前可能正在运行的动画
+        if hasattr(widget, "_current_anim") and widget._current_anim is not None:
+            try:
+                widget._current_anim.stop()
+                widget._current_anim = None
+            except Exception:
+                pass
+                
+        # 优化：使用windowOpacity而不是QGraphicsOpacityEffect以获得更好的性能
+        anim = QPropertyAnimation(widget, b"windowOpacity")
+        anim.setDuration(int(duration * 0.6))  # 进一步减少动画时间以使其感觉更快速
         anim.setStartValue(start)
         anim.setEndValue(end)
-        anim.setEasingCurve(QEasingCurve.InOutQuad)
+        anim.setEasingCurve(QEasingCurve.OutQuint)  # 使用更平滑的缓动曲线
         
         if callback:
             anim.finished.connect(callback)
         
-        anim.start()
+        # 保存当前动画引用，以便后续可以停止
+        widget._current_anim = anim
+        
+        anim.start(QAbstractAnimation.DeleteWhenStopped)
         return anim
     
     @classmethod
-    def slide(cls, widget, duration=300, direction="left", distance=50, callback=None):
+    def slide(cls, widget, duration=200, direction="left", distance=50, callback=None):
         """滑动动画
         
         Args:
@@ -105,7 +130,7 @@ class AnimationUtils:
         return anim
     
     @classmethod
-    def highlight(cls, widget, duration=400, color="#3498db", fade_out=True):
+    def highlight(cls, widget, duration=250, color="#3498db", fade_out=True):
         """突出显示widget，通常用于指示更改"""
         if not widget:
             return
@@ -177,7 +202,7 @@ class AnimationUtils:
         return anim
     
     @classmethod
-    def highlight_button(cls, button, duration=800):
+    def highlight_button(cls, button, duration=400):
         """按钮高亮动画"""
         # 检查是否启用动画
         if not cls.is_animations_enabled():
@@ -210,8 +235,8 @@ class AnimationUtils:
         scale_anim.setDuration(duration)
         orig_geo = button.geometry()
         scale_anim.setKeyValueAt(0, orig_geo)
-        scale_anim.setKeyValueAt(0.3, orig_geo.adjusted(-5, -3, 5, 3))
-        scale_anim.setKeyValueAt(0.6, orig_geo.adjusted(2, 1, -2, -1))
+        scale_anim.setKeyValueAt(0.3, orig_geo.adjusted(-3, -2, 3, 2))  # 减小缩放幅度
+        scale_anim.setKeyValueAt(0.6, orig_geo.adjusted(1, 1, -1, -1))
         scale_anim.setEndValue(orig_geo)
         
         # 创建动画组
@@ -228,7 +253,7 @@ class AnimationUtils:
         return group
     
     @classmethod
-    def page_transition(cls, old_page, new_page, duration=400, direction="left"):
+    def page_transition(cls, old_page, new_page, duration=200, direction="left"):
         """页面过渡动画
         
         Args:
@@ -246,6 +271,9 @@ class AnimationUtils:
             new_page.move(old_page.pos())
             return None
             
+        # 优化动画性能 - 更快的动画
+        duration = int(duration * 0.6)  # 进一步减少动画时间
+        
         # 确保新页面可见
         new_page.show()
         
@@ -270,7 +298,7 @@ class AnimationUtils:
             old_anim.setEndValue(old_pos - QPoint(width, 0))
         else:
             old_anim.setEndValue(old_pos + QPoint(width, 0))
-        old_anim.setEasingCurve(QEasingCurve.OutQuad)
+        old_anim.setEasingCurve(QEasingCurve.OutQuart)  # 更快的缓动曲线
         
         # 新页面动画
         new_anim = QPropertyAnimation(new_page, b"pos")
@@ -280,7 +308,7 @@ class AnimationUtils:
         else:
             new_anim.setStartValue(old_pos - QPoint(width, 0))
         new_anim.setEndValue(old_pos)
-        new_anim.setEasingCurve(QEasingCurve.OutQuad)
+        new_anim.setEasingCurve(QEasingCurve.OutQuart)  # 更快的缓动曲线
         
         # 添加到动画组
         anim_group.addAnimation(old_anim)
@@ -295,14 +323,14 @@ class AnimationUtils:
         return anim_group
 
     @classmethod
-    def text_flow(cls, label, duration=1200):
+    def text_flow(cls, label, duration=800):
         """文字流动动画"""
         anim = QPropertyAnimation(label, b"pos")
         anim.setEasingCurve(QEasingCurve.InOutSine)
         anim.setDuration(duration)
         start_pos = label.pos()
         anim.setKeyValueAt(0, start_pos)
-        anim.setKeyValueAt(0.5, start_pos + QPoint(20, 0))
+        anim.setKeyValueAt(0.5, start_pos + QPoint(10, 0))  # 减小位移
         anim.setKeyValueAt(1, start_pos)
-        anim.setLoopCount(2)
+        anim.setLoopCount(1)  # 减少循环次数
         anim.start() 

@@ -9,10 +9,11 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QGroupBox, QCheckBox, QFileDialog, QListWidget,
                              QListWidgetItem, QRadioButton, QComboBox, QTableWidget,
                              QHeaderView, QTableWidgetItem, QTextBrowser, QTabWidget,
-                             QLineEdit)
+                             QLineEdit, QButtonGroup)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QDir, QDateTime
 from PyQt5.QtWidgets import QApplication
 from components.base_component import BaseComponent
+from config import Icon
 
 class VirusScanThread(QThread):
     """Thread for running virus scan operations in the background"""
@@ -246,60 +247,237 @@ class VirusScanWidget(BaseComponent):
         self.scanner_worker = None
         self.scan_thread = None
         self.custom_scan_targets = []
+        self.detected_threats = []
+        self.main_window = parent
         
-        # 调用父类构造函数
+        # Call parent constructor
         super().__init__(parent)
         
-        self.detected_threats = []
-        self.setup_ui()
+        # Set up the UI (called by parent but we need to ensure it exists)
+        if not hasattr(self, 'quick_scan_rb'):
+            self.setup_ui()
         
+    def get_translation(self, key, default=None):
+        """获取当前组件的翻译
+        
+        Args:
+            key: 翻译键
+            default: 如果翻译不存在时的默认值
+            
+        Returns:
+            翻译文本
+        """
+        try:
+            # 使用BaseComponent中定义的get_translation方法
+            return super().get_translation(key, default)
+        except (KeyError, AttributeError) as e:
+            # 记录缺失的翻译，如果在开发模式
+            if hasattr(self, 'settings') and self.settings.is_development_mode():
+                print(f"Translation missing in VirusScanWidget: {key}")
+            
+            # 返回默认值或键名
+            return default if default is not None else key
+
     def setup_ui(self):
         """设置UI元素"""
-        # 创建主布局
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(15)
+        # 主布局
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(10, 10, 10, 10)
+        self.main_layout.setSpacing(10)
         
-        # 标题
-        title = QLabel(self.get_translation("title", "病毒扫描工具"))
-        title.setStyleSheet("font-size: 24px; font-weight: bold;")
-        main_layout.addWidget(title)
+        # 创建选项卡部件
+        self.tabs = QTabWidget()
         
-        # 选项卡部件
-        self.tab_widget = QTabWidget()
-        
-        # 创建扫描选项卡
+        # 扫描选项卡
         self.scan_tab = QWidget()
         self.setup_scan_tab(self.scan_tab)
+        self.tabs.addTab(self.scan_tab, self.get_translation("scan_tab", "扫描"))
         
-        # 创建隔离区选项卡
+        # 隔离区选项卡
         self.quarantine_tab = QWidget()
         self.setup_quarantine_tab(self.quarantine_tab)
+        self.tabs.addTab(self.quarantine_tab, self.get_translation("quarantine_tab", "隔离区"))
         
-        # 添加选项卡
-        self.tab_widget.addTab(self.scan_tab, self.get_translation("scan_tab", "扫描"))
-        self.tab_widget.addTab(self.quarantine_tab, self.get_translation("quarantine_tab", "隔离区"))
+        # 添加到主布局
+        self.main_layout.addWidget(self.tabs)
         
-        # 将选项卡添加到主布局
-        main_layout.addWidget(self.tab_widget)
+        # 在初始化后特别处理单选按钮的大小和样式
+        self.update_radio_buttons_size()
+    
+    def apply_theme(self):
+        """应用主题样式到组件"""
+        # 调用父类的应用主题方法，使用统一样式
+        super().apply_theme()
         
-        # 清除旧布局（如果有）
-        if self.layout():
-            # 清除旧布局中的所有部件
-            while self.layout().count():
-                item = self.layout().takeAt(0)
-                if item.widget():
-                    item.widget().deleteLater()
+        # 获取当前主题
+        theme_name = self.settings.get_setting("theme", "dark")
+        theme_data = self.settings.load_theme(theme_name)
+        
+        if theme_data and "colors" in theme_data:
+            bg_color = theme_data["colors"].get("bg_color", "#2d2d2d")
+            text_color = theme_data["colors"].get("text_color", "#dcdcdc")
+            accent_color = theme_data["colors"].get("accent_color", "#007acc")
+            border_color = theme_data["colors"].get("border_color", "#444444")
+            table_bg_color = theme_data["colors"].get("table_bg_color", self.lighten_color(bg_color, -5))
+            header_bg_color = theme_data["colors"].get("header_bg_color", self.lighten_color(bg_color, 10))
+            disabled_bg_color = theme_data["colors"].get("disabled_bg_color", self.lighten_color(bg_color, -10))
+            disabled_text_color = theme_data["colors"].get("disabled_text_color", self.lighten_color(text_color, -30))
+            button_bg_color = theme_data["colors"].get("button_bg_color", self.lighten_color(bg_color, 10))
+            button_hover_bg_color = theme_data["colors"].get("button_hover_bg_color", self.lighten_color(bg_color, 15))
+            button_pressed_bg_color = theme_data["colors"].get("button_pressed_bg_color", self.lighten_color(bg_color, 5))
+            input_bg_color = theme_data["colors"].get("input_bg_color", self.lighten_color(bg_color, -5))
+
+            # Get icons paths from Icon class
+            check_icon_path = Icon.Check.Path if Icon.Check.Exist else ""
+            down_arrow_path = Icon.DownArrow.Path if Icon.DownArrow.Exist else ""
+            clean_icon_path = Icon.Clean.Path if Icon.Clean.Exist else ""
+            virus_icon_path = Icon.Virus.Path if Icon.Virus.Exist else ""
             
-            # 删除旧布局
-            old_layout = self.layout()
-            QWidget().setLayout(old_layout)  # 将旧布局设置给一个临时部件以便删除
+            # Use logging instead of print for better debugging
+            if not check_icon_path:
+                print("Warning: Check icon not found for checkbox styling")
+
+            # 更新组件样式 - 更全面的样式覆盖
+            self.setStyleSheet(f"""
+                QWidget {{ background-color: transparent; color: {text_color}; }}
+                QTabWidget::pane {{ border: 1px solid {border_color}; border-radius: 4px; background-color: {bg_color}; }}
+                QTabBar::tab {{ background-color: {header_bg_color}; color: {text_color}; padding: 8px 16px; border-top-left-radius: 4px; border-top-right-radius: 4px; }}
+                QTabBar::tab:selected {{ background-color: {bg_color}; border-bottom: none; }}
+                QGroupBox {{ background-color: {bg_color}; border: 1px solid {border_color}; border-radius: 4px; margin-top: 1em; padding-top: 10px; }}
+                QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 5px; color: {text_color}; }}
+                QTextEdit, QTextBrowser {{ background-color: {table_bg_color}; color: {text_color}; border: 1px solid {border_color}; border-radius: 4px; }}
+                QTableWidget {{ background-color: {table_bg_color}; color: {text_color}; border: 1px solid {border_color}; border-radius: 4px; gridline-color: {border_color}; selection-background-color: {accent_color}40; }}
+                QTableWidget::item {{ padding: 4px; color: {text_color}; }}
+                QTableWidget::item:selected {{ background-color: {accent_color}80; color: #ffffff; }}
+                QHeaderView::section {{ background-color: {header_bg_color}; color: {text_color}; padding: 4px; border: 1px solid {border_color}; }}
+                QProgressBar {{ border: 1px solid {border_color}; border-radius: 4px; background-color: {table_bg_color}; text-align: center; color: {text_color}; }}
+                QProgressBar::chunk {{ background-color: {accent_color}; width: 10px; border-radius: 3px; margin: 1px; }}
+                QPushButton {{ background-color: {button_bg_color}; color: {text_color}; border: 1px solid #555; border-radius: 4px; padding: 6px 12px; }}
+                QPushButton:hover {{ background-color: {button_hover_bg_color}; }}
+                QPushButton:pressed {{ background-color: {button_pressed_bg_color}; }}
+                QPushButton:disabled {{ background-color: {disabled_bg_color}; color: {disabled_text_color}; }}
+                QComboBox, QLineEdit {{ background-color: {input_bg_color}; color: {text_color}; border: 1px solid {border_color}; border-radius: 4px; padding: 4px; }}
+                
+                QCheckBox, QRadioButton {{ color: {text_color}; background-color: transparent; spacing: 5px; }}
+                
+                QCheckBox::indicator {{ width: 16px; height: 16px; border: 2px solid {accent_color}; border-radius: 3px; background-color: {bg_color}; }}
+                QCheckBox::indicator:unchecked {{ background-color: {bg_color}; }}
+                QCheckBox::indicator:checked {{ background-color: {accent_color}; {f"image: url({check_icon_path});" if check_icon_path else ""} }}
+                QCheckBox::indicator:unchecked:hover {{ border-color: {self.lighten_color(accent_color, 20)}; background-color: {self.lighten_color(bg_color, 10)}; }}
+                QCheckBox::indicator:checked:hover {{ background-color: {self.lighten_color(accent_color, 10)}; }}
+                
+                QRadioButton::indicator {{ width: 16px; height: 16px; border: 2px solid {accent_color}; border-radius: 9px; background-color: {bg_color}; }}
+                QRadioButton::indicator:unchecked {{ background-color: {bg_color}; }}
+                QRadioButton::indicator:checked {{ background-color: {bg_color}; border: 4px solid {accent_color}; }}
+                QRadioButton::indicator:unchecked:hover {{ border-color: {self.lighten_color(accent_color, 20)}; background-color: {self.lighten_color(bg_color, 10)}; }}
+                QRadioButton::indicator:checked:hover {{ border-color: {self.lighten_color(accent_color, 10)}; }}
+                
+                QLabel {{ color: {text_color}; background-color: transparent; }}
+                
+                QComboBox::drop-down {{ 
+                    subcontrol-origin: padding; 
+                    subcontrol-position: center right; 
+                    width: 20px; 
+                    border-left: 1px solid {border_color}; 
+                    {f"image: url({down_arrow_path});" if down_arrow_path else ""}
+                }}
+            """)
+            
+            # Set specific button styles using icons if they exist
+            if clean_icon_path and hasattr(self, 'clean_button'):
+                self.clean_button.setStyleSheet(f"""
+                    QPushButton {{ 
+                        background-color: {button_bg_color}; 
+                        color: {text_color}; 
+                        border: 1px solid #555; 
+                        border-radius: 4px; 
+                        padding: 6px 12px; 
+                        padding-left: 30px; 
+                        text-align: left;
+                        background-image: url({clean_icon_path}); 
+                        background-repeat: no-repeat; 
+                        background-position: 5px center; 
+                        background-size: 20px 20px;
+                    }}
+                    QPushButton:hover {{ background-color: {button_hover_bg_color}; }}
+                    QPushButton:pressed {{ background-color: {button_pressed_bg_color}; }}
+                    QPushButton:disabled {{ background-color: {disabled_bg_color}; color: {disabled_text_color}; }}
+                """)
+            
+            if virus_icon_path and hasattr(self, 'scan_button'):
+                self.scan_button.setStyleSheet(f"""
+                    QPushButton {{ 
+                        background-color: {accent_color}; 
+                        color: white; 
+                        border: 1px solid {self.lighten_color(accent_color, -10)}; 
+                        border-radius: 4px; 
+                        padding: 6px 12px; 
+                        padding-left: 30px;
+                        text-align: left;
+                        background-image: url({virus_icon_path}); 
+                        background-repeat: no-repeat; 
+                        background-position: 5px center; 
+                        background-size: 20px 20px;
+                    }}
+                    QPushButton:hover {{ background-color: {self.lighten_color(accent_color, 10)}; }}
+                    QPushButton:pressed {{ background-color: {self.lighten_color(accent_color, -10)}; }}
+                    QPushButton:disabled {{ background-color: {disabled_bg_color}; color: {disabled_text_color}; }}
+                """)
+                
+            # Apply alternating row colors specifically for the table
+            try:
+                if self.result_table:
+                    self.result_table.setAlternatingRowColors(True)
+                    self.result_table.setStyleSheet(f"QTableWidget {{ alternate-background-color: {self.lighten_color(table_bg_color, 5)}; background-color: {table_bg_color}; color: {text_color}; border: 1px solid {border_color}; gridline-color: {border_color};}} QTableWidget::item {{ padding: 4px; color: {text_color}; }} QTableWidget::item:selected {{ background-color: {accent_color}80; color: #ffffff; }}")
+            except AttributeError:
+                pass
+                
+            try:
+                if self.quarantined_list:
+                    self.quarantined_list.setAlternatingRowColors(True)
+                    self.quarantined_list.setStyleSheet(f"QTableWidget {{ alternate-background-color: {self.lighten_color(table_bg_color, 5)}; background-color: {table_bg_color}; color: {text_color}; border: 1px solid {border_color}; gridline-color: {border_color};}} QTableWidget::item {{ padding: 4px; color: {text_color}; }} QTableWidget::item:selected {{ background-color: {accent_color}80; color: #ffffff; }}")
+            except AttributeError:
+                pass
         
-        # 设置新布局
-        self.setLayout(main_layout)
+        # 修复单选按钮连接
+        self.fix_radiobutton_connections()
         
-        # 确保样式正确应用
-        self.setAttribute(Qt.WA_StyledBackground, True)
+    def apply_current_theme(self):
+        """应用当前主题的颜色 - 此方法由MainWindow的refresh_component_theme调用"""
+        try:
+            # 调用具体的主题应用方法
+            self.apply_theme()
+        except Exception as e:
+            print(f"Error applying current theme in VirusScanWidget: {str(e)}")
+            # 在开发模式下提供更详细的错误信息
+            if hasattr(self, 'settings') and self.settings.is_development_mode():
+                import traceback
+                print(traceback.format_exc())
+            
+    def lighten_color(self, color, amount=0):
+        """使颜色变亮或变暗
+        
+        Args:
+            color: 十六进制颜色代码
+            amount: 变化量，正数变亮，负数变暗
+            
+        Returns:
+            新的十六进制颜色代码
+        """
+        try:
+            c = color.lstrip('#')
+            c = tuple(int(c[i:i+2], 16) for i in (0, 2, 4))
+            
+            r, g, b = c
+            
+            r = min(255, max(0, r + amount * 2.55))
+            g = min(255, max(0, g + amount * 2.55))
+            b = min(255, max(0, b + amount * 2.55))
+            
+            return '#{:02x}{:02x}{:02x}'.format(int(r), int(g), int(b))
+        except Exception as e:
+            print(f"计算颜色变化出错: {str(e)}")
+            return color
         
     def setup_scan_tab(self, tab):
         """设置扫描选项卡的UI"""
@@ -317,18 +495,31 @@ class VirusScanWidget(BaseComponent):
         scan_options_group = QGroupBox(self.get_translation("scan_options", "扫描选项"))
         options_layout = QVBoxLayout(scan_options_group)
         
+        # 创建扫描类型按钮组
+        self.scan_type_group = QButtonGroup()
+        self.scan_type_group.setObjectName("virus_scan_type_group")
+        
         # 快速扫描选项
         self.quick_scan_rb = QRadioButton(self.get_translation("quick_scan", "快速扫描"))
         self.quick_scan_rb.setChecked(True)
+        self.quick_scan_rb.setObjectName("virus_scan_quick")
         options_layout.addWidget(self.quick_scan_rb)
+        self.scan_type_group.addButton(self.quick_scan_rb)
         
         # 完整扫描选项
         self.full_scan_rb = QRadioButton(self.get_translation("full_scan", "完整扫描"))
+        self.full_scan_rb.setObjectName("virus_scan_full")
         options_layout.addWidget(self.full_scan_rb)
+        self.scan_type_group.addButton(self.full_scan_rb)
         
         # 自定义扫描选项
         self.custom_scan_rb = QRadioButton(self.get_translation("custom_scan", "自定义扫描"))
+        self.custom_scan_rb.setObjectName("virus_scan_custom")
         options_layout.addWidget(self.custom_scan_rb)
+        self.scan_type_group.addButton(self.custom_scan_rb)
+        
+        # 连接按钮组信号
+        self.scan_type_group.buttonClicked.connect(self.on_scan_type_changed)
         
         # 自定义扫描路径选择
         custom_scan_layout = QHBoxLayout()
@@ -449,10 +640,6 @@ class VirusScanWidget(BaseComponent):
         
         layout.addWidget(button_container)
 
-    def get_translation(self, key, default=None):
-        """Override get_translation to use the correct section name"""
-        return self.settings.get_translation("virus_scan", key, default)
-    
     def refresh_language(self):
         """Refresh all UI elements with current language translations"""
         # 查找标题和描述标签
@@ -797,3 +984,192 @@ class VirusScanWidget(BaseComponent):
             QMessageBox.information(self, 
                                    self.get_translation("quarantine_complete", "隔离完成"), 
                                    self.get_translation("quarantine_success", "选中的威胁已成功隔离！")) 
+
+    def on_scan_type_changed(self, button):
+        """处理扫描类型选择改变"""
+        button_id = button.objectName()
+        print(f"病毒扫描类型更改为: {button.text()}")
+        
+        # 保存设置
+        self.settings.set_setting("virus_scan_type", button_id)
+        self.settings.sync()
+        
+        # 更新UI状态
+        if button_id == "virus_scan_custom":
+            self.custom_path_edit.setEnabled(True)
+            self.browse_button.setEnabled(True)
+        else:
+            self.custom_path_edit.setEnabled(False)
+            self.browse_button.setEnabled(False)
+        
+        # 在初始化后特别处理单选按钮的大小和样式
+        self.update_radio_buttons_size()
+
+    def update_radio_buttons_size(self):
+        """更新单选按钮的大小和样式，适配当前主题"""
+        # 获取当前主题颜色
+        theme_name = self.settings.get_setting("theme", "dark")
+        theme_data = self.settings.load_theme(theme_name)
+        
+        # 设置默认颜色
+        text_color = "#dcdcdc"
+        accent_color = "#007acc"
+        
+        # 更新颜色值（如果有主题数据）
+        if theme_data and "colors" in theme_data:
+            text_color = theme_data["colors"].get("text_color", text_color)
+            accent_color = theme_data["colors"].get("accent_color", accent_color)
+        
+        # 获取图标路径
+        # virus_icon_path = Icon.Virus.Path if Icon.Virus.Exist else ""
+        
+        # 生成通用的样式
+        radio_style = f"""
+            QRadioButton {{
+                min-height: 30px;
+                font-size: 13px;
+                padding: 4px;
+                color: {text_color};
+                spacing: 8px;
+            }}
+            QRadioButton::indicator {{
+                width: 18px;
+                height: 18px;
+                border: 2px solid {accent_color};
+                border-radius: 10px;
+            }}
+            QRadioButton::indicator:checked {{
+                background-color: {accent_color};
+                border: 4px solid {accent_color};
+                width: 10px;
+                height: 10px;
+            }}
+            QRadioButton:checked {{
+                font-weight: bold;
+            }}
+        """
+        
+        # 使用具有一致对齐的图标样式
+        # if virus_icon_path and hasattr(self, 'quick_scan_rb') and self.quick_scan_rb:
+        #     icon_style = radio_style + f"""
+        #         QRadioButton {{
+        #             padding-left: 30px;
+        #             text-align: left;
+        #             padding-top: 0px;
+        #             padding-bottom: 0px;
+        #             height: 30px;
+        #             line-height: 30px;
+        #             background-image: url({virus_icon_path});
+        #             background-repeat: no-repeat;
+        #             background-position: 5px center;
+        #             background-size: 20px 20px;
+        #         }}
+        #     """
+        #     # 应用图标样式到快速扫描
+        #     self.quick_scan_rb.setMinimumHeight(30)
+        #     self.quick_scan_rb.setStyleSheet(icon_style)
+            
+        #     # 应用相同高度样式到其他按钮，确保对齐一致
+        #     if hasattr(self, 'full_scan_rb') and self.full_scan_rb:
+        #         self.full_scan_rb.setMinimumHeight(30)
+        #         self.full_scan_rb.setStyleSheet(radio_style + """
+        #             QRadioButton {
+        #                 padding-top: 0px;
+        #                 padding-bottom: 0px;
+        #                 height: 30px;
+        #                 line-height: 30px;
+        #             }
+        #         """)
+                
+        #     if hasattr(self, 'custom_scan_rb') and self.custom_scan_rb:
+        #         self.custom_scan_rb.setMinimumHeight(30)
+        #         self.custom_scan_rb.setStyleSheet(radio_style + """
+        #             QRadioButton {
+        #                 padding-top: 0px;
+        #                 padding-bottom: 0px;
+        #                 height: 30px;
+        #                 line-height: 30px;
+        #             }
+        #         """)
+        # else:
+        #     # 应用通用样式到所有按钮
+        #     if hasattr(self, 'quick_scan_rb') and self.quick_scan_rb:
+        #         self.quick_scan_rb.setMinimumHeight(30)
+        #         self.quick_scan_rb.setStyleSheet(radio_style)
+                
+        #     if hasattr(self, 'full_scan_rb') and self.full_scan_rb:
+        #         self.full_scan_rb.setMinimumHeight(30)
+        #         self.full_scan_rb.setStyleSheet(radio_style)
+                
+        #     if hasattr(self, 'custom_scan_rb') and self.custom_scan_rb:
+        #         self.custom_scan_rb.setMinimumHeight(30)
+        #         self.custom_scan_rb.setStyleSheet(radio_style)
+
+    def apply_settings(self, settings=None):
+        """应用设置更改到此组件
+        
+        Args:
+            settings: 可选的设置对象。如果为None，则使用父对象的设置。
+        """
+        try:
+            # 获取设置对象
+            if settings is None:
+                if hasattr(self, 'settings'):
+                    settings = self.settings
+                elif hasattr(self, 'main_window') and self.main_window:
+                    settings = self.main_window.settings
+            
+            if settings:
+                # 应用主题
+                self.apply_theme()
+                
+                # 刷新语言
+                self.refresh_language()
+                
+                # 更新单选按钮大小和样式
+                self.update_radio_buttons_size()
+                
+                # 应用任何组件特定设置
+                if hasattr(settings, 'get_setting'):
+                    # 动画设置
+                    enable_animations = settings.get_setting('enable_animations', True)
+                    # 应用动画设置（如果需要）
+                    
+                    # 应用扫描特定设置
+                    auto_quarantine = settings.get_setting('auto_quarantine', False)
+                    if hasattr(self, 'auto_quarantine_check') and self.auto_quarantine_check:
+                        self.auto_quarantine_check.setChecked(auto_quarantine)
+                    
+                    # 应用保存的扫描类型
+                    scan_type = settings.get_setting('virus_scan_type', 'virus_scan_quick')
+                    self._apply_saved_scan_type(scan_type)
+                    
+                    # 应用其他扫描设置（根据需要）
+                    
+                # 修复单选按钮连接
+                self.fix_radiobutton_connections()
+        except Exception as e:
+            print(f"在 VirusScanWidget 中应用设置时发生错误: {str(e)}")
+            if hasattr(self, 'settings') and settings and settings.is_development_mode():
+                import traceback
+                print(traceback.format_exc())
+    
+    def _apply_saved_scan_type(self, scan_type):
+        """应用保存的扫描类型设置
+        
+        Args:
+            scan_type: 要应用的扫描类型ID
+        """
+        try:
+            # 设置相应的单选按钮为选中状态
+            if scan_type == 'virus_scan_quick' and hasattr(self, 'quick_scan_rb'):
+                self.quick_scan_rb.setChecked(True)
+                self.toggle_custom_scan(False)
+            elif scan_type == 'virus_scan_full' and hasattr(self, 'full_scan_rb'):
+                self.full_scan_rb.setChecked(True)
+                self.toggle_custom_scan(False)
+            elif scan_type == 'virus_scan_custom' and hasattr(self, 'custom_scan_rb'):
+                self.custom_scan_rb.setChecked(True)
+                self.toggle_custom_scan(True)
+        except Exception as e:
+            print(f"应用扫描类型时出错: {str(e)}") 

@@ -563,23 +563,23 @@ class SystemCleanerWidget(BaseComponent):
         
         # Checkboxes for scan options
         self.temp_files_check = QCheckBox(self.get_translation("temp_files"))
+        self.temp_files_check.setObjectName("cleaner_temp_files")
         self.temp_files_check.setChecked(True)
-        self.temp_files_check.setStyleSheet("color: #e0e0e0;")
         scan_layout.addWidget(self.temp_files_check)
         
         self.recycle_bin_check = QCheckBox(self.get_translation("recycle_bin"))
+        self.recycle_bin_check.setObjectName("cleaner_recycle_bin")
         self.recycle_bin_check.setChecked(True)
-        self.recycle_bin_check.setStyleSheet("color: #e0e0e0;")
         scan_layout.addWidget(self.recycle_bin_check)
         
         self.cache_files_check = QCheckBox(self.get_translation("cache_files"))
+        self.cache_files_check.setObjectName("cleaner_cache_files")
         self.cache_files_check.setChecked(True)
-        self.cache_files_check.setStyleSheet("color: #e0e0e0;")
         scan_layout.addWidget(self.cache_files_check)
         
         self.log_files_check = QCheckBox(self.get_translation("log_files"))
+        self.log_files_check.setObjectName("cleaner_log_files")
         self.log_files_check.setChecked(True)
-        self.log_files_check.setStyleSheet("color: #e0e0e0;")
         scan_layout.addWidget(self.log_files_check)
         
         layout.addWidget(self.scan_options_group)

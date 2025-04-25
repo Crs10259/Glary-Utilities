@@ -4,7 +4,8 @@ import time
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, 
                             QProgressBar, QGraphicsDropShadowEffect)
 from PyQt5.QtGui import QPixmap, QColor, QPainter, QFont
-from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve
+from config import Icon, version
 
 class LoadingThread(QThread):
     """加载线程，模拟耗时操作"""
@@ -15,7 +16,8 @@ class LoadingThread(QThread):
         """运行加载线程"""
         for i in range(101):
             self.progress_updated.emit(i)
-            time.sleep(0.05)  # 总计约5秒
+            # 缩短加载时间，减少到0.06秒，总耗时约6秒
+            time.sleep(0.06)
         self.loading_finished.emit()
 
 class SplashScreen(QWidget):
@@ -26,7 +28,23 @@ class SplashScreen(QWidget):
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setFixedSize(600, 400)
+        
+        # 预先加载图标
+        self._preload_resources()
+        
+        # 设置UI
         self.setup_ui()
+        
+        # 设置窗口的透明度为0，准备渐显效果
+        self.setWindowOpacity(0.0)
+        
+        # 创建渐显动画
+        self.fade_anim = QPropertyAnimation(self, b"windowOpacity")
+        self.fade_anim.setDuration(400)
+        self.fade_anim.setStartValue(0.0)
+        self.fade_anim.setEndValue(1.0)
+        self.fade_anim.setEasingCurve(QEasingCurve.OutQuint)
+        self.fade_anim.start()
         
         # 居中显示
         screen_geo = QApplication.desktop().screenGeometry()
@@ -39,6 +57,18 @@ class SplashScreen(QWidget):
         self.loading_thread.progress_updated.connect(self.update_progress)
         self.loading_thread.loading_finished.connect(self.finish_loading)
         self.loading_thread.start()
+    
+    def _preload_resources(self):
+        """预加载资源文件"""
+        # 预加载图标以确保显示正常
+        self.app_icon = None
+        icon_path = Icon.Icon.Path
+        if os.path.exists(icon_path):
+            try:
+                self.app_icon = QPixmap(icon_path)
+            except Exception as e:
+                print(f"无法加载图标: {e}")
+                self.app_icon = None
     
     def setup_ui(self):
         """设置UI界面"""
@@ -78,12 +108,9 @@ class SplashScreen(QWidget):
         container_layout.addWidget(title_label)
         
         # 添加应用程序图标
-        logo_pixmap = QPixmap("resources/icons/icon.svg")
-        if logo_pixmap.isNull():
-            logo_pixmap = QPixmap("resources/icons/icon.png")
-        if not logo_pixmap.isNull():
+        if self.app_icon:
             logo_label = QLabel(self)
-            logo_label.setPixmap(logo_pixmap.scaled(80, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            logo_label.setPixmap(self.app_icon.scaled(80, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
             logo_label.setAlignment(Qt.AlignCenter)
             container_layout.addWidget(logo_label)
         
@@ -127,7 +154,7 @@ class SplashScreen(QWidget):
         container_layout.addWidget(self.progress_label)
         
         # 添加版权信息
-        version_label = QLabel("Version 1.0.0 | Copyright © 2023")
+        version_label = QLabel(f"Version {version} | Copyright © 2025")
         version_label.setStyleSheet("""
             color: #777777;
             font-size: 12px;
@@ -158,5 +185,12 @@ class SplashScreen(QWidget):
     
     def finish_loading(self):
         """完成加载"""
-        # 发出完成信号，由main.py接收处理
-        self.close() 
+        # 创建渐隐动画
+        self.fade_out_anim = QPropertyAnimation(self, b"windowOpacity")
+        self.fade_out_anim.setDuration(300)
+        self.fade_out_anim.setStartValue(1.0)
+        self.fade_out_anim.setEndValue(0.0)
+        self.fade_out_anim.setEasingCurve(QEasingCurve.OutQuint)
+        self.fade_out_anim.finished.connect(self.close)
+        self.fade_out_anim.start() 
+        

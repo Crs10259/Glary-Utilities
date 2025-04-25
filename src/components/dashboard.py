@@ -16,7 +16,7 @@ from PyQt5.QtGui import (
 from PyQt5.QtChart import QChart, QChartView, QLineSeries, QValueAxis
 
 from .base_component import BaseComponent
-from .icons import Icon
+from config import Icon
 from collections import deque
 
 # 最大数据点数量
@@ -101,12 +101,20 @@ class ChartTile(QFrame):
         # 创建X轴（时间）
         self.axis_x = QValueAxis()
         self.axis_x.setRange(0, MAX_DATA_POINTS - 1)
-        self.axis_x.setVisible(False)
+        self.axis_x.setVisible(True)
+        self.axis_x.setLabelsVisible(False)  # 隐藏标签但显示网格线
+        self.axis_x.setGridLineVisible(True)
+        self.axis_x.setGridLineColor(QColor(60, 60, 60))  # 暗色网格线
+        self.axis_x.setMinorGridLineVisible(False)  # 不显示次网格线
         
         # 创建Y轴（值）
         self.axis_y = QValueAxis()
         self.axis_y.setRange(0, 100)
-        self.axis_y.setVisible(False)
+        self.axis_y.setVisible(True)
+        self.axis_y.setLabelsVisible(False)  # 隐藏标签但显示网格线
+        self.axis_y.setGridLineVisible(True)
+        self.axis_y.setGridLineColor(QColor(60, 60, 60))  # 暗色网格线
+        self.axis_y.setMinorGridLineVisible(False)  # 不显示次网格线
         
         # 将轴附加到图表
         self.chart.addAxis(self.axis_x, Qt.AlignBottom)
@@ -259,10 +267,12 @@ class ActionTile(QFrame):
         
         self.layout.addLayout(self.text_container, 1)  # 添加伸展因子
         
-        # 修复箭头图标显示
+        # Fix arrow icon loading
         try:
-            if hasattr(Icon.Arrow, 'Path') and os.path.exists(Icon.Arrow.Path):
-                arrow_icon = QIcon(Icon.Arrow.Path)
+            # Explicitly use the path from the Icon class
+            arrow_icon_path = Icon.DownArrow.Path 
+            if arrow_icon_path and os.path.exists(arrow_icon_path):
+                arrow_icon = QIcon(arrow_icon_path)
                 if not arrow_icon.isNull():
                     self.arrow_label = QLabel()
                     arrow_pixmap = arrow_icon.pixmap(QSize(18, 18))
@@ -270,7 +280,7 @@ class ActionTile(QFrame):
                         self.arrow_label.setPixmap(arrow_pixmap)
                         self.layout.addWidget(self.arrow_label, 0, Qt.AlignRight)
         except Exception as e:
-            print(f"Error loading arrow icon: {str(e)}")  # 加载箭头图标时出错
+            print(f"Error loading arrow icon: {str(e)}")
 
 class DashboardWidget(BaseComponent):
     def __init__(self, parent=None):
@@ -340,7 +350,7 @@ class DashboardWidget(BaseComponent):
         self.stats_layout.setSpacing(20)
         
         # CPU 使用情况图表
-        cpu_icon_path = "resources/icons/cpu.svg"
+        cpu_icon_path = Icon.CPU.Path
         self.cpu_chart = ChartTile(
             self.get_translation("cpu_usage"), 
             cpu_icon_path if os.path.exists(cpu_icon_path) else Icon.CPU.Path,
@@ -349,7 +359,7 @@ class DashboardWidget(BaseComponent):
         self.stats_layout.addWidget(self.cpu_chart, 0, 0)
         
         # 内存使用情况图表
-        memory_icon_path = "resources/icons/memory.svg"
+        memory_icon_path = Icon.Memory.Path
         self.memory_chart = ChartTile(
             self.get_translation("memory_usage"), 
             memory_icon_path if os.path.exists(memory_icon_path) else Icon.Memory.Path,
@@ -358,7 +368,7 @@ class DashboardWidget(BaseComponent):
         self.stats_layout.addWidget(self.memory_chart, 0, 1)
         
         # 磁盘使用情况图表
-        disk_icon_path = "resources/icons/disk.svg"
+        disk_icon_path = Icon.Disk.Path
         self.disk_chart = ChartTile(
             self.get_translation("disk_usage"), 
             disk_icon_path if os.path.exists(disk_icon_path) else Icon.Disk.Path,
@@ -367,7 +377,7 @@ class DashboardWidget(BaseComponent):
         self.stats_layout.addWidget(self.disk_chart, 1, 0)
         
         # 温度图表
-        temp_icon_path = "resources/icons/temperature.svg"
+        temp_icon_path = Icon.Temperature.Path
         self.temp_chart = ChartTile(
             self.get_translation("system_temperature"), 
             temp_icon_path if os.path.exists(temp_icon_path) else Icon.Temperature.Path,
@@ -391,18 +401,18 @@ class DashboardWidget(BaseComponent):
         self.quick_layout.setContentsMargins(0, 0, 0, 0)
         self.quick_layout.setSpacing(20)
         
-        # 优化系统块
-        optimize_icon_path = "resources/icons/optimize.svg"
-        self.optimize_tile = ActionTile(
-            self.get_translation("optimize_system"),
-            "Speed up your system by fixing issues",  # 通过修复问题加速系统
-            optimize_icon_path if os.path.exists(optimize_icon_path) else (None if not Icon.Optimize.Exist else Icon.Optimize.Path),
-            color="#4285F4"  # Google Blue
+        # System Repair tile (Corrected)
+        repair_icon_path = Icon.Repair.Path
+        self.repair_tile = ActionTile(
+            self.get_translation("system_repair"), # Use correct translation key
+            self.get_translation("system_repair_desc"), # Use correct description key
+            repair_icon_path if os.path.exists(repair_icon_path) else Icon.Repair.Path,
+            color="#4285F4" # Keep color or adjust as needed
         )
-        self.quick_layout.addWidget(self.optimize_tile, 0, 0)
+        self.quick_layout.addWidget(self.repair_tile, 0, 0)
         
-        # 清理垃圾块
-        clean_icon_path = "resources/icons/clean.svg"
+        # Clean Junk tile
+        clean_icon_path = Icon.Clean.Path
         self.clean_tile = ActionTile(
             self.get_translation("clean_junk"),
             "Free up disk space by removing unnecessary files",  # 通过删除不必要的文件释放磁盘空间
@@ -411,8 +421,8 @@ class DashboardWidget(BaseComponent):
         )
         self.quick_layout.addWidget(self.clean_tile, 0, 1)
         
-        # 病毒扫描块
-        virus_icon_path = "resources/icons/virus.svg"
+        # Virus Scan tile
+        virus_icon_path = Icon.Virus.Path
         self.virus_tile = ActionTile(
             self.get_translation("scan_system"),
             "Scan your system for viruses and malware",  # 扫描系统中的病毒和恶意软件
@@ -421,8 +431,8 @@ class DashboardWidget(BaseComponent):
         )
         self.quick_layout.addWidget(self.virus_tile, 1, 0)
         
-        # 获取系统信息块
-        info_icon_path = "resources/icons/info.svg"
+        # Get System Info tile
+        info_icon_path = Icon.Info.Path
         self.info_tile = ActionTile(
             self.get_translation("get_system_info"),
             "Get system information",  # 获取系统信息
@@ -431,14 +441,13 @@ class DashboardWidget(BaseComponent):
         )
         self.quick_layout.addWidget(self.info_tile, 1, 1)
         
-        # 将快速访问框架添加到主布局，设置为可扩展但比图表部分分配少一些空间
+        # Connect tiles to correct pages
+        self.repair_tile.mousePressEvent = lambda event: self.navigate_to_page(3)  # System Repair page index (assuming 3)
+        self.clean_tile.mousePressEvent = lambda event: self.navigate_to_page(1)  # System Cleaner
+        self.virus_tile.mousePressEvent = lambda event: self.navigate_to_page(8)  # Virus Scan
+        self.info_tile.mousePressEvent = lambda event: self.navigate_to_page(9)  # System Information
+
         self.main_layout.addWidget(self.quick_frame, 3)
-        
-        # 连接操作块到各自的功能
-        self.optimize_tile.mousePressEvent = lambda event: self.navigate_to_page(3)  # 系统修复
-        self.clean_tile.mousePressEvent = lambda event: self.navigate_to_page(1)     # 系统清理
-        self.virus_tile.mousePressEvent = lambda event: self.navigate_to_page(8)     # 病毒扫描
-        self.info_tile.mousePressEvent = lambda event: self.navigate_to_page(9)     # 系统信息
     
     def update_system_info(self):
         """更新系统统计信息"""
@@ -545,7 +554,7 @@ class DashboardWidget(BaseComponent):
         self.temp_chart.title_label.setText(self.get_translation("system_temperature"))
         
         # 更新操作块
-        self.optimize_tile.title_label.setText(self.get_translation("optimize_system"))
+        self.repair_tile.title_label.setText(self.get_translation("system_repair"))
         self.clean_tile.title_label.setText(self.get_translation("clean_junk"))
         self.virus_tile.title_label.setText(self.get_translation("scan_system"))
         self.info_tile.title_label.setText(self.get_translation("get_system_info"))
@@ -570,3 +579,4 @@ class DashboardWidget(BaseComponent):
         for key in keys:
             # 如果键不存在，将引发KeyError
             self.get_translation(key, None) 
+            

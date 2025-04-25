@@ -3,22 +3,19 @@
 
 import sys
 import os
-from typing import List, Dict, Any, Optional, Tuple
-import logging
+from typing import List, Dict
 
 from PyQt5.QtWidgets import QApplication, QMessageBox
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import QCoreApplication, Qt, QLibraryInfo
 
 from utils.settings_manager import Settings
 from main_window import MainWindow
-from components.icons import Icon
+from config import Icon
 from utils.platform import PlatformUtils
 from utils.logger import Logger, setup_logger
-from utils.exception_handler import ExceptionHandler
 from splash_screen import SplashScreen
-from utils.resource_manager import ResourceManager
-
+from config import ResourceManager
 
 class GlaryUtilitiesApp:
     """Main application class for Glary Utilities"""
@@ -26,7 +23,6 @@ class GlaryUtilitiesApp:
     def __init__(self, argv: List[str]):
         self.argv = argv
         self.logger = Logger().get_logger()
-        self.exception_handler = ExceptionHandler()
         self.settings = None
         self.app = None
         self.window = None
@@ -56,11 +52,34 @@ class GlaryUtilitiesApp:
         # Initialize settings
         self.settings = Settings()
         
+        # 设置更好看的全局字体
+        self.setup_fonts()
+        
         # Initialize resource manager
         ResourceManager.initialize()
         
         # Set up logger
         setup_logger()
+
+    def setup_fonts(self) -> None:
+        """设置全局字体"""
+        # 创建字体
+        if PlatformUtils.is_windows():
+            # Windows系统上优先使用微软雅黑或Segoe UI
+            font_name = "Microsoft YaHei" if "zh" in self.settings.get_setting("language", "en") else "Segoe UI"
+            font = QFont(font_name, 9)
+        elif PlatformUtils.is_mac():
+            # macOS上使用SF Pro
+            font = QFont("SF Pro", 13)
+        else:
+            # Linux上使用Ubuntu或Noto Sans
+            font = QFont("Ubuntu", 10)
+        
+        # 设置字体特性
+        font.setStyleStrategy(QFont.PreferAntialias | QFont.PreferQuality)
+        
+        # 应用到全局
+        self.app.setFont(font)
 
     def show_splash_screen(self) -> None:
         """显示启动画面"""
@@ -93,8 +112,6 @@ class GlaryUtilitiesApp:
         Returns:
             int: Exit code
         """
-        # Install global exception handler
-        self.exception_handler.install()
         
         try:
             # Parse command line arguments
@@ -112,7 +129,6 @@ class GlaryUtilitiesApp:
             
             # Handle translations
             if not self.handle_translations(args):
-                self.exception_handler.uninstall()
                 return 0
             
             # 显示窗口，启动应用程序
@@ -135,10 +151,6 @@ class GlaryUtilitiesApp:
             self.logger.exception(f"An error occurred during program execution: {e}")
             return 1
             
-        finally:
-            # Uninstall global exception handler
-            self.exception_handler.uninstall()
-
 
 def main() -> int:
     """Application entry point"""

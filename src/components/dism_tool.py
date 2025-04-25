@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
+from config import Icon
 
 class DismThread(QThread):
     """DISM操作的工作线程"""
@@ -129,19 +130,15 @@ class DismToolWidget(BaseComponent):
         """重写 get_translation 以使用正确的部分名称"""
         return self.settings.get_translation("dism_tool", key, default)
     
-    def setup_ui(self):
-        # 清除旧布局（如果有）
-        if self.layout():
-            # 清除旧布局中的所有部件
-            while self.layout().count():
-                item = self.layout().takeAt(0)
-                if item.widget():
-                    item.widget().deleteLater()
-            
-            # 删除旧布局
-            old_layout = self.layout()
-            QWidget().setLayout(old_layout)  # 将旧布局设置给一个临时部件以便删除
+    def apply_theme(self):
+        """应用主题样式到组件"""
+        # 调用父类的应用主题方法，使用统一样式
+        super().apply_theme()
         
+        # 修复单选按钮连接
+        self.fix_radiobutton_connections()
+    
+    def setup_ui(self):
         # 主布局
         self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(20, 20, 20, 20)
@@ -186,27 +183,31 @@ class DismToolWidget(BaseComponent):
         
         # 操作选择的单选按钮
         self.operation_group = QButtonGroup(self)
+        self.operation_group.setObjectName("dism_operation_group")
         
         self.check_health_rb = QRadioButton(self.get_translation("check_health"))
         self.check_health_rb.setChecked(True)
-        self.check_health_rb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
+        self.check_health_rb.setObjectName("dism_check_health")
         operations_layout.addWidget(self.check_health_rb)
         self.operation_group.addButton(self.check_health_rb)
         
         self.scan_health_rb = QRadioButton(self.get_translation("scan_health"))
-        self.scan_health_rb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
+        self.scan_health_rb.setObjectName("dism_scan_health")
         operations_layout.addWidget(self.scan_health_rb)
         self.operation_group.addButton(self.scan_health_rb)
         
         self.restore_health_rb = QRadioButton(self.get_translation("restore_health"))
-        self.restore_health_rb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
+        self.restore_health_rb.setObjectName("dism_restore_health")
         operations_layout.addWidget(self.restore_health_rb)
         self.operation_group.addButton(self.restore_health_rb)
         
         self.cleanup_image_rb = QRadioButton(self.get_translation("cleanup_image"))
-        self.cleanup_image_rb.setStyleSheet("color: #e0e0e0; background-color: transparent;")
+        self.cleanup_image_rb.setObjectName("dism_cleanup_image")
         operations_layout.addWidget(self.cleanup_image_rb)
         self.operation_group.addButton(self.cleanup_image_rb)
+        
+        # Connect button group to handler
+        self.operation_group.buttonClicked.connect(self.on_operation_changed)
         
         self.main_layout.addWidget(self.operations_group)
         
@@ -271,6 +272,12 @@ class DismToolWidget(BaseComponent):
         
         # 确保样式正确应用
         self.setAttribute(Qt.WA_StyledBackground, True)
+        
+        # 应用主题样式到单选按钮
+        self.apply_theme()
+        
+        # 确保单选按钮事件正确连接
+        self.fix_radiobutton_connections()
     
     def start_operation(self):
         """开始选定的DISM操作"""
@@ -350,6 +357,26 @@ class DismToolWidget(BaseComponent):
         for key in keys:
             # 如果键不存在，将引发KeyError
             self.get_translation(key, None)
+    
+    def on_operation_changed(self, button):
+        """处理操作选择的单选按钮变化"""
+        # 获取当前选中的按钮
+        selected_button = None
+        
+        if self.check_health_rb.isChecked():
+            selected_button = self.check_health_rb
+        elif self.scan_health_rb.isChecked():
+            selected_button = self.scan_health_rb
+        elif self.restore_health_rb.isChecked():
+            selected_button = self.restore_health_rb
+        elif self.cleanup_image_rb.isChecked():
+            selected_button = self.cleanup_image_rb
+            
+        if selected_button:
+            # 保存用户的选择到设置
+            operation_key = selected_button.objectName()
+            self.settings.set_setting("dism_operation", operation_key)
+            self.settings.sync()  # 确保设置被保存
 
 # 创建别名以保持向后兼容性
-DISMToolWidget = DismToolWidget 
+DISMToolWidget = DismToolWidget

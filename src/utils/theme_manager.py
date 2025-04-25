@@ -5,7 +5,7 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtWidgets import QApplication
 from .settings import Settings
-
+from config import Icon
 
 class ThemeManager(QObject):
     """
@@ -465,7 +465,6 @@ class ThemeManager(QObject):
                 border-radius: 8px;
                 padding: 6px 12px;
                 min-height: 28px;
-                transition: background-color 0.2s, border-color 0.2s;
             }}
             QPushButton:hover {{
                 background-color: {self.lighten_color(bg_lighter, 15)};
@@ -514,20 +513,11 @@ class ThemeManager(QObject):
             }}
             QCheckBox::indicator:checked {{
                 background-color: {accent_color};
-                image: url(resources/icons/check.png);
+                image: url("{Icon.Check.Path}");
             }}
             QRadioButton::indicator:checked {{
-                background-color: {bg_lighter};
-                border: 1px solid {accent_color};
-            }}
-            QRadioButton::indicator:checked::before {{
-                content: "";
-                display: block;
-                width: 10px;
-                height: 10px;
-                margin: 3px;
-                border-radius: 5px;
                 background-color: {accent_color};
+                border: 1px solid {accent_color};
             }}
             QLineEdit, QTextEdit, QPlainTextEdit, QListWidget, QTableWidget, QComboBox {{
                 background-color: {bg_lighter};
@@ -700,7 +690,7 @@ class ThemeManager(QObject):
                 border-bottom-right-radius: 8px;
             }}
             QComboBox::down-arrow {{
-                image: url(resources/icons/down-arrow.png);
+                image: url({Icon.DownArrow.Path});
                 width: 16px;
                 height: 16px;
             }}
@@ -790,8 +780,8 @@ class ThemeManager(QObject):
                 background-color: {self.lighten_color(bg_lighter, 10)};
             }}
             QDockWidget {{
-                titlebar-close-icon: url(resources/icons/close.png);
-                titlebar-normal-icon: url(resources/icons/undock.png);
+                titlebar-close-icon: url({Icon.Close.Path});
+                titlebar-normal-icon: url({Icon.Undock.Path});
             }}
             QDockWidget::title {{
                 text-align: center;

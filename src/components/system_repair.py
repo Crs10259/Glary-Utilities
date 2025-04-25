@@ -375,21 +375,25 @@ class SystemRepairWidget(BaseComponent):
         
         # Checkboxes for scan options
         self.registry_check = QCheckBox(self.get_translation("registry_issues"))
+        self.registry_check.setObjectName("repair_registry_issues")
         self.registry_check.setChecked(True)
         self.registry_check.setStyleSheet("color: #e0e0e0;")
         scan_layout.addWidget(self.registry_check)
         
         self.system_files_check = QCheckBox(self.get_translation("system_files"))
+        self.system_files_check.setObjectName("repair_system_files")
         self.system_files_check.setChecked(True)
         self.system_files_check.setStyleSheet("color: #e0e0e0;")
         scan_layout.addWidget(self.system_files_check)
         
         self.startup_check = QCheckBox(self.get_translation("startup_items"))
+        self.startup_check.setObjectName("repair_startup_items")
         self.startup_check.setChecked(True)
         self.startup_check.setStyleSheet("color: #e0e0e0;")
         scan_layout.addWidget(self.startup_check)
         
         self.services_check = QCheckBox(self.get_translation("services"))
+        self.services_check.setObjectName("repair_services")
         self.services_check.setChecked(True)
         self.services_check.setStyleSheet("color: #e0e0e0;")
         scan_layout.addWidget(self.services_check)
