@@ -5,7 +5,7 @@ import os
 import json
 from PyQt5.QtGui import QColor, QFont
 from utils.animations import AnimationUtils
-from utils.settings_manager import Settings
+from utils.settings import Settings
 from utils.theme_manager import ThemeManager
 from config import Icon
 
@@ -24,10 +24,7 @@ class BaseComponent(QWidget):
         
         # 初始化UI
         self.setup_ui()
-        # 确保复选框状态正确响应
-        self.fix_checkbox_connections()
-        # 确保单选按钮状态正确响应
-        self.fix_radiobutton_connections()
+
     
     def setup_ui(self):
         """Setup component UI - must be implemented by subclasses"""
@@ -321,25 +318,6 @@ class BaseComponent(QWidget):
         """Get component name for identification"""
         return self.__class__.__name__
     
-    def fix_checkbox_connections(self):
-        """确保所有复选框正确连接信号和槽"""
-        for checkbox in self.findChildren(QCheckBox):
-            # 断开可能存在的旧连接
-            try:
-                checkbox.stateChanged.disconnect()
-            except:
-                pass
-            
-            # 为每个复选框创建一个更新状态的函数
-            def create_handler(cb):
-                return lambda state: self.update_checkbox_state(cb, state)
-            
-            # 连接新的信号处理函数
-            handler = create_handler(checkbox)
-            checkbox.stateChanged.connect(handler)
-            
-            # Store the handler as an attribute to prevent garbage collection
-            checkbox._state_handler = handler
     
     def update_checkbox_state(self, checkbox, state):
         """更新复选框状态并应用相关设置"""
@@ -359,44 +337,6 @@ class BaseComponent(QWidget):
             self.settings.set_setting(setting_key, state == Qt.Checked)
             self.settings.sync()  # 确保立即保存设置
     
-    def fix_radiobutton_connections(self):
-        """确保所有单选按钮正确连接信号和槽"""
-        # 处理所有单选按钮
-        for radio in self.findChildren(QRadioButton):
-            # 断开可能存在的旧连接
-            try:
-                radio.toggled.disconnect()
-            except:
-                pass
-            
-            # 为每个单选按钮创建一个更新状态的函数
-            def create_handler(rb):
-                return lambda checked: self.update_radiobutton_state(rb, checked) if checked else None
-            
-            # 连接新的信号处理函数
-            handler = create_handler(radio)
-            radio.toggled.connect(handler)
-            
-            # Store the handler as an attribute to prevent garbage collection
-            radio._toggle_handler = handler
-            
-        # 处理按钮组
-        for button_group in self.findChildren(QButtonGroup):
-            try:
-                button_group.buttonClicked.disconnect()
-            except:
-                pass
-                
-            # 为每个按钮组创建处理函数
-            def create_group_handler(group):
-                return lambda button: self.update_buttongroup_selection(group, button)
-                
-            # 连接新的信号处理函数
-            handler = create_group_handler(button_group)
-            button_group.buttonClicked.connect(handler)
-            
-            # Store the handler
-            button_group._click_handler = handler
             
     def update_radiobutton_state(self, radio_button, checked):
         """更新单选按钮状态并应用相关设置"""

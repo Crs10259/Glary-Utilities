@@ -849,3 +849,4 @@ class ThemeManager(QObject):
         except Exception as e:
             print(f"创建主题失败: {e}")
             return False 
+        

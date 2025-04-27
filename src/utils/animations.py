@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QGraphicsOpacityEffect, QGraphicsColorizeEf
 from PyQt5.QtCore import QPropertyAnimation, QSequentialAnimationGroup, QParallelAnimationGroup
 from PyQt5.QtCore import QEasingCurve, Qt, QSize, QPoint, QRect, QAbstractAnimation
 from PyQt5.QtGui import QColor
-from utils.settings_manager import Settings
+from utils.settings import Settings
 
 class AnimationUtils:
     """提供UI动画效果的工具类"""

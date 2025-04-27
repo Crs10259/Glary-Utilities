@@ -439,9 +439,6 @@ class VirusScanWidget(BaseComponent):
             except AttributeError:
                 pass
         
-        # 修复单选按钮连接
-        self.fix_radiobutton_connections()
-        
     def apply_current_theme(self):
         """应用当前主题的颜色 - 此方法由MainWindow的refresh_component_theme调用"""
         try:
@@ -1048,62 +1045,6 @@ class VirusScanWidget(BaseComponent):
                 font-weight: bold;
             }}
         """
-        
-        # 使用具有一致对齐的图标样式
-        # if virus_icon_path and hasattr(self, 'quick_scan_rb') and self.quick_scan_rb:
-        #     icon_style = radio_style + f"""
-        #         QRadioButton {{
-        #             padding-left: 30px;
-        #             text-align: left;
-        #             padding-top: 0px;
-        #             padding-bottom: 0px;
-        #             height: 30px;
-        #             line-height: 30px;
-        #             background-image: url({virus_icon_path});
-        #             background-repeat: no-repeat;
-        #             background-position: 5px center;
-        #             background-size: 20px 20px;
-        #         }}
-        #     """
-        #     # 应用图标样式到快速扫描
-        #     self.quick_scan_rb.setMinimumHeight(30)
-        #     self.quick_scan_rb.setStyleSheet(icon_style)
-            
-        #     # 应用相同高度样式到其他按钮，确保对齐一致
-        #     if hasattr(self, 'full_scan_rb') and self.full_scan_rb:
-        #         self.full_scan_rb.setMinimumHeight(30)
-        #         self.full_scan_rb.setStyleSheet(radio_style + """
-        #             QRadioButton {
-        #                 padding-top: 0px;
-        #                 padding-bottom: 0px;
-        #                 height: 30px;
-        #                 line-height: 30px;
-        #             }
-        #         """)
-                
-        #     if hasattr(self, 'custom_scan_rb') and self.custom_scan_rb:
-        #         self.custom_scan_rb.setMinimumHeight(30)
-        #         self.custom_scan_rb.setStyleSheet(radio_style + """
-        #             QRadioButton {
-        #                 padding-top: 0px;
-        #                 padding-bottom: 0px;
-        #                 height: 30px;
-        #                 line-height: 30px;
-        #             }
-        #         """)
-        # else:
-        #     # 应用通用样式到所有按钮
-        #     if hasattr(self, 'quick_scan_rb') and self.quick_scan_rb:
-        #         self.quick_scan_rb.setMinimumHeight(30)
-        #         self.quick_scan_rb.setStyleSheet(radio_style)
-                
-        #     if hasattr(self, 'full_scan_rb') and self.full_scan_rb:
-        #         self.full_scan_rb.setMinimumHeight(30)
-        #         self.full_scan_rb.setStyleSheet(radio_style)
-                
-        #     if hasattr(self, 'custom_scan_rb') and self.custom_scan_rb:
-        #         self.custom_scan_rb.setMinimumHeight(30)
-        #         self.custom_scan_rb.setStyleSheet(radio_style)
 
     def apply_settings(self, settings=None):
         """应用设置更改到此组件

@@ -290,7 +290,7 @@ class BootRepairWidget(BaseComponent):
                 except Exception as e:
                     print(f"Error getting check icon path: {e}")
                     check_icon_path = ""
-                
+
                 # 更新组件样式 - 更全面的样式覆盖
                 self.setStyleSheet(f"""
                     QWidget {{ background-color: transparent; color: {text_color}; }}
@@ -335,8 +335,6 @@ class BootRepairWidget(BaseComponent):
                 except AttributeError:
                     pass
                 
-                # 修复单选按钮连接
-                self.fix_radiobutton_connections()
         except Exception as e:
             print(f"Error applying theme in BootRepairWidget: {e}")
             

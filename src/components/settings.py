@@ -25,7 +25,6 @@ class SettingsWidget(QWidget):
         self.animations = AnimationUtils()
         self.setup_ui()
         self.load_settings()
-        # self.fix_checkbox_connections()
     
     def setup_ui(self) -> None:
         """设置UI组件"""
@@ -178,11 +177,6 @@ class SettingsWidget(QWidget):
         # 更新本地化
         self.refresh_language()
         
-        # 修复复选框连接
-        self.fix_checkbox_connections()
-        
-        # 应用统一的复选框样式
-        self.apply_checkbox_styles()
     
     def setup_general_tab(self, general_tab) -> None:
         """设置常规选项卡"""
@@ -765,7 +759,16 @@ class SettingsWidget(QWidget):
             # 加载动画启用设置
             try:
                 if hasattr(self, 'enable_animations_check'):
-                    self.enable_animations_check.setChecked(self.settings.get_setting("enable_animations", True))
+                    animation_enabled = self.settings.get_setting("enable_animations", True)
+                    # Convert to proper boolean value
+                    if isinstance(animation_enabled, str):
+                        animation_enabled = animation_enabled.lower() in ('true', 'yes', '1', 'on')
+                    elif isinstance(animation_enabled, int):
+                        animation_enabled = animation_enabled != 0
+                    else:
+                        animation_enabled = bool(animation_enabled)
+                        
+                    self.enable_animations_check.setChecked(animation_enabled)
             except AttributeError:
                 pass
             
@@ -795,9 +798,6 @@ class SettingsWidget(QWidget):
             print("设置加载完成")
         except Exception as e:
             print(f"Error loading settings: {e}")
-
-        # 应用统一的复选框样式
-        self.apply_checkbox_styles()
     
     def reset_settings(self):
         """重置设置为默认值"""
@@ -1364,106 +1364,4 @@ class SettingsWidget(QWidget):
                 # Refresh animation settings throughout the application
                 self.main_window.refresh_all_components()
 
-    def fix_checkbox_connections(self):
-        """Ensure all checkboxes have proper connections"""
-        for checkbox in self.findChildren(QCheckBox):
-            # Disconnect any existing connections to avoid duplicates
-            try:
-                checkbox.stateChanged.disconnect()
-            except:
-                pass
-            
-            # Get the setting key from object name or create one from text
-            setting_key = checkbox.objectName()
-            if not setting_key and checkbox.text():
-                setting_key = f"checkbox_{checkbox.text().lower().replace(' ', '_')}"
-                checkbox.setObjectName(setting_key)
-            
-            # Only connect if we have a valid setting key
-            if setting_key:
-                # Using partial to pass the setting_key correctly as a fixed parameter
-                from functools import partial
-                checkbox.stateChanged.connect(
-                    partial(self.on_checkbox_changed, setting_key)
-                )
-
-    def apply_checkbox_styles(self):
-        """应用统一的复选框和单选按钮样式"""
-        # 获取当前主题
-        theme_name = self.settings.get_setting("theme", "dark")
-        theme_data = self.settings.load_theme(theme_name)
-        
-        if theme_data and "colors" in theme_data:
-            bg_color = theme_data["colors"].get("bg_color", "#2d2d2d")
-            text_color = theme_data["colors"].get("text_color", "#dcdcdc")
-            accent_color = theme_data["colors"].get("accent_color", "#007acc")
-            
-            # 获取check图标路径
-            check_icon_path = ""
-            try:
-                from config import Icon
-                if hasattr(Icon, "Check") and hasattr(Icon.Check, "Path"):
-                    check_icon_path = Icon.Check.Path
-            except:
-                check_icon_path = ""
-            
-            # 设置统一的样式表
-            checkbox_style = f"""
-                QCheckBox, QRadioButton {{ 
-                    color: {text_color}; 
-                    background-color: transparent; 
-                    spacing: 5px; 
-                    padding: 5px; 
-                    font-size: 13px; 
-                    min-height: 20px; 
-                    margin: 2px 0;
-                }}
-                
-                QCheckBox::indicator {{ 
-                    width: 16px; 
-                    height: 16px; 
-                    border: 2px solid {accent_color}; 
-                    border-radius: 3px; 
-                    background-color: {bg_color}; 
-                }}
-                QCheckBox::indicator:unchecked {{ background-color: {bg_color}; }}
-                QCheckBox::indicator:checked {{ 
-                    background-color: {accent_color}; 
-                    image: url({check_icon_path}); 
-                }}
-                QCheckBox::indicator:unchecked:hover {{ 
-                    border-color: {self.lighten_color(accent_color, 20)}; 
-                    background-color: {self.lighten_color(bg_color, 10)}; 
-                }}
-                QCheckBox::indicator:checked:hover {{ 
-                    background-color: {self.lighten_color(accent_color, 10)}; 
-                }}
-                
-                QRadioButton::indicator {{ 
-                    width: 16px; 
-                    height: 16px; 
-                    border: 2px solid {accent_color}; 
-                    border-radius: 9px; 
-                    background-color: {bg_color}; 
-                }}
-                QRadioButton::indicator:unchecked {{ background-color: {bg_color}; }}
-                QRadioButton::indicator:checked {{ 
-                    background-color: {bg_color}; 
-                    border: 5px solid {accent_color}; 
-                }}
-                QRadioButton::indicator:unchecked:hover {{ 
-                    border-color: {self.lighten_color(accent_color, 20)}; 
-                    background-color: {self.lighten_color(bg_color, 10)}; 
-                }}
-                QRadioButton::indicator:checked:hover {{ 
-                    border-color: {self.lighten_color(accent_color, 10)}; 
-                }}
-            """
-            
-            # 应用到所有复选框
-            for checkbox in self.findChildren(QCheckBox):
-                checkbox.setStyleSheet(checkbox_style)
-                
-            # 应用到所有单选按钮
-            for radiobutton in self.findChildren(QRadioButton):
-                radiobutton.setStyleSheet(checkbox_style)
+   

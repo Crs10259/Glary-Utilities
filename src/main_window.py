@@ -281,7 +281,10 @@ class MainWindow(QMainWindow):
         # 添加应用图标
         app_icon = QLabel()
         app_icon.setPixmap(QPixmap(Icon.Icon.Path).scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        app_icon.setStyleSheet("background-color: transparent;")
+        app_icon.setStyleSheet("background-color: transparent; cursor: pointer;")
+        app_icon.setToolTip(self.get_translation("click_for_about", "Click for About"))
+        # Make the icon clickable
+        app_icon.mousePressEvent = lambda event: self.show_about_dialog()
         title_layout.addWidget(app_icon)
         
         # 添加标题文本
@@ -701,7 +704,7 @@ class MainWindow(QMainWindow):
             page = self.content_area.widget(i)
             if isinstance(page, QWidget):
                 page.setContentsMargins(0, 0, 0, 0)
-
+    
     def apply_theme(self):
         """应用当前主题"""
         theme_name = self.settings.get_setting("theme", "dark")
@@ -1327,4 +1330,233 @@ class MainWindow(QMainWindow):
             Translated text
         """
         return self.settings.get_translation("main_window", key, default)
+
+    def show_about_dialog(self):
+        """显示关于对话框"""
+        
+        # 创建无边框对话框
+        about_dialog = QDialog(self)
+        about_dialog.setObjectName("AboutDialog")
+        about_dialog.setWindowTitle(self.tr("about_title"))
+        about_dialog.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        about_dialog.setAttribute(Qt.WA_TranslucentBackground)
+        about_dialog.setFixedSize(450, 420)
+        
+        # 创建主布局
+        main_layout = QVBoxLayout(about_dialog)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # 创建内容容器（带圆角和阴影）
+        content_container = QWidget()
+        content_container.setObjectName("AboutDialogContent")
+        content_container.setStyleSheet("""
+            #AboutDialogContent {
+                background-color: #1e1e1e;
+                border-radius: 10px;
+            }
+        """)
+        
+        # 添加阴影效果
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(20)
+        shadow.setColor(QColor(0, 0, 0, 80))
+        shadow.setOffset(0, 0)
+        content_container.setGraphicsEffect(shadow)
+        
+        content_layout = QVBoxLayout(content_container)
+        content_layout.setContentsMargins(0, 0, 20, 20)
+        
+        # 创建标题栏
+        title_bar = QWidget()
+        title_bar.setFixedHeight(40)
+        title_bar.setObjectName("AboutTitleBar")
+        title_bar_layout = QHBoxLayout(title_bar)
+        title_bar_layout.setContentsMargins(20, 10, 10, 0)
+        
+        # 添加标题
+        title_label = QLabel(self.tr("about_title"))
+        title_label.setObjectName("AboutTitle")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff;")
+        
+        # 添加关闭按钮
+        close_button = QPushButton()
+        close_button.setFixedSize(24, 24)
+        
+        # 设置关闭按钮样式
+        if os.path.exists(Icon.Close.Path):
+            close_button.setIcon(QIcon(Icon.Close.Path))
+            close_button.setIconSize(QSize(16, 16))
+        else:
+            close_button.setText("×")
+            
+        close_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                color: #999999;
+                font-size: 18px;
+            }
+            QPushButton:hover {
+                color: #ffffff;
+                background-color: #e81123;
+                border-radius: 12px;
+            }
+        """)
+        
+        # 连接关闭按钮信号到reject插槽，而不是close
+        close_button.clicked.connect(about_dialog.reject)
+        
+        title_bar_layout.addWidget(title_label)
+        title_bar_layout.addStretch()
+        title_bar_layout.addWidget(close_button)
+        
+        content_layout.addWidget(title_bar)
+        
+        # 创建内容区域
+        content_widget = QWidget()
+        content_widget_layout = QVBoxLayout(content_widget)
+        content_widget_layout.setContentsMargins(20, 0, 0, 0)
+        
+        # 添加应用图标和标题
+        icon_title_layout = QHBoxLayout()
+        
+        # 添加应用图标
+        app_icon_label = QLabel()
+        app_icon_label.setFixedSize(64, 64)
+        if os.path.exists(Icon.Icon.Path):
+            app_icon = QPixmap(Icon.Icon.Path)
+            app_icon_label.setPixmap(app_icon.scaled(64, 64, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        app_icon_label.setStyleSheet("background-color: transparent;")
+        
+        # 添加标题和版本布局
+        title_version_layout = QVBoxLayout()
+        title_version_layout.setSpacing(5)
+        
+        app_title = QLabel("Glary Utilities")
+        app_title.setStyleSheet("font-size: 20px; font-weight: bold; color: #ffffff;")
+        
+        version_label = QLabel(f"{self.tr('version')}: {version}")
+        version_label.setStyleSheet("font-size: 14px; color: #cccccc;")
+        
+        title_version_layout.addWidget(app_title)
+        title_version_layout.addWidget(version_label)
+        title_version_layout.addStretch()
+        
+        icon_title_layout.addWidget(app_icon_label)
+        icon_title_layout.addLayout(title_version_layout)
+        icon_title_layout.addStretch()
+        
+        content_widget_layout.addLayout(icon_title_layout)
+        
+        # 添加应用描述
+        description_label = QLabel(self.tr("app_description"))
+        description_label.setWordWrap(True)
+        description_label.setStyleSheet("font-size: 14px; color: #cccccc; margin-top: 10px; margin-bottom: 10px;")
+        content_widget_layout.addWidget(description_label)
+        
+        # 添加主要功能
+        features_label = QLabel(self.tr("features"))
+        features_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #ffffff; margin-top: 10px;")
+        content_widget_layout.addWidget(features_label)
+        
+        # 功能列表
+        features_layout = QVBoxLayout()
+        features_layout.setContentsMargins(10, 0, 0, 0)
+        features_layout.setSpacing(5)
+        
+        feature_items = [
+            self.tr("feature_clean"),
+            self.tr("feature_repair"),
+            self.tr("feature_security"),
+            self.tr("feature_disk")
+        ]
+        
+        for feature in feature_items:
+            feature_label = QLabel(f"• {feature}")
+            feature_label.setStyleSheet("font-size: 13px; color: #cccccc;")
+            features_layout.addWidget(feature_label)
+        
+        content_widget_layout.addLayout(features_layout)
+        
+        # 添加系统要求
+        sys_req_label = QLabel(self.tr("system_requirements"))
+        sys_req_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #ffffff; margin-top: 10px;")
+        content_widget_layout.addWidget(sys_req_label)
+        
+        sys_req_details = QLabel(self.tr("requirements_details"))
+        sys_req_details.setStyleSheet("font-size: 13px; color: #cccccc; margin-left: 10px;")
+        content_widget_layout.addWidget(sys_req_details)
+        
+        # 添加版权信息
+        copyright_label = QLabel(f"© 2025 Glarysoft Ltd. All rights reserved.")
+        copyright_label.setStyleSheet("font-size: 13px; color: #999999; margin-top: 10px;")
+        content_widget_layout.addWidget(copyright_label)
+        
+        # 添加开发者信息
+        dev_label = QLabel(self.tr("developed_by"))
+        dev_label.setStyleSheet("font-size: 13px; color: #999999;")
+        content_widget_layout.addWidget(dev_label)
+        
+        # 添加网站链接
+        website_label = QLabel("<a href='https://www.chenrunsen.com' style='color: #5b9bd5;'>www.glarysoft.com</a>")
+        website_label.setOpenExternalLinks(True)
+        website_label.setStyleSheet("font-size: 13px; color: #5b9bd5;")
+        content_widget_layout.addWidget(website_label)
+        
+        content_widget_layout.addStretch()
+        
+        # 添加按钮布局
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        ok_button = QPushButton(self.tr("ok_button"))
+        ok_button.setFixedSize(100, 30)
+        ok_button.setStyleSheet("""
+            QPushButton {
+                background-color: #0078d7;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 5px 15px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #1084e1;
+            }
+            QPushButton:pressed {
+                background-color: #006cc1;
+            }
+        """)
+        
+        ok_button.clicked.connect(about_dialog.reject)
+        button_layout.addWidget(ok_button)
+        
+        content_widget_layout.addLayout(button_layout)
+        content_layout.addWidget(content_widget)
+        
+        main_layout.addWidget(content_container)
+        
+        # 实现拖动功能
+        self._old_pos = None
+        
+        def mousePressEvent(event):
+            if event.button() == Qt.LeftButton:
+                self._old_pos = event.globalPos()
+        
+        def mouseMoveEvent(event):
+            if self._old_pos:
+                delta = QPoint(event.globalPos() - self._old_pos)
+                about_dialog.move(about_dialog.pos() + delta)
+                self._old_pos = event.globalPos()
+        
+        def mouseReleaseEvent(event):
+            if event.button() == Qt.LeftButton:
+                self._old_pos = None
+        
+        about_dialog.mousePressEvent = mousePressEvent
+        about_dialog.mouseMoveEvent = mouseMoveEvent
+        about_dialog.mouseReleaseEvent = mouseReleaseEvent
+        
+        # 显示对话框
+        about_dialog.exec_()
  

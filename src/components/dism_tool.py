@@ -135,9 +135,6 @@ class DismToolWidget(BaseComponent):
         # 调用父类的应用主题方法，使用统一样式
         super().apply_theme()
         
-        # 修复单选按钮连接
-        self.fix_radiobutton_connections()
-    
     def setup_ui(self):
         # 主布局
         self.main_layout = QVBoxLayout()
@@ -275,9 +272,6 @@ class DismToolWidget(BaseComponent):
         
         # 应用主题样式到单选按钮
         self.apply_theme()
-        
-        # 确保单选按钮事件正确连接
-        self.fix_radiobutton_connections()
     
     def start_operation(self):
         """开始选定的DISM操作"""
@@ -357,7 +351,7 @@ class DismToolWidget(BaseComponent):
         for key in keys:
             # 如果键不存在，将引发KeyError
             self.get_translation(key, None)
-    
+
     def on_operation_changed(self, button):
         """处理操作选择的单选按钮变化"""
         # 获取当前选中的按钮
@@ -377,6 +371,3 @@ class DismToolWidget(BaseComponent):
             operation_key = selected_button.objectName()
             self.settings.set_setting("dism_operation", operation_key)
             self.settings.sync()  # 确保设置被保存
-
-# 创建别名以保持向后兼容性
-DISMToolWidget = DismToolWidget

@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import QCoreApplication, Qt, QLibraryInfo
 
-from utils.settings_manager import Settings
+from utils.settings import Settings
 from main_window import MainWindow
 from config import Icon
 from utils.platform import PlatformUtils

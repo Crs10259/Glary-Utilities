@@ -326,7 +326,7 @@ class NetworkResetWidget(BaseComponent):
 
     def get_translation(self, key, default=None):
         """Override get_translation to use the correct section name"""
-        return self.settings.get_translation("network_reset", key, default)
+        return self.settings.get_translation("network_reset", key, default) 
 
     def apply_theme(self):
         """应用主题样式到组件"""
@@ -391,5 +391,3 @@ class NetworkResetWidget(BaseComponent):
             if hasattr(self, 'reset_firewall_cb'):
                 self.reset_firewall_cb.setStyleSheet(checkbox_style)
                 
-            # 修复复选框连接
-            self.fix_checkbox_connections() 
