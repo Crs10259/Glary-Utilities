@@ -559,7 +559,7 @@ class DiskCheckWidget(BaseComponent):
     def on_checkbox_changed(self, checkbox_name, state):
         """Handle checkbox state change"""
         checked = state == Qt.Checked
-        print(f"磁盘检查设置: {checkbox_name} = {checked}")
+        self.logger.info(f"磁盘检查设置: {checkbox_name} = {checked}")
         
         # 保存设置
         self.settings.set_setting(checkbox_name, checked)

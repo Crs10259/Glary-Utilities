@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QCheckBox, QListWidget, QProgressBar, QTabWidget, 
                             QGroupBox, QListWidgetItem)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
 
 class RepairThread(QThread):
@@ -120,7 +119,7 @@ class RepairThread(QThread):
                 progress = int((i + 1) / total_issues * 100)
                 self.progress_updated.emit(progress, f"Fixed {results['fixed_count']} issues")
             except Exception as e:
-                print(f"Error fixing issue: {e}")
+                self.logger.error(f"Error fixing issue: {e}")
                 results["failed_count"] += 1
         
         self.progress_updated.emit(100, f"Repair completed. Fixed {results['fixed_count']} issues")
@@ -205,28 +204,28 @@ class RepairThread(QThread):
         """Fix a registry issue"""
         # In a real application, you would actually modify the registry
         # This is just a placeholder that simulates success
-        print(f"Fixing registry issue: {issue['description']}")
+        self.logger.info(f"Fixing registry issue: {issue['description']}")
         return True
     
     def fix_system_file(self, issue):
         """Fix a system file issue"""
         # In a real application, you would use SFC or DISM to repair the file
         # This is just a placeholder that simulates success
-        print(f"Fixing system file: {issue['description']}")
+        self.logger.info(f"Fixing system file: {issue['description']}")
         return True
     
     def fix_startup_issue(self, issue):
         """Fix a startup issue"""
         # In a real application, you would modify startup settings
         # This is just a placeholder that simulates success
-        print(f"Fixing startup issue: {issue['description']}")
+        self.logger.info(f"Fixing startup issue: {issue['description']}")
         return True
     
     def fix_service_issue(self, issue):
         """Fix a service issue"""
         # In a real application, you would configure the service
         # This is just a placeholder that simulates success
-        print(f"Fixing service issue: {issue['description']}")
+        self.logger.info(f"Fixing service issue: {issue['description']}")
         return True
 
 class SystemRepairWidget(BaseComponent):

@@ -10,7 +10,6 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QListWidgetItem, QTableWidget, QHeaderView, QTextEdit,
                             QMessageBox, QInputDialog)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize
-from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
 from utils.logger import Logger
 
@@ -134,7 +133,7 @@ class CleanerWorker(QThread):
                 else:
                     results["failed_count"] += 1
             except Exception as e:
-                print(f"清理 {file_path} 时出错: {e}")
+                logger.error(f"清理 {file_path} 时出错: {e}")
                 results["failed_count"] += 1
         
         self.progress_updated.emit(100, f"清理完成。清理了 {results['cleaned_count']} 个文件 ({self.format_size(results['cleaned_size'])})")
@@ -171,9 +170,9 @@ class CleanerWorker(QThread):
                             "size": file_size
                         })
                     except Exception as e:
-                        print(f"获取文件信息时出错 {file_path}: {e}")
+                        logger.error(f"获取文件信息时出错 {file_path}: {e}")
         except Exception as e:
-            print(f"扫描目录 {directory} 时出错: {e}")
+            logger.error(f"扫描目录 {directory} 时出错: {e}")
         
         return files
     
@@ -200,7 +199,7 @@ class CleanerWorker(QThread):
                 if os.path.exists(trash_path):
                     files = self.scan_directory(trash_path)
         except Exception as e:
-            print(f"扫描回收站时出错: {e}")
+            logger.error(f"扫描回收站时出错: {e}")
         
         return files
     
@@ -250,7 +249,7 @@ class CleanerWorker(QThread):
                     files.extend(self.scan_directory(edge_cache))
             
         except Exception as e:
-            print(f"扫描浏览器缓存时出错: {e}")
+            logger.error(f"扫描浏览器缓存时出错: {e}")
         
         return files
     
@@ -285,7 +284,7 @@ class CleanerWorker(QThread):
                                             "size": file_size
                                         })
                                     except Exception as e:
-                                        print(f"获取日志文件信息时出错: {e}")
+                                        logger.error(f"获取日志文件信息时出错: {e}")
             elif system == "Darwin" or system == "Linux":
                 # macOS/Linux日志
                 log_paths = [
@@ -300,7 +299,7 @@ class CleanerWorker(QThread):
                         log_files = [f for f in log_files if f["name"].endswith(".log")]
                         files.extend(log_files)
         except Exception as e:
-            print(f"扫描日志文件时出错: {e}")
+            logger.error(f"扫描日志文件时出错: {e}")
         
         return files
     

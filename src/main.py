@@ -16,13 +16,15 @@ from utils.platform import PlatformUtils
 from utils.logger import Logger, setup_logger
 from splash_screen import SplashScreen
 from config import ResourceManager
+from utils.logger import logging
 
 class GlaryUtilitiesApp:
     """Main application class for Glary Utilities"""
     
     def __init__(self, argv: List[str]):
         self.argv = argv
-        self.logger = Logger().get_logger()
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        self.logger = logging.getLogger("GlaryUtilities")
         self.settings = None
         self.app = None
         self.window = None

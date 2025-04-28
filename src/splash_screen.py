@@ -7,6 +7,7 @@ from PyQt5.QtGui import QPixmap, QColor, QPainter, QFont
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve
 from config import Icon, version
 from utils.settings import Settings
+from utils.logger import Logger
 
 class LoadingThread(QThread):
     """加载线程，模拟耗时操作"""
@@ -25,6 +26,7 @@ class CustomProgressBar(QProgressBar):
     """自定义进度条，在中间显示百分比"""
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.logger = Logger().get_logger()
         self.setTextVisible(True)
         self.setAlignment(Qt.AlignCenter)
         
@@ -94,7 +96,7 @@ class SplashScreen(QWidget):
             try:
                 self.app_icon = QPixmap(icon_path)
             except Exception as e:
-                print(f"无法加载图标: {e}")
+                self.logger.error(f"无法加载图标: {e}")
                 self.app_icon = None
     
     def get_translation(self, key, default):

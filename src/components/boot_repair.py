@@ -6,11 +6,13 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLabel, QTextEdit, QProgressBar, QMessageBox,
                              QGroupBox, QRadioButton, QCheckBox, QTabWidget,
                              QTableWidget, QTableWidgetItem, QFrame, QSizePolicy,
-                             QSpacerItem, QHeaderView, QButtonGroup)
+                             QSpacerItem, QHeaderView, QButtonGroup, QFileDialog)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from components.base_component import BaseComponent
 from PyQt5.QtGui import QBrush, QColor
 from config import Icon
+from utils.startup_manager import StartupManager
+from utils.platform import PlatformUtils
 
 class BootRepairThread(QThread):
     """Thread for running boot repair operations in the background"""
@@ -278,18 +280,6 @@ class BootRepairWidget(BaseComponent):
                 
                 if hasattr(self, 'description') and self.description is not None:
                     self.description.setStyleSheet(f"font-size: 14px; color: {text_color};")
-                
-                # 获取check图标路径
-                check_icon_path = ""
-                try:
-                    if hasattr(Icon, "Check") and hasattr(Icon.Check, "Path"):
-                        check_icon_path = Icon.Check.Path
-                    else:
-                        check_icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resources", "icons", "check.svg")
-                        print(f"Using fallback check icon path: {check_icon_path}")
-                except Exception as e:
-                    print(f"Error getting check icon path: {e}")
-                    check_icon_path = ""
 
                 # 更新组件样式 - 更全面的样式覆盖
                 self.setStyleSheet(f"""
@@ -315,7 +305,6 @@ class BootRepairWidget(BaseComponent):
                     
                     QCheckBox::indicator {{ width: 16px; height: 16px; border: 2px solid {accent_color}; border-radius: 3px; background-color: {bg_color}; }}
                     QCheckBox::indicator:unchecked {{ background-color: {bg_color}; }}
-                    QCheckBox::indicator:checked {{ background-color: {accent_color}; image: url({check_icon_path}); }}
                     QCheckBox::indicator:unchecked:hover {{ border-color: {self.lighten_color(accent_color, 20)}; background-color: {self.lighten_color(bg_color, 10)}; }}
                     QCheckBox::indicator:checked:hover {{ background-color: {self.lighten_color(accent_color, 10)}; }}
                     
@@ -336,7 +325,7 @@ class BootRepairWidget(BaseComponent):
                     pass
                 
         except Exception as e:
-            print(f"Error applying theme in BootRepairWidget: {e}")
+            self.logger.error(f"Error applying theme in BootRepairWidget: {e}")
             
     def lighten_color(self, color, amount=0):
         """使颜色变亮或变暗
@@ -360,7 +349,7 @@ class BootRepairWidget(BaseComponent):
             
             return '#{:02x}{:02x}{:02x}'.format(int(r), int(g), int(b))
         except Exception as e:
-            print(f"计算颜色变化出错: {str(e)}")
+            self.logger.error(f"计算颜色变化出错: {str(e)}")
             return color
             
     def setup_repair_tab(self, tab):
@@ -454,7 +443,7 @@ class BootRepairWidget(BaseComponent):
         layout.setSpacing(10)
         
         # 描述
-        description = QLabel(self.get_translation("startup_desc", "Manage Windows startup items, enable or disable self-starting programs."))
+        description = QLabel(self.get_translation("startup_desc", "管理Windows启动项，启用或禁用自启动程序。"))
         description.setStyleSheet("font-size: 14px;")
         description.setWordWrap(True)
         layout.addWidget(description)
@@ -463,10 +452,10 @@ class BootRepairWidget(BaseComponent):
         self.startup_table = QTableWidget()
         self.startup_table.setColumnCount(4)
         self.startup_table.setHorizontalHeaderLabels([
-            self.get_translation("startup_name", "Name"),
-            self.get_translation("startup_path", "Path"),
-            self.get_translation("startup_status", "Status"),
-            self.get_translation("startup_type", "Type")
+            self.get_translation("startup_name", "名称"),
+            self.get_translation("startup_path", "路径"),
+            self.get_translation("startup_status", "状态"),
+            self.get_translation("startup_type", "类型")
         ])
         
         # 设置表格属性
@@ -479,40 +468,83 @@ class BootRepairWidget(BaseComponent):
         # 按钮区域
         button_layout = QHBoxLayout()
         
+        # 添加按钮
+        self.add_button = QPushButton(self.get_translation("add", "添加启动项"))
+        self.add_button.clicked.connect(self.add_startup_item)
+        button_layout.addWidget(self.add_button)
+        
         # 刷新按钮
-        self.refresh_button = QPushButton(self.get_translation("refresh", "Refresh List"))
+        self.refresh_button = QPushButton(self.get_translation("refresh", "刷新列表"))
         self.refresh_button.clicked.connect(self.refresh_startup_items)
         button_layout.addWidget(self.refresh_button)
         
         # 启用/禁用按钮
-        self.enable_button = QPushButton(self.get_translation("enable", "Enable Selected"))
+        self.enable_button = QPushButton(self.get_translation("enable", "启用选中"))
         self.enable_button.clicked.connect(self.enable_startup_item)
         button_layout.addWidget(self.enable_button)
         
-        self.disable_button = QPushButton(self.get_translation("disable", "Disable Selected"))
+        self.disable_button = QPushButton(self.get_translation("disable", "禁用选中"))
         self.disable_button.clicked.connect(self.disable_startup_item)
         button_layout.addWidget(self.disable_button)
         
         # 删除按钮
-        self.delete_button = QPushButton(self.get_translation("delete", "Delete Selected"))
+        self.delete_button = QPushButton(self.get_translation("delete", "删除选中"))
         self.delete_button.clicked.connect(self.delete_startup_item)
         button_layout.addWidget(self.delete_button)
         
         layout.addLayout(button_layout)
         
         # 加载示例数据
-        self.load_demo_startup_items()
+        self.load_startup_items()
         
         # 连接选择信号
         self.startup_table.itemSelectionChanged.connect(self.update_button_states)
         
         # 初始化按钮状态
         self.update_button_states()
+        
+        # 如果不是Windows系统，禁用所有按钮
+        if not PlatformUtils.is_windows():
+            self.add_button.setEnabled(False)
+            self.refresh_button.setEnabled(False)
+            self.enable_button.setEnabled(False)
+            self.disable_button.setEnabled(False)
+            self.delete_button.setEnabled(False)
+            # 添加警告标签
+            warning_label = QLabel("⚠️ 启动项管理功能仅在Windows系统上可用")
+            warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
+            layout.addWidget(warning_label)
 
-    def load_demo_startup_items(self):
-        """加载演示用的启动项数据"""
+    def load_startup_items(self):
+        """加载系统启动项数据"""
         self.startup_table.setRowCount(0)  # 清除现有行
         
+        try:
+            # 获取实际的启动项
+            startup_items = StartupManager.get_startup_items()
+            
+            for item in startup_items:
+                row = self.startup_table.rowCount()
+                self.startup_table.insertRow(row)
+                
+                # 添加各列数据
+                self.startup_table.setItem(row, 0, QTableWidgetItem(item["name"]))
+                self.startup_table.setItem(row, 1, QTableWidgetItem(item["path"]))
+                self.startup_table.setItem(row, 2, QTableWidgetItem(item["status"]))
+                self.startup_table.setItem(row, 3, QTableWidgetItem(item["type"]))
+                
+                # 为已禁用项设置灰色
+                if item["status"] == "已禁用":
+                    for col in range(4):
+                        self.startup_table.item(row, col).setForeground(QBrush(QColor("#888888")))
+                        
+        except Exception as e:
+            self.log_output.append(f"加载启动项时出错: {str(e)}")
+            # 如果出错，加载演示数据
+            self.load_demo_items()
+    
+    def load_demo_items(self):
+        """加载演示用的启动项数据"""
         demo_items = [
             ["Microsoft Edge", "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe", "已启用", "注册表"],
             ["Spotify", "C:\\Users\\AppData\\Roaming\\Spotify\\Spotify.exe", "已启用", "启动文件夹"],
@@ -532,33 +564,32 @@ class BootRepairWidget(BaseComponent):
             if item[2] == "已禁用":
                 for col in range(4):
                     self.startup_table.item(row, col).setForeground(QBrush(QColor("#888888")))
-
-    def refresh_startup_items(self):
-        """刷新启动项列表"""
-        self.log_output.append(self.get_translation("refreshing", "正在刷新启动项列表..."))
-        # 在实际应用中，这里应该查询系统中的启动项
-        # 现在我们只是重新加载示例数据
-        self.load_demo_startup_items()
-        self.log_output.append(self.get_translation("refresh_complete", "刷新完成"))
     
     def enable_startup_item(self):
         """启用选中的启动项"""
         selected_rows = self.get_selected_rows()
         if not selected_rows:
-                return
+            return
             
         for row in selected_rows:
-            item = self.startup_table.item(row, 0)
-            name = item.text()
+            name = self.startup_table.item(row, 0).text()
+            item_type = self.startup_table.item(row, 3).text()
+            
             self.log_output.append(self.get_translation("enabling", f"正在启用 {name}..."))
             
-            # 更新状态
-            status_item = self.startup_table.item(row, 2)
-            status_item.setText("已启用")
-            
-            # 恢复正常颜色
-            for col in range(4):
-                self.startup_table.item(row, col).setForeground(QBrush(QColor("#000000")))
+            # 尝试启用启动项
+            if StartupManager.enable_startup_item(name, item_type):
+                # 更新状态
+                status_item = self.startup_table.item(row, 2)
+                status_item.setText("已启用")
+                
+                # 恢复正常颜色
+                for col in range(4):
+                    self.startup_table.item(row, col).setForeground(QBrush(QColor("#000000")))
+                    
+                self.log_output.append(f"✓ {name} 已成功启用")
+            else:
+                self.log_output.append(f"✗ 启用 {name} 失败")
                 
         self.update_button_states()
     
@@ -566,20 +597,27 @@ class BootRepairWidget(BaseComponent):
         """禁用选中的启动项"""
         selected_rows = self.get_selected_rows()
         if not selected_rows:
-                return
+            return
             
         for row in selected_rows:
-            item = self.startup_table.item(row, 0)
-            name = item.text()
+            name = self.startup_table.item(row, 0).text()
+            item_type = self.startup_table.item(row, 3).text()
+            
             self.log_output.append(self.get_translation("disabling", f"正在禁用 {name}..."))
             
-            # 更新状态
-            status_item = self.startup_table.item(row, 2)
-            status_item.setText("已禁用")
-            
-            # 设置灰色
-            for col in range(4):
-                self.startup_table.item(row, col).setForeground(QBrush(QColor("#888888")))
+            # 尝试禁用启动项
+            if StartupManager.disable_startup_item(name, item_type):
+                # 更新状态
+                status_item = self.startup_table.item(row, 2)
+                status_item.setText("已禁用")
+                
+                # 设置灰色
+                for col in range(4):
+                    self.startup_table.item(row, col).setForeground(QBrush(QColor("#888888")))
+                    
+                self.log_output.append(f"✓ {name} 已成功禁用")
+            else:
+                self.log_output.append(f"✗ 禁用 {name} 失败")
                 
         self.update_button_states()
     
@@ -589,14 +627,59 @@ class BootRepairWidget(BaseComponent):
         if not selected_rows:
             return
         
-        # 从底部开始删除，避免索引变化问题
-        for row in sorted(selected_rows, reverse=True):
-            item = self.startup_table.item(row, 0)
-            name = item.text()
-            self.log_output.append(self.get_translation("deleting", f"正在删除 {name}..."))
-            self.startup_table.removeRow(row)
+        # 确认对话框
+        reply = QMessageBox.question(
+            self,
+            self.get_translation("confirm_delete", "确认删除"),
+            self.get_translation("confirm_delete_msg", "确定要删除选中的启动项吗？此操作无法撤销。"),
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            # 从底部开始删除，避免索引变化问题
+            for row in sorted(selected_rows, reverse=True):
+                name = self.startup_table.item(row, 0).text()
+                path = self.startup_table.item(row, 1).text()
+                item_type = self.startup_table.item(row, 3).text()
+                
+                self.log_output.append(self.get_translation("deleting", f"正在删除 {name}..."))
+                
+                # 尝试删除启动项
+                if StartupManager.delete_startup_item(name, path, item_type):
+                    self.startup_table.removeRow(row)
+                    self.log_output.append(f"✓ {name} 已成功删除")
+                else:
+                    self.log_output.append(f"✗ 删除 {name} 失败")
             
-        self.update_button_states()
+            self.update_button_states()
+    
+    def add_startup_item(self):
+        """添加新的启动项"""
+        # 选择可执行文件
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.get_translation("select_program", "选择程序"),
+            "",
+            self.get_translation("exe_files", "可执行文件 (*.exe);;所有文件 (*.*)")
+        )
+        
+        if not file_path:
+            return
+            
+        # 获取程序名称（不带扩展名）
+        name = os.path.splitext(os.path.basename(file_path))[0]
+        
+        # 选择添加方式
+        item_type = "注册表"  # 默认使用注册表
+        
+        # 尝试添加启动项
+        if StartupManager.add_startup_item(name, file_path, item_type):
+            self.log_output.append(f"✓ {name} 已成功添加到启动项")
+            # 刷新列表
+            self.load_startup_items()
+        else:
+            self.log_output.append(f"✗ 添加 {name} 到启动项失败")
 
     def get_selected_rows(self):
         """获取选中的行索引"""
@@ -758,7 +841,7 @@ class BootRepairWidget(BaseComponent):
         """处理修复类型选择改变"""
         button_id = button.objectName()
         button_text = button.text()
-        print(f"启动修复类型更改为: {button_text}")
+        self.logger.info(f"启动修复类型更改为: {button_text}")
         
         # 保存设置
         self.settings.set_setting("boot_repair_type", button_id)
@@ -785,4 +868,12 @@ class BootRepairWidget(BaseComponent):
             self.disable_service_cb.setText(self.get_translation("disable_service_checked"))
         else:
             self.disable_service_cb.setText(self.get_translation("disable_service"))
+            
+    def refresh_startup_items(self):
+        """刷新启动项列表"""
+        self.log_output.append(self.get_translation("refreshing", "正在刷新启动项列表..."))
+        # 在实际应用中，这里应该查询系统中的启动项
+        # 现在我们只是重新加载示例数据
+        self.load_startup_items()
+        self.log_output.append(self.get_translation("refresh_complete", "刷新完成"))
             

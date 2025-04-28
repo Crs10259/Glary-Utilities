@@ -1,13 +1,10 @@
 from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout, QLabel, QCheckBox, QRadioButton, QButtonGroup
 from PyQt5.QtCore import QPropertyAnimation, QEasingCurve, QPoint, Qt, pyqtSignal
-import sys
-import os
-import json
 from PyQt5.QtGui import QColor, QFont
 from utils.animations import AnimationUtils
 from utils.settings import Settings
 from utils.theme_manager import ThemeManager
-from config import Icon
+from utils.logger import Logger
 
 class BaseComponent(QWidget):
     """Base component class for all application components"""
@@ -15,6 +12,7 @@ class BaseComponent(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.settings = Settings()
+        self.logger = Logger().get_logger()
         self.theme_manager = ThemeManager()
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.apply_theme()
@@ -25,7 +23,6 @@ class BaseComponent(QWidget):
         # 初始化UI
         self.setup_ui()
 
-    
     def setup_ui(self):
         """Setup component UI - must be implemented by subclasses"""
         raise NotImplementedError("Subclasses must implement setup_ui()")
@@ -57,10 +54,6 @@ class BaseComponent(QWidget):
         button_text = button_colors.get("primary_text", "#ffffff")
         button_hover = button_colors.get("primary_hover", self.theme_manager.lighten_color(accent_color, 10))
         button_pressed = button_colors.get("primary_pressed", self.theme_manager.lighten_color(accent_color, -10))
-        
-        # 获取图标路径
-        check_icon_path = Icon.Check.Path
-        down_arrow_path = Icon.DownArrow.Path
         
         # 应用基本样式
         self.setStyleSheet(f"""
@@ -114,9 +107,6 @@ class BaseComponent(QWidget):
                 subcontrol-origin: padding;
                 subcontrol-position: center right;
                 border: none;
-                width: 20px;
-                height: 20px;
-                image: url("resources/icons/down-arrow.svg");
             }}
             
             QComboBox QAbstractItemView {{
@@ -158,7 +148,6 @@ class BaseComponent(QWidget):
             
             QCheckBox::indicator:checked {{
                 background-color: {accent_color};
-                image: url({check_icon_path});
             }}
             
             QCheckBox::indicator:unchecked:hover {{
@@ -320,12 +309,20 @@ class BaseComponent(QWidget):
     
     
     def update_checkbox_state(self, checkbox, state):
-        """更新复选框状态并应用相关设置"""
+        """更新复选框状态并应用相关设置
+        
+        Args:
+            checkbox (QCheckBox): 复选框对象
+            state (Qt.CheckState): 复选框状态
+        """
         # 获取复选框的对象名称，作为设置键
         setting_key = checkbox.objectName()
         
+        # 将 Qt.CheckState 转换为布尔值
+        is_checked = (state == Qt.Checked)
+        
         # Debug output for troubleshooting
-        print(f"Checkbox state changed: {checkbox.text()} -> {state == Qt.Checked}")
+        self.logger.info(f"Checkbox state changed: {checkbox.text()} -> {is_checked}")
         
         # If setting_key is empty, try to use checkbox text as fallback
         if not setting_key and checkbox.text():
@@ -334,7 +331,7 @@ class BaseComponent(QWidget):
             
         if setting_key:
             # 将状态保存到设置
-            self.settings.set_setting(setting_key, state == Qt.Checked)
+            self.settings.set_setting(setting_key, is_checked)
             self.settings.sync()  # 确保立即保存设置
     
             
@@ -347,7 +344,7 @@ class BaseComponent(QWidget):
         setting_key = radio_button.objectName()
         
         # Debug output
-        print(f"Radio button state changed: {radio_button.text()} -> {checked}")
+        self.logger.info.info(f"Radio button state changed: {radio_button.text()} -> {checked}")
         
         # If setting_key is empty, try to use radio button text as fallback
         if not setting_key and radio_button.text():
@@ -364,7 +361,7 @@ class BaseComponent(QWidget):
         setting_key = button_group.objectName()
         
         # Debug output
-        print(f"Button group selection changed: {setting_key} -> {selected_button.text()}")
+        self.logger.info.info(f"Button group selection changed: {setting_key} -> {selected_button.text()}")
         
         if setting_key:
             # 保存所选按钮的ID或文本

@@ -7,9 +7,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QFrame, QPushButton, QSizePolicy, QSpacerItem,
                             QRadioButton, QTextEdit, QButtonGroup, QGroupBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
-from config import Icon
+
 
 class DismThread(QThread):
     """DISM操作的工作线程"""
@@ -178,7 +177,7 @@ class DismToolWidget(BaseComponent):
         """)
         operations_layout = QVBoxLayout(self.operations_group)
         
-        # 操作选择的单选按钮
+        # 操作选择的复选框
         self.operation_group = QButtonGroup(self)
         self.operation_group.setObjectName("dism_operation_group")
         

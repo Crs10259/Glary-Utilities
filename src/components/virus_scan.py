@@ -13,7 +13,6 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QDir, QDateTime
 from PyQt5.QtWidgets import QApplication
 from components.base_component import BaseComponent
-from config import Icon
 
 class VirusScanThread(QThread):
     """Thread for running virus scan operations in the background"""
@@ -271,9 +270,7 @@ class VirusScanWidget(BaseComponent):
             # 使用BaseComponent中定义的get_translation方法
             return super().get_translation(key, default)
         except (KeyError, AttributeError) as e:
-            # 记录缺失的翻译，如果在开发模式
-            if hasattr(self, 'settings') and self.settings.is_development_mode():
-                print(f"Translation missing in VirusScanWidget: {key}")
+            self.logger.error(f"Translation missing in VirusScanWidget: {key}")
             
             # 返回默认值或键名
             return default if default is not None else key
@@ -291,12 +288,12 @@ class VirusScanWidget(BaseComponent):
         # 扫描选项卡
         self.scan_tab = QWidget()
         self.setup_scan_tab(self.scan_tab)
-        self.tabs.addTab(self.scan_tab, self.get_translation("scan_tab", "扫描"))
+        self.tabs.addTab(self.scan_tab, self.get_translation("scan_tab", "Scan"))
         
         # 隔离区选项卡
         self.quarantine_tab = QWidget()
         self.setup_quarantine_tab(self.quarantine_tab)
-        self.tabs.addTab(self.quarantine_tab, self.get_translation("quarantine_tab", "隔离区"))
+        self.tabs.addTab(self.quarantine_tab, self.get_translation("quarantine_tab", "Quarantine"))
         
         # 添加到主布局
         self.main_layout.addWidget(self.tabs)
@@ -327,16 +324,6 @@ class VirusScanWidget(BaseComponent):
             button_pressed_bg_color = theme_data["colors"].get("button_pressed_bg_color", self.lighten_color(bg_color, 5))
             input_bg_color = theme_data["colors"].get("input_bg_color", self.lighten_color(bg_color, -5))
 
-            # Get icons paths from Icon class
-            check_icon_path = Icon.Check.Path if Icon.Check.Exist else ""
-            down_arrow_path = Icon.DownArrow.Path if Icon.DownArrow.Exist else ""
-            clean_icon_path = Icon.Clean.Path if Icon.Clean.Exist else ""
-            virus_icon_path = Icon.Virus.Path if Icon.Virus.Exist else ""
-            
-            # Use logging instead of print for better debugging
-            if not check_icon_path:
-                print("Warning: Check icon not found for checkbox styling")
-
             # 更新组件样式 - 更全面的样式覆盖
             self.setStyleSheet(f"""
                 QWidget {{ background-color: transparent; color: {text_color}; }}
@@ -362,7 +349,6 @@ class VirusScanWidget(BaseComponent):
                 
                 QCheckBox::indicator {{ width: 16px; height: 16px; border: 2px solid {accent_color}; border-radius: 3px; background-color: {bg_color}; }}
                 QCheckBox::indicator:unchecked {{ background-color: {bg_color}; }}
-                QCheckBox::indicator:checked {{ background-color: {accent_color}; {f"image: url({check_icon_path});" if check_icon_path else ""} }}
                 QCheckBox::indicator:unchecked:hover {{ border-color: {self.lighten_color(accent_color, 20)}; background-color: {self.lighten_color(bg_color, 10)}; }}
                 QCheckBox::indicator:checked:hover {{ background-color: {self.lighten_color(accent_color, 10)}; }}
                 
@@ -379,12 +365,10 @@ class VirusScanWidget(BaseComponent):
                     subcontrol-position: center right; 
                     width: 20px; 
                     border-left: 1px solid {border_color}; 
-                    {f"image: url({down_arrow_path});" if down_arrow_path else ""}
                 }}
             """)
-            
-            # Set specific button styles using icons if they exist
-            if clean_icon_path and hasattr(self, 'clean_button'):
+        
+            if hasattr(self, 'clean_button'):
                 self.clean_button.setStyleSheet(f"""
                     QPushButton {{ 
                         background-color: {button_bg_color}; 
@@ -394,17 +378,13 @@ class VirusScanWidget(BaseComponent):
                         padding: 6px 12px; 
                         padding-left: 30px; 
                         text-align: left;
-                        background-image: url({clean_icon_path}); 
-                        background-repeat: no-repeat; 
-                        background-position: 5px center; 
-                        background-size: 20px 20px;
                     }}
                     QPushButton:hover {{ background-color: {button_hover_bg_color}; }}
                     QPushButton:pressed {{ background-color: {button_pressed_bg_color}; }}
                     QPushButton:disabled {{ background-color: {disabled_bg_color}; color: {disabled_text_color}; }}
                 """)
             
-            if virus_icon_path and hasattr(self, 'scan_button'):
+            if hasattr(self, 'scan_button'):
                 self.scan_button.setStyleSheet(f"""
                     QPushButton {{ 
                         background-color: {accent_color}; 
@@ -414,10 +394,6 @@ class VirusScanWidget(BaseComponent):
                         padding: 6px 12px; 
                         padding-left: 30px;
                         text-align: left;
-                        background-image: url({virus_icon_path}); 
-                        background-repeat: no-repeat; 
-                        background-position: 5px center; 
-                        background-size: 20px 20px;
                     }}
                     QPushButton:hover {{ background-color: {self.lighten_color(accent_color, 10)}; }}
                     QPushButton:pressed {{ background-color: {self.lighten_color(accent_color, -10)}; }}
@@ -445,11 +421,9 @@ class VirusScanWidget(BaseComponent):
             # 调用具体的主题应用方法
             self.apply_theme()
         except Exception as e:
-            print(f"Error applying current theme in VirusScanWidget: {str(e)}")
-            # 在开发模式下提供更详细的错误信息
-            if hasattr(self, 'settings') and self.settings.is_development_mode():
-                import traceback
-                print(traceback.format_exc())
+            self.logger.error(f"Error applying current theme in VirusScanWidget: {str(e)}")
+            import traceback
+            self.logger.error(traceback.format_exc())
             
     def lighten_color(self, color, amount=0):
         """使颜色变亮或变暗
@@ -473,7 +447,7 @@ class VirusScanWidget(BaseComponent):
             
             return '#{:02x}{:02x}{:02x}'.format(int(r), int(g), int(b))
         except Exception as e:
-            print(f"计算颜色变化出错: {str(e)}")
+            self.logger.error(f"计算颜色变化出错: {str(e)}")
             return color
         
     def setup_scan_tab(self, tab):
@@ -483,13 +457,13 @@ class VirusScanWidget(BaseComponent):
         layout.setSpacing(10)
         
         # 描述
-        description = QLabel(self.get_translation("scan_description", "扫描您的系统，查找并移除恶意软件和病毒。"))
+        description = QLabel(self.get_translation("scan_description", "Scan your system for malware and viruses"))
         description.setStyleSheet("font-size: 14px;")
         description.setWordWrap(True)
         layout.addWidget(description)
         
         # 扫描选项组
-        scan_options_group = QGroupBox(self.get_translation("scan_options", "扫描选项"))
+        scan_options_group = QGroupBox(self.get_translation("scan_options", "Scan Options"))
         options_layout = QVBoxLayout(scan_options_group)
         
         # 创建扫描类型按钮组
@@ -497,54 +471,47 @@ class VirusScanWidget(BaseComponent):
         self.scan_type_group.setObjectName("virus_scan_type_group")
         
         # 快速扫描选项
-        self.quick_scan_rb = QRadioButton(self.get_translation("quick_scan", "快速扫描"))
+        self.quick_scan_rb = QRadioButton(self.get_translation("quick_scan", "Quick Scan"))
         self.quick_scan_rb.setChecked(True)
         self.quick_scan_rb.setObjectName("virus_scan_quick")
         options_layout.addWidget(self.quick_scan_rb)
         self.scan_type_group.addButton(self.quick_scan_rb)
         
         # 完整扫描选项
-        self.full_scan_rb = QRadioButton(self.get_translation("full_scan", "完整扫描"))
+        self.full_scan_rb = QRadioButton(self.get_translation("full_scan", "Full Scan"))
         self.full_scan_rb.setObjectName("virus_scan_full")
         options_layout.addWidget(self.full_scan_rb)
         self.scan_type_group.addButton(self.full_scan_rb)
         
         # 自定义扫描选项
-        self.custom_scan_rb = QRadioButton(self.get_translation("custom_scan", "自定义扫描"))
+        self.custom_scan_rb = QRadioButton(self.get_translation("custom_scan", "Custom Scan"))
         self.custom_scan_rb.setObjectName("virus_scan_custom")
         options_layout.addWidget(self.custom_scan_rb)
         self.scan_type_group.addButton(self.custom_scan_rb)
         
-        # 连接按钮组信号
-        self.scan_type_group.buttonClicked.connect(self.on_scan_type_changed)
-        
         # 自定义扫描路径选择
         custom_scan_layout = QHBoxLayout()
         self.custom_path_edit = QLineEdit()
-        self.custom_path_edit.setPlaceholderText(self.get_translation("select_path", "选择要扫描的目录或文件"))
+        self.custom_path_edit.setPlaceholderText(self.get_translation("select_path", "Select directory or file to scan"))
         self.custom_path_edit.setEnabled(False)
         custom_scan_layout.addWidget(self.custom_path_edit)
         
-        self.browse_button = QPushButton(self.get_translation("browse", "浏览..."))
+        self.browse_button = QPushButton(self.get_translation("browse", "Browse..."))
         self.browse_button.setEnabled(False)
         self.browse_button.clicked.connect(self.browse_path)
         custom_scan_layout.addWidget(self.browse_button)
         
         options_layout.addLayout(custom_scan_layout)
-        
-        # 连接自定义扫描单选按钮的状态变化信号
-        self.custom_scan_rb.toggled.connect(self.toggle_custom_scan)
-        
         layout.addWidget(scan_options_group)
         
         # 扫描按钮和停止按钮
         button_layout = QHBoxLayout()
         
-        self.scan_button = QPushButton(self.get_translation("start_scan", "开始扫描"))
+        self.scan_button = QPushButton(self.get_translation("start_scan", "Start Scan"))
         self.scan_button.clicked.connect(self.start_scan)
         button_layout.addWidget(self.scan_button)
         
-        self.stop_button = QPushButton(self.get_translation("stop_scan", "停止扫描"))
+        self.stop_button = QPushButton(self.get_translation("stop_scan", "Stop Scan"))
         self.stop_button.clicked.connect(self.stop_scan)
         self.stop_button.setEnabled(False)
         button_layout.addWidget(self.stop_button)
@@ -558,16 +525,16 @@ class VirusScanWidget(BaseComponent):
         layout.addWidget(self.progress)
         
         # 结果列表
-        result_group = QGroupBox(self.get_translation("scan_results", "扫描结果"))
+        result_group = QGroupBox(self.get_translation("scan_results", "Scan Results"))
         result_layout = QVBoxLayout(result_group)
         
         self.result_table = QTableWidget()
         self.result_table.setColumnCount(4)
         self.result_table.setHorizontalHeaderLabels([
-            self.get_translation("file", "文件"),
-            self.get_translation("location", "位置"),
-            self.get_translation("threat", "威胁"),
-            self.get_translation("status", "状态")
+            self.get_translation("file", "File"),
+            self.get_translation("location", "Location"),
+            self.get_translation("threat", "Threat"),
+            self.get_translation("status", "Status")
         ])
         self.result_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.result_table.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -578,12 +545,12 @@ class VirusScanWidget(BaseComponent):
         # 操作按钮
         action_layout = QHBoxLayout()
         
-        self.clean_button = QPushButton(self.get_translation("clean_all", "清除全部"))
+        self.clean_button = QPushButton(self.get_translation("clean_all", "Clean All"))
         self.clean_button.clicked.connect(self.clean_threats)
         self.clean_button.setEnabled(False)
         action_layout.addWidget(self.clean_button)
         
-        self.quarantine_button = QPushButton(self.get_translation("quarantine", "隔离选中"))
+        self.quarantine_button = QPushButton(self.get_translation("quarantine", "Quarantine Selected"))
         self.quarantine_button.clicked.connect(self.quarantine_selected)
         self.quarantine_button.setEnabled(False)
         action_layout.addWidget(self.quarantine_button)
@@ -592,7 +559,7 @@ class VirusScanWidget(BaseComponent):
         layout.addWidget(result_group)
         
         # 统计信息
-        self.stats_label = QLabel(self.get_translation("scan_stats", "扫描统计: 已扫描 0 个文件，发现 0 个威胁"))
+        self.stats_label = QLabel(self.get_translation("scan_stats", "Scan Statistics: Scanned 0 files, Found 0 threats"))
         layout.addWidget(self.stats_label)
         
     def setup_quarantine_tab(self, tab):
@@ -602,7 +569,8 @@ class VirusScanWidget(BaseComponent):
         layout.setSpacing(10)
         
         # 隔离区说明
-        description = QLabel(self.get_translation("quarantine_description", "隔离区中的文件已被程序检测为潜在威胁并已被隔离。您可以删除这些文件或选择恢复它们。"))
+        description = QLabel(self.get_translation("quarantine_description", 
+            "Files in quarantine have been detected as potential threats and isolated. You can delete these files or choose to restore them."))
         description.setWordWrap(True)
         description.setStyleSheet("color: #a0a0a0;")
         layout.addWidget(description)
@@ -611,9 +579,9 @@ class VirusScanWidget(BaseComponent):
         self.quarantined_list = QTableWidget()
         self.quarantined_list.setColumnCount(3)
         self.quarantined_list.setHorizontalHeaderLabels([
-            self.get_translation("file_name", "文件名"),
-            self.get_translation("threat_type", "威胁类型"),
-            self.get_translation("date", "日期")
+            self.get_translation("file_name", "File Name"),
+            self.get_translation("threat_type", "Threat Type"),
+            self.get_translation("date", "Date")
         ])
         self.quarantined_list.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.quarantined_list.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
@@ -733,14 +701,13 @@ class VirusScanWidget(BaseComponent):
         
         # Confirmation dialog
         reply = QMessageBox.question(self, 
-                                   self.get_translation("start_scan_confirm", "开始病毒扫描"), 
-                                   self.get_translation("start_scan_msg", f"现在开始{scan_type}扫描？"),
+                                   self.get_translation("start_scan_confirm", "Start Virus Scan"), 
+                                   self.get_translation("start_scan_msg", "Start {scan_type} scan now?"),
                                    QMessageBox.Yes | QMessageBox.No, 
                                    QMessageBox.Yes)
         
         if reply == QMessageBox.Yes:
             # Clear previous results
-            # self.log_text.clear()
             self.result_table.setRowCount(0)
             self.detected_threats = []
             self.clean_button.setEnabled(False)
@@ -820,7 +787,7 @@ class VirusScanWidget(BaseComponent):
         """添加日志消息"""
         # 临时的实现，将消息显示在状态标签上
         self.stats_label.setText(message)
-        print(f"[Virus Scan] {message}")
+        self.logger.info(f"[Virus Scan] {message}")
 
     def add_threat(self, file_path: str, threat_type: str) -> None:
         """将检测到的威胁添加到结果表格"""
@@ -861,7 +828,7 @@ class VirusScanWidget(BaseComponent):
         
         stats_text = self.get_translation(
             "scan_stats", 
-            f"扫描统计: 已扫描 {files_scanned} 个文件，发现 {threats_found} 个威胁"
+            "Scan Statistics: Scanned {files} files, Found {threats} threats"
         ).format(files=files_scanned, threats=threats_found)
         
         self.stats_label.setText(stats_text)
@@ -985,7 +952,7 @@ class VirusScanWidget(BaseComponent):
     def on_scan_type_changed(self, button):
         """处理扫描类型选择改变"""
         button_id = button.objectName()
-        print(f"病毒扫描类型更改为: {button.text()}")
+        self.logger.info(f"病毒扫描类型更改为: {button.text()}")
         
         # 保存设置
         self.settings.set_setting("virus_scan_type", button_id)
@@ -1016,10 +983,7 @@ class VirusScanWidget(BaseComponent):
         if theme_data and "colors" in theme_data:
             text_color = theme_data["colors"].get("text_color", text_color)
             accent_color = theme_data["colors"].get("accent_color", accent_color)
-        
-        # 获取图标路径
-        # virus_icon_path = Icon.Virus.Path if Icon.Virus.Exist else ""
-        
+
         # 生成通用的样式
         radio_style = f"""
             QRadioButton {{
@@ -1084,16 +1048,11 @@ class VirusScanWidget(BaseComponent):
                     # 应用保存的扫描类型
                     scan_type = settings.get_setting('virus_scan_type', 'virus_scan_quick')
                     self._apply_saved_scan_type(scan_type)
-                    
-                    # 应用其他扫描设置（根据需要）
-                    
-                # 修复单选按钮连接
-                self.fix_radiobutton_connections()
+
         except Exception as e:
-            print(f"在 VirusScanWidget 中应用设置时发生错误: {str(e)}")
-            if hasattr(self, 'settings') and settings and settings.is_development_mode():
-                import traceback
-                print(traceback.format_exc())
+            self.logger.error(f"在 VirusScanWidget 中应用设置时发生错误: {str(e)}")
+            import traceback
+            self.logger.error(traceback.format_exc())
     
     def _apply_saved_scan_type(self, scan_type):
         """应用保存的扫描类型设置
@@ -1113,4 +1072,4 @@ class VirusScanWidget(BaseComponent):
                 self.custom_scan_rb.setChecked(True)
                 self.toggle_custom_scan(True)
         except Exception as e:
-            print(f"应用扫描类型时出错: {str(e)}") 
+            self.logger.error(f"应用扫描类型时出错: {str(e)}") 

@@ -245,11 +245,11 @@ class ActionTile(QFrame):
                         self.icon_label.setPixmap(pixmap)
                         self.layout.addWidget(self.icon_label)
                     else:
-                        print(f"Warning: Could not load pixmap for icon {icon_path}")  # 警告：无法加载图标像素图
+                        self.logger.warning(f"Warning: Could not load pixmap for icon {icon_path}")  # 警告：无法加载图标像素图
                 else:
-                    print(f"Warning: Could not load icon {icon_path}")  # 警告：无法加载图标
+                    self.logger.error(f"Warning: Could not load icon {icon_path}")  # 警告：无法加载图标
             except Exception as e:
-                print(f"Error loading icon {icon_path}: {str(e)}")  # 加载图标时出错
+                self.logger.error(f"Error loading icon {icon_path}: {str(e)}")  # 加载图标时出错
         
         # 文本容器
         self.text_container = QVBoxLayout()
@@ -280,7 +280,7 @@ class ActionTile(QFrame):
                         self.arrow_label.setPixmap(arrow_pixmap)
                         self.layout.addWidget(self.arrow_label, 0, Qt.AlignRight)
         except Exception as e:
-            print(f"Error loading arrow icon: {str(e)}")
+            self.logger.error(f"Error loading arrow icon: {str(e)}")
 
 class DashboardWidget(BaseComponent):
     def __init__(self, parent=None):
@@ -293,9 +293,9 @@ class DashboardWidget(BaseComponent):
         # 检查缺失翻译（仅在开发模式下）
         missing_keys = self.check_all_translations()
         if missing_keys:
-            print(f"Warning: Missing translations in DashboardWidget:")  # 警告：DashboardWidget 中缺少翻译
+            self.logger.warning(f"Warning: Missing translations in DashboardWidget:")  # 警告：DashboardWidget 中缺少翻译
             for language, keys in missing_keys.items():
-                print(f"  Language: {language}, Missing keys: {', '.join(keys)}")  # 语言和缺少的键
+                self.logger.warning(f"  Language: {language}, Missing keys: {', '.join(keys)}")  # 语言和缺少的键
         
         # 设置定时器以更新系统信息
         self.update_timer = QTimer(self)
@@ -474,7 +474,7 @@ class DashboardWidget(BaseComponent):
             self.disk_chart.update_value(disk_percent)
         except Exception as e:
             self.disk_chart.update_value("Error")  # 错误
-            print(f"Error getting disk usage: {e}")  # 获取磁盘使用情况时出错
+            self.logger.error(f"Error getting disk usage: {e}")  # 获取磁盘使用情况时出错
         
         # 温度检测 - 增强版
         self._update_temperature()
@@ -517,7 +517,7 @@ class DashboardWidget(BaseComponent):
                 self.temp_chart.update_value("N/A")
         except Exception as e:
             self.temp_chart.update_value("N/A")
-            print(f"Error getting temperature: {e}")  # 获取温度时出错
+            self.logger.error(f"Error getting temperature: {e}")  # 获取温度时出错
     
     def navigate_to_page(self, page_index):
         """在主窗口中导航到特定页面"""

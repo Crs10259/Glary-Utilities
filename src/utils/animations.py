@@ -28,9 +28,7 @@ class AnimationUtils:
             # 其他类型返回默认值True
             return True
         except Exception as e:
-            print(f"获取动画设置时出错: {str(e)}")
-            # 出错时默认启用动画
-            return True
+            raise Exception(f"获取动画设置时出错: {str(e)}")
     
     @classmethod
     def fade(cls, widget, duration=200, start=1.0, end=0.0, direction="out", callback=None):
@@ -60,7 +58,6 @@ class AnimationUtils:
             except Exception:
                 pass
                 
-        # 优化：使用windowOpacity而不是QGraphicsOpacityEffect以获得更好的性能
         anim = QPropertyAnimation(widget, b"windowOpacity")
         anim.setDuration(int(duration * 0.6))  # 进一步减少动画时间以使其感觉更快速
         anim.setStartValue(start)
@@ -272,7 +269,7 @@ class AnimationUtils:
             return None
             
         # 优化动画性能 - 更快的动画
-        duration = int(duration * 0.6)  # 进一步减少动画时间
+        duration = int(duration * 0.5)  # 进一步减少动画时间
         
         # 确保新页面可见
         new_page.show()

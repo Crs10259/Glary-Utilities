@@ -8,6 +8,7 @@ class Settings(QObject):
         super().__init__(parent)
         self.settings = QSettings("GlaryUtilities", "GlaryUtilities")
         self.translations = {}
+        self._current_language = None  # 添加语言缓存
         self.load_translations()
         
     def load_translations(self):
@@ -138,11 +139,38 @@ class Settings(QObject):
         return themes
     
     def get_setting(self, key, default_value=None):
-        """获取设置值，带默认回退"""
-        return self.settings.value(key, default_value)
+        """获取设置值，带默认回退
+        
+        Args:
+            key (str): 设置键名
+            default_value: 默认值
+            
+        Returns:
+            设置值，如果是布尔值相关的设置会确保返回bool类型
+        """
+        value = self.settings.value(key, default_value)
+        
+        # 如果默认值是布尔类型，确保返回布尔值
+        if isinstance(default_value, bool) or key.startswith(('enable_', 'show_', 'use_', 'is_')):
+            if isinstance(value, str):
+                return value.lower() in ('true', 'yes', '1', 'on')
+            elif isinstance(value, int):
+                return bool(value)
+            return bool(value)
+        
+        return value
     
     def set_setting(self, key, value):
-        """设置设置值"""
+        """设置设置值
+        
+        Args:
+            key (str): 设置键名
+            value: 要设置的值
+        """
+        # 对于布尔值，确保存储为字符串 'true' 或 'false'
+        if isinstance(value, bool):
+            value = 'true' if value else 'false'
+        
         self.settings.setValue(key, value)
     
     def sync(self):
@@ -159,10 +187,13 @@ class Settings(QObject):
         self.set_setting("language", "English")
         self.set_setting("window_transparency", 100)
     
-    def get_translation(self, section, key, language=None):
+    def get_translation(self, section, key, default=None, language=None):
         """获取给定键的翻译文本"""
+        # 使用缓存的语言设置，避免递归
         if not language:
-            language = self.get_setting("language", "en")
+            if not self._current_language:
+                self._current_language = self.settings.value("language", "en")
+            language = self._current_language
             
         # 处理语言代码映射
         language_map = {
@@ -184,7 +215,7 @@ class Settings(QObject):
             # 尝试在英语中查找作为回退
             if "en" in self.translations and section in self.translations["en"] and key in self.translations["en"][section]:
                 return self.translations["en"][section][key]
-            return key
+            return default if default is not None else key
             
         return self.translations[lang_code][section][key]
 
@@ -195,6 +226,7 @@ class Settings(QObject):
             language: 要设置的语言
         """
         self.set_setting("language", language)
+        self._current_language = language  # 更新缓存的语言设置
         # 重新加载翻译
         self.load_translations()
         

@@ -4,20 +4,14 @@ import platform
 import psutil
 import socket
 import uuid
-import subprocess
-import shutil
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                             QFrame, QPushButton, QSizePolicy, QSpacerItem,
                             QTabWidget, QGroupBox, QFormLayout, QScrollArea,
-                            QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox)
+                            QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox,
+                            QGridLayout)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize
-from PyQt5.QtGui import QIcon, QFont, QColor
 from components.base_component import BaseComponent
 from utils.platform import PlatformUtils
-from utils.logger import Logger
-
-# 获取日志记录器
-logger = Logger().get_logger()
 
 class SystemInfoWidget(BaseComponent):
     """系统信息小部件，显示硬件、操作系统和网络详细信息"""
@@ -25,7 +19,7 @@ class SystemInfoWidget(BaseComponent):
     def __init__(self, parent=None):
         # 调用父类构造函数
         super().__init__(parent)
-        logger.info("初始化系统信息组件")
+        self.logger.info("初始化系统信息组件")
     
     def get_translation(self, key, default=None):
         """获取翻译，带默认回退"""
@@ -40,22 +34,18 @@ class SystemInfoWidget(BaseComponent):
                 if item.widget():
                     item.widget().deleteLater()
             
-            # 删除旧布局
-            old_layout = self.layout()
-            QWidget().setLayout(old_layout)  # 将旧布局设置给一个临时部件以便删除
-            
         # 主布局
         self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(20)
         
         # 标题
-        self.title = QLabel("系统信息")
+        self.title = QLabel(self.get_translation("title", "System Information"))
         self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
         self.main_layout.addWidget(self.title)
         
         # 描述
-        self.description = QLabel("查看有关系统硬件和软件的详细信息")
+        self.description = QLabel(self.get_translation("description", "View system hardware and software information"))
         self.description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
         self.main_layout.addWidget(self.description)
         
@@ -64,30 +54,30 @@ class SystemInfoWidget(BaseComponent):
         self.tab_widget.setStyleSheet("""
             QTabWidget::pane {
                 border: 1px solid #3a3a3a;
+                background-color: #2d2d2d;
                 border-radius: 6px;
-                background-color: #2a2a2a;
             }
             QTabBar::tab {
-                background-color: #252525;
+                background-color: #2a2a2a;
                 color: #a0a0a0;
                 border: 1px solid #3a3a3a;
-                border-bottom: none;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                padding: 8px 12px;
-                margin-right: 4px;
+                padding: 8px 16px;
+                margin-right: 2px;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
             }
             QTabBar::tab:selected {
-                background-color: #2a2a2a;
+                background-color: #2d2d2d;
                 color: #e0e0e0;
+                border-bottom: none;
             }
             QTabBar::tab:hover {
-                background-color: #303030;
+                background-color: #353535;
             }
         """)
         
         # 创建选项卡
-        self.hw_tab = QWidget()
+        self.hardware_tab = QWidget()
         self.os_tab = QWidget()
         self.network_tab = QWidget()
         
@@ -96,16 +86,15 @@ class SystemInfoWidget(BaseComponent):
         self.setup_os_tab()
         self.setup_network_tab()
         
-        # 将选项卡添加到小部件
-        self.tab_widget.addTab(self.hw_tab, self.get_translation("hardware_tab", "硬件"))
-        self.tab_widget.addTab(self.os_tab, self.get_translation("os_tab", "操作系统"))
-        self.tab_widget.addTab(self.network_tab, self.get_translation("network_tab", "网络"))
+        # 添加选项卡
+        self.tab_widget.addTab(self.hardware_tab, self.get_translation("hardware_tab", "Hardware"))
+        self.tab_widget.addTab(self.os_tab, self.get_translation("os_tab", "OS"))
+        self.tab_widget.addTab(self.network_tab, self.get_translation("network_tab", "Network"))
         
-        # 将选项卡小部件添加到主布局
         self.main_layout.addWidget(self.tab_widget)
         
         # 刷新按钮
-        self.refresh_button = QPushButton(self.get_translation("refresh", "刷新信息"))
+        self.refresh_button = QPushButton(self.get_translation("refresh", "Refresh"))
         self.refresh_button.setStyleSheet("""
             QPushButton {
                 background-color: #00a8ff;
@@ -123,6 +112,7 @@ class SystemInfoWidget(BaseComponent):
             }
         """)
         self.refresh_button.clicked.connect(self.refresh_info)
+        self.refresh_button.setCursor(Qt.PointingHandCursor)
         
         # 按钮容器（用于右对齐）
         button_container = QWidget()
@@ -140,22 +130,16 @@ class SystemInfoWidget(BaseComponent):
         self.setAttribute(Qt.WA_StyledBackground, True)
         
         # 记录日志
-        logger.info("系统信息UI初始化完成")
+        self.logger.info("系统信息UI初始化完成")
     
     def setup_hardware_tab(self):
         """设置硬件信息选项卡"""
-        # 创建主滚动区域
-        self.hw_scroll = QScrollArea()
-        self.hw_scroll.setWidgetResizable(True)
-        
-        # 创建内容小部件
-        hw_content = QWidget()
-        layout = QVBoxLayout(hw_content)
+        layout = QVBoxLayout(self.hardware_tab)
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(15)
         
-        # CPU 信息
-        cpu_group = QGroupBox(self.get_translation("cpu", "CPU"))
+        # CPU Information
+        cpu_group = QGroupBox(self.get_translation("cpu_info", "CPU Information"))
         cpu_group.setStyleSheet("""
             QGroupBox {
                 background-color: #2a2a2a;
@@ -173,57 +157,35 @@ class SystemInfoWidget(BaseComponent):
                 color: #e0e0e0;
             }
         """)
-        cpu_layout = QFormLayout(cpu_group)
+        cpu_layout = QGridLayout(cpu_group)
+        cpu_layout.setHorizontalSpacing(20)
+        cpu_layout.setVerticalSpacing(8)
         
-        # 添加CPU信息字段
+        # Add CPU information fields
         cpu_info = self.get_cpu_info()
+        row = 0
+        col = 0
         for key, value in cpu_info.items():
-            key_label = QLabel(key + ":")
+            key_label = QLabel(self.get_translation(f"cpu_{key.lower()}", key) + ":")
             key_label.setStyleSheet("color: #a0a0a0;")
             value_label = QLabel(value)
             value_label.setStyleSheet("color: #e0e0e0;")
-            cpu_layout.addRow(key_label, value_label)
+            
+            cpu_layout.addWidget(key_label, row, col * 2)
+            cpu_layout.addWidget(value_label, row, col * 2 + 1)
+            
+            col += 1
+            if col >= 2:
+                col = 0
+                row += 1
+        
+        cpu_layout.setColumnStretch(1, 1)
+        cpu_layout.setColumnStretch(3, 1)
         
         layout.addWidget(cpu_group)
         
-        # GPU 信息组
-        gpu_group = QGroupBox(self.get_translation("gpu", "显卡/GPU"))
-        gpu_group.setStyleSheet("""
-            QGroupBox {
-                background-color: #2a2a2a;
-                color: #e0e0e0;
-                border: 1px solid #3a3a3a;
-                border-radius: 6px;
-                margin-top: 1em;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-                background-color: #2a2a2a;
-                color: #e0e0e0;
-            }
-        """)
-        
-        # 创建GPU信息容器
-        self.gpu_info_container = QWidget()
-        self.gpu_info_layout = QVBoxLayout(self.gpu_info_container)
-        self.gpu_info_layout.setContentsMargins(10, 10, 10, 10)
-        self.gpu_info_layout.setSpacing(15)
-        
-        # 获取GPU信息
-        self.update_gpu_info()
-        
-        # 将GPU信息容器添加到GPU组
-        gpu_layout = QVBoxLayout(gpu_group)
-        gpu_layout.addWidget(self.gpu_info_container)
-        
-        # 添加GPU组到主布局
-        layout.addWidget(gpu_group)
-        
-        # 内存信息
-        memory_group = QGroupBox(self.get_translation("memory", "内存"))
+        # Memory Information
+        memory_group = QGroupBox(self.get_translation("memory_info", "Memory Information"))
         memory_group.setStyleSheet("""
             QGroupBox {
                 background-color: #2a2a2a;
@@ -241,21 +203,35 @@ class SystemInfoWidget(BaseComponent):
                 color: #e0e0e0;
             }
         """)
-        memory_layout = QFormLayout(memory_group)
+        memory_layout = QGridLayout(memory_group)
+        memory_layout.setHorizontalSpacing(20)
+        memory_layout.setVerticalSpacing(8)
         
-        # 添加内存信息字段
+        # Add memory information fields
         memory_info = self.get_memory_info()
+        row = 0
+        col = 0
         for key, value in memory_info.items():
-            key_label = QLabel(key + ":")
+            key_label = QLabel(self.get_translation(f"memory_{key.lower()}", key) + ":")
             key_label.setStyleSheet("color: #a0a0a0;")
             value_label = QLabel(value)
             value_label.setStyleSheet("color: #e0e0e0;")
-            memory_layout.addRow(key_label, value_label)
+            
+            memory_layout.addWidget(key_label, row, col * 2)
+            memory_layout.addWidget(value_label, row, col * 2 + 1)
+            
+            col += 1
+            if col >= 2:
+                col = 0
+                row += 1
+        
+        memory_layout.setColumnStretch(1, 1)
+        memory_layout.setColumnStretch(3, 1)
         
         layout.addWidget(memory_group)
         
-        # 磁盘信息
-        disk_group = QGroupBox(self.get_translation("disk", "磁盘"))
+        # Disk Information
+        disk_group = QGroupBox(self.get_translation("disk_info", "Disk Information"))
         disk_group.setStyleSheet("""
             QGroupBox {
                 background-color: #2a2a2a;
@@ -275,15 +251,15 @@ class SystemInfoWidget(BaseComponent):
         """)
         disk_layout = QVBoxLayout(disk_group)
         
-        # 创建磁盘表
+        # Create disk table
         self.disk_table = QTableWidget()
         self.disk_table.setColumnCount(5)
         self.disk_table.setHorizontalHeaderLabels([
-            self.get_translation("device", "设备"),
-            self.get_translation("mountpoint", "挂载点"),
-            self.get_translation("filesystem", "文件系统"),
-            self.get_translation("total", "总大小"),
-            self.get_translation("used", "已用")
+            self.get_translation("device", "Device"),
+            self.get_translation("mountpoint", "Mount Point"),
+            self.get_translation("filesystem", "File System"),
+            self.get_translation("total", "Total"),
+            self.get_translation("used", "Used")
         ])
         self.disk_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.disk_table.setStyleSheet("""
@@ -305,22 +281,13 @@ class SystemInfoWidget(BaseComponent):
             }
         """)
         
-        # 填充磁盘表
+        # Fill disk table
         self.populate_disk_table()
         disk_layout.addWidget(self.disk_table)
         
         layout.addWidget(disk_group)
         
-        # 设置内容小部件，添加到滚动区域
-        self.hw_scroll.setWidget(hw_content)
-        
-        # 创建硬件标签的主布局并添加滚动区域
-        hw_main_layout = QVBoxLayout(self.hw_tab)
-        hw_main_layout.setContentsMargins(0, 0, 0, 0)
-        hw_main_layout.addWidget(self.hw_scroll)
-        
-        # 记录日志
-        logger.info("硬件信息选项卡设置完成")
+        layout.addStretch()
     
     def setup_os_tab(self):
         """Set up the operating system information tab"""
@@ -352,7 +319,8 @@ class SystemInfoWidget(BaseComponent):
         # Add OS information fields
         os_info = self.get_os_info()
         for key, value in os_info.items():
-            key_label = QLabel(key + ":")
+            translated_key = self.get_translation(f"os_{key.lower().replace(' ', '_')}", key)
+            key_label = QLabel(translated_key + ":")
             key_label.setStyleSheet("color: #a0a0a0;")
             value_label = QLabel(value)
             value_label.setStyleSheet("color: #e0e0e0;")
@@ -361,7 +329,7 @@ class SystemInfoWidget(BaseComponent):
         layout.addWidget(os_group)
         
         # Python Information
-        python_group = QGroupBox("Python")
+        python_group = QGroupBox(self.get_translation("python_info", "Python Information"))
         python_group.setStyleSheet("""
             QGroupBox {
                 background-color: #2a2a2a;
@@ -384,7 +352,8 @@ class SystemInfoWidget(BaseComponent):
         # Add Python information fields
         python_info = self.get_python_info()
         for key, value in python_info.items():
-            key_label = QLabel(key + ":")
+            translated_key = self.get_translation(f"python_{key.lower().replace(' ', '_')}", key)
+            key_label = QLabel(translated_key + ":")
             key_label.setStyleSheet("color: #a0a0a0;")
             value_label = QLabel(value)
             value_label.setStyleSheet("color: #e0e0e0;")
@@ -401,7 +370,7 @@ class SystemInfoWidget(BaseComponent):
         layout.setSpacing(15)
         
         # Network Information
-        network_group = QGroupBox(self.get_translation("network", "Network"))
+        network_group = QGroupBox(self.get_translation("network_info", "Network Information"))
         network_group.setStyleSheet("""
             QGroupBox {
                 background-color: #2a2a2a;
@@ -424,7 +393,8 @@ class SystemInfoWidget(BaseComponent):
         # Add network information fields
         network_info = self.get_network_info()
         for key, value in network_info.items():
-            key_label = QLabel(key + ":")
+            translated_key = self.get_translation(f"network_{key.lower().replace(' ', '_')}", key)
+            key_label = QLabel(translated_key + ":")
             key_label.setStyleSheet("color: #a0a0a0;")
             value_label = QLabel(value)
             value_label.setStyleSheet("color: #e0e0e0;")
@@ -433,7 +403,7 @@ class SystemInfoWidget(BaseComponent):
         layout.addWidget(network_group)
         
         # Network Interfaces
-        interfaces_group = QGroupBox(self.get_translation("interfaces", "Network Interfaces"))
+        interfaces_group = QGroupBox(self.get_translation("network_interfaces", "Network Interfaces"))
         interfaces_group.setStyleSheet("""
             QGroupBox {
                 background-color: #2a2a2a;
@@ -457,10 +427,10 @@ class SystemInfoWidget(BaseComponent):
         self.interfaces_table = QTableWidget()
         self.interfaces_table.setColumnCount(4)
         self.interfaces_table.setHorizontalHeaderLabels([
-            self.get_translation("interface", "Interface"),
-            self.get_translation("address", "Address"),
-            self.get_translation("netmask", "Netmask"),
-            self.get_translation("status", "Status")
+            self.get_translation("interface_name", "Interface"),
+            self.get_translation("interface_address", "Address"),
+            self.get_translation("interface_netmask", "Netmask"),
+            self.get_translation("interface_status", "Status")
         ])
         self.interfaces_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.interfaces_table.setStyleSheet("""
@@ -575,7 +545,7 @@ class SystemInfoWidget(BaseComponent):
                     self.disk_table.setItem(row_position, 4, QTableWidgetItem(str(e)))
             
         except Exception as e:
-            print(f"Error populating disk table: {e}")  # 填充磁盘表格时出错
+            self.logger.error(f"Error populating disk table: {e}")  # 填充磁盘表格时出错
             self.disk_table.setRowCount(1)
             self.disk_table.setItem(0, 0, QTableWidgetItem("Error"))
             self.disk_table.setItem(0, 1, QTableWidgetItem(str(e)))
@@ -687,60 +657,28 @@ class SystemInfoWidget(BaseComponent):
                         self.interfaces_table.setItem(row_position, 3, QTableWidgetItem(status))
             
         except Exception as e:
-            print(f"Error populating interfaces table: {e}")
+            self.logger.error(f"Error populating interfaces table: {e}")
     
     def refresh_info(self):
         """刷新所有系统信息"""
-        # 重新填充CPU信息
-        cpu_group = self.hw_tab.findChild(QGroupBox, "")
-        if cpu_group and cpu_group.title() == self.get_translation("cpu", "CPU"):
-            # 清除当前CPU布局
-            while cpu_group.layout().count():
-                item = cpu_group.layout().takeAt(0)
-                if item.widget():
-                    item.widget().deleteLater()
+        try:
+            # 重新填充所有表格
+            if hasattr(self, 'disk_table'):
+                self.populate_disk_table()
+            if hasattr(self, 'interfaces_table'):
+                self.populate_interfaces_table()
             
-            # 添加更新的CPU信息
-            cpu_info = self.get_cpu_info()
-            for key, value in cpu_info.items():
-                key_label = QLabel(key + ":")
-                key_label.setStyleSheet("color: #a0a0a0;")
-                value_label = QLabel(value)
-                value_label.setStyleSheet("color: #e0e0e0;")
-                cpu_group.layout().addRow(key_label, value_label)
-        
-        # 重新填充内存信息
-        memory_group = self.hw_tab.findChild(QGroupBox, "")
-        if memory_group and memory_group.title() == self.get_translation("memory", "内存"):
-            # 清除当前内存布局
-            while memory_group.layout().count():
-                item = memory_group.layout().takeAt(0)
-                if item.widget():
-                    item.widget().deleteLater()
+            # 重新设置所有选项卡
+            self.setup_hardware_tab()
+            self.setup_os_tab()
+            self.setup_network_tab()
             
-            # 添加更新的内存信息
-            memory_info = self.get_memory_info()
-            for key, value in memory_info.items():
-                key_label = QLabel(key + ":")
-                key_label.setStyleSheet("color: #a0a0a0;")
-                value_label = QLabel(value)
-                value_label.setStyleSheet("color: #e0e0e0;")
-                memory_group.layout().addRow(key_label, value_label)
-        
-        # 重新填充磁盘信息
-        self.populate_disk_table()
-        
-        # 重新填充操作系统信息
-        self.setup_os_tab()
-        
-        # 重新填充网络信息
-        self.setup_network_tab()
-        
-        # 重新填充GPU信息
-        self.update_gpu_info()
-        
-        # 提示用户
-        QMessageBox.information(self, "信息刷新", "系统信息已成功刷新！")
+            self.logger.info("系统信息已刷新")
+        except Exception as e:
+            self.logger.error(f"刷新系统信息时出错: {e}")
+            QMessageBox.warning(self, 
+                              self.get_translation("error", "Error"),
+                              self.get_translation("refresh_error", "Error refreshing system information"))
 
     def get_gpu_info(self):
         """获取GPU信息"""
@@ -759,7 +697,7 @@ class SystemInfoWidget(BaseComponent):
                         info[f"GPU {i} {key.strip()}"] = val.strip()
             return info
         except Exception as e:
-            logger.error(f"获取GPU信息时出错: {str(e)}")
+            self.logger.error(f"获取GPU信息时出错: {str(e)}")
             return {"GPU错误": str(e)}
     
     def _format_bytes(self, bytes):
@@ -782,18 +720,36 @@ class SystemInfoWidget(BaseComponent):
         keys = [
             "title", "description", "refresh",
             "hardware_tab", "os_tab", "network_tab",
-            "cpu", "memory", "disks", "device", "mountpoint", 
-            "filesystem", "total", "used", "operating_system",
-            "python", "network", "interfaces", "interface",
-            "address", "netmask", "status", "gpu"
+            "cpu_info", "memory_info", "disks_info",
+            "operating_system", "python_info", "network_info",
+            "network_interfaces", "interface_name", "interface_address",
+            "interface_netmask", "interface_status",
+            # OS tab translations
+            "os_system", "os_release", "os_version", "os_machine",
+            "os_processor", "os_platform", "os_architecture",
+            # Python tab translations
+            "python_version", "python_implementation", "python_compiler",
+            "python_build", "python_location",
+            # Network tab translations
+            "network_hostname", "network_ip_address", "network_fqdn",
+            "network_mac_address",
+            # Hardware tab translations
+            "device", "mountpoint", "filesystem", "total", "used",
+            "memory_total", "memory_available", "memory_used", "memory_usage",
+            "memory_swap_total", "memory_swap_used", "memory_swap_free",
+            # CPU info translations
+            "cpu_model", "cpu_physical_cores", "cpu_logical_cores",
+            "cpu_current_frequency", "cpu_min_frequency", "cpu_max_frequency",
+            "cpu_architecture", "cpu_usage",
+            # Additional translations
+            "error", "refresh_error", "ready_message", "gpu_not_detected",
+            "gpu_error", "gpu_install_message", "gpu_info_error"
         ]
         
         # Check each key and return missing ones
         missing = []
         for key in keys:
-            try:
-                self.get_translation(key, None)
-            except:
+            if not self.get_translation(key, None):
                 missing.append(key)
         
         return missing
@@ -808,7 +764,7 @@ class SystemInfoWidget(BaseComponent):
         
         # 获取GPU信息
         raw_info = PlatformUtils.get_gpu_info()
-        logger.info(f"获取GPU信息: {raw_info}")
+        self.logger.info(f"获取GPU信息: {raw_info}")
         
         if "未检测到GPU" in raw_info:
             label = QLabel("未检测到GPU设备")
@@ -867,3 +823,41 @@ class SystemInfoWidget(BaseComponent):
                     gpu_layout.addRow(key_label, value_label)
             
             self.gpu_info_layout.addWidget(gpu_group) 
+
+    def refresh_language(self):
+        """刷新界面语言"""
+        # 更新标题和描述
+        self.title.setText(self.get_translation("title", "System Information"))
+        self.description.setText(self.get_translation("description", "View system hardware and software information"))
+        
+        # 更新选项卡标题
+        self.tab_widget.setTabText(0, self.get_translation("hardware_tab", "Hardware"))
+        self.tab_widget.setTabText(1, self.get_translation("os_tab", "OS"))
+        self.tab_widget.setTabText(2, self.get_translation("network_tab", "Network"))
+        
+        # 更新刷新按钮
+        self.refresh_button.setText(self.get_translation("refresh", "Refresh"))
+        
+        # 更新表格标题
+        if hasattr(self, 'disk_table'):
+            self.disk_table.setHorizontalHeaderLabels([
+                self.get_translation("device", "Device"),
+                self.get_translation("mountpoint", "Mount Point"),
+                self.get_translation("filesystem", "File System"),
+                self.get_translation("total", "Total"),
+                self.get_translation("used", "Used")
+            ])
+        
+        if hasattr(self, 'interfaces_table'):
+            self.interfaces_table.setHorizontalHeaderLabels([
+                self.get_translation("interface", "Interface"),
+                self.get_translation("address", "Address"),
+                self.get_translation("netmask", "Netmask"),
+                self.get_translation("status", "Status")
+            ])
+        
+        # 刷新所有信息以使用新的翻译
+        self.refresh_info()
+        
+        # 添加动画以突出显示更改
+        super().refresh_language() 

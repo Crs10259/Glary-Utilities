@@ -6,9 +6,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QFrame, QPushButton, QSizePolicy, QSpacerItem,
                             QCheckBox, QTextEdit, QGroupBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QIcon, QFont
 from components.base_component import BaseComponent
-from config import Icon
 
 class NetworkResetThread(QThread):
     """Worker thread for network reset operations"""
@@ -129,18 +127,6 @@ class NetworkResetWidget(BaseComponent):
     
     def setup_ui(self):
         """设置UI"""
-        # 清除旧布局（如果有）
-        if self.layout():
-            # 清除旧布局中的所有部件
-            while self.layout().count():
-                item = self.layout().takeAt(0)
-                if item.widget():
-                    item.widget().deleteLater()
-            
-            # 删除旧布局
-            old_layout = self.layout()
-            QWidget().setLayout(old_layout)  # 将旧布局设置给一个临时部件以便删除
-        
         # Create layout
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(20, 20, 20, 20)
@@ -368,7 +354,6 @@ class NetworkResetWidget(BaseComponent):
                 
                 QCheckBox::indicator:checked {{ 
                     background-color: {accent_color}; 
-                    image: url({Icon.Check.Path}); 
                 }}
                 
                 QCheckBox::indicator:unchecked:hover {{ 
@@ -390,4 +375,3 @@ class NetworkResetWidget(BaseComponent):
                 self.reset_tcp_ip_cb.setStyleSheet(checkbox_style)
             if hasattr(self, 'reset_firewall_cb'):
                 self.reset_firewall_cb.setStyleSheet(checkbox_style)
-                

@@ -16,11 +16,7 @@ from PyQt5.QtCore import (Qt, QSize, QPoint, QPropertyAnimation,
                         QParallelAnimationGroup, QSequentialAnimationGroup,
                         QEasingCurve, pyqtSignal, QTimer, QAbstractAnimation,
                         QRect, QEvent, QObject)
-import logging
-import weakref
-import json
-from typing import Dict, List, Tuple, Any, Optional, Union, Callable
-import psutil
+from utils.logger import Logger
 
 from components.base_component import BaseComponent
 from components.dashboard import DashboardWidget
@@ -34,10 +30,6 @@ from components.network_reset import NetworkResetWidget
 from components.system_info import SystemInfoWidget
 from components.settings import SettingsWidget
 from config import Icon, version
-
-# 配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("GlaryUtilities")
 
 class MainWindow(QMainWindow):
     """主应用程序窗口"""
@@ -54,6 +46,9 @@ class MainWindow(QMainWindow):
         """
         super().__init__()
         
+        # 配置日志
+        self.logger = Logger().get_logger()
+
         # 保存设置实例
         self.settings = settings
         
@@ -97,13 +92,13 @@ class MainWindow(QMainWindow):
         # 验证翻译 - 查找缺失的键
         missing_translations = self.settings.validate_translations(raise_error=False)
         if missing_translations:
-            logger.warning("Found missing translations!")
+            self.logger.warning("Found missing translations!")
             for language, sections in missing_translations.items():
-                logger.warning(f"\nLanguage: {language}")
+                self.logger.warning(f"\nLanguage: {language}")
                 for section, keys in sections.items():
-                    logger.warning(f"  Section: {section}")
+                    self.logger.warning(f"  Section: {section}")
                     for key in keys:
-                        logger.warning(f"    - {key}")
+                        self.logger.warning(f"    - {key}")
         
         self.show_status_message(self.settings.get_translation("general", "welcome"), 5000)
         
@@ -207,7 +202,7 @@ class MainWindow(QMainWindow):
                 if "general" in translations and "welcome" in translations["general"]:
                     welcome_message = translations["general"]["welcome"]
         except Exception as e:
-            print(f"Error getting welcome message: {e}")
+            self.logger.error(f"Error getting welcome message: {e}")
             
         self.show_status_message(welcome_message, 5000)
         
@@ -281,7 +276,7 @@ class MainWindow(QMainWindow):
         # 添加应用图标
         app_icon = QLabel()
         app_icon.setPixmap(QPixmap(Icon.Icon.Path).scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        app_icon.setStyleSheet("background-color: transparent; cursor: pointer;")
+        app_icon.setStyleSheet("background-color: transparent;")
         app_icon.setToolTip(self.get_translation("click_for_about", "Click for About"))
         # Make the icon clickable
         app_icon.mousePressEvent = lambda event: self.show_about_dialog()
@@ -530,7 +525,7 @@ class MainWindow(QMainWindow):
             button._original_icon_size = icon_size
         
         except Exception as e:
-            logger.error(f"创建侧边栏按钮时出错: {e}")
+            self.logger.error(f"创建侧边栏按钮时出错: {e}")
             # 创建不带图标的按钮
             button = QPushButton(name)
             button.setCheckable(True)
@@ -863,14 +858,14 @@ class MainWindow(QMainWindow):
                     widget.apply_current_theme()
                     return  # 已应用特定组件的主题方法，无需继续
             except Exception as e:
-                print(f"Error applying custom theme to {component_name}: {str(e)}")
+                self.logger.error(f"Error applying custom theme to {component_name}: {str(e)}")
         
         # 对于其他标准组件，应用通用的apply_theme方法
         try:
             if hasattr(widget, 'apply_theme') and callable(widget.apply_theme):
                 widget.apply_theme()
         except Exception as e:
-            print(f"Error applying theme to widget: {str(e)}")
+            self.logger.error(f"Error applying theme to widget: {str(e)}")
             
         # Process children
         for child in widget.findChildren(QWidget):
@@ -905,7 +900,7 @@ class MainWindow(QMainWindow):
             
         # 检查页面是否存在于索引字典中
         if page_name not in self.page_indices:
-            print(f"错误: 找不到页面 '{page_name}'")
+            self.logger.error(f"错误: 找不到页面 '{page_name}'")
             return
             
         # 获取页面索引
@@ -1020,7 +1015,7 @@ class MainWindow(QMainWindow):
         
     def _update_page_content(self, page_name):
         """根据页面名称更新内容区域"""
-        logger.info(f"切换到页面: {page_name}")
+        self.logger.info(f"切换到页面: {page_name}")
         
         # 获取页面的本地化显示名称
         page_display_name = self.settings.get_translation("general", page_name.lower().replace(' ', '_'))
@@ -1056,12 +1051,12 @@ class MainWindow(QMainWindow):
                 self.page_changed.emit(page_name)
             else:
                 # 如果页面不存在，显示一个错误消息
-                logger.warning(f"未找到页面 '{page_name}' 的索引")
+                self.logger.warning(f"未找到页面 '{page_name}' 的索引")
                 self.show_status_message(f"页面 '{page_name}' 不存在", 3000)
                 
         except Exception as e:
             # 处理异常情况
-            logger.error(f"切换到页面 '{page_name}' 时出错：{e}")
+            self.logger.error(f"切换到页面 '{page_name}' 时出错：{e}")
             error_widget = QLabel(f"加载页面时出错：{e}")
             error_widget.setStyleSheet("color: red;")
             error_widget.setAlignment(Qt.AlignCenter)
@@ -1096,7 +1091,7 @@ class MainWindow(QMainWindow):
             language_display = "English" if language == "en" else "中文"
             self.show_status_message(f"Language changed to {language_display}")
         except Exception as e:
-            print(f"Error changing language: {str(e)}")
+            self.logger.error(f"Error changing language: {str(e)}")
     
     def update_ui_texts(self):
         """Update all UI text elements with current language translations"""
@@ -1167,7 +1162,7 @@ class MainWindow(QMainWindow):
                         button.setText(translated_text)
                 except Exception as e:
                     # 如果出错，使用原始页面名称
-                    print(f"Error updating button text: {e}")
+                    self.logger.error(f"Error updating button text: {e}")
                     # 保持原有文本，不做更改
                 
         # 更新工具栏
@@ -1193,10 +1188,10 @@ class MainWindow(QMainWindow):
                     # 记录当前语言中缺失的翻译
                     for section, keys in missing_in_current.items():
                         for key in keys:
-                            logging.warning(f"Missing translation for '{section}.{key}' in language '{current_lang}'")
+                            self.logger.warning(f"Missing translation for '{section}.{key}' in language '{current_lang}'")
             return True
         except Exception as e:
-            logging.error(f"Error checking translations: {e}")
+            self.logger.error(f"Error checking translations: {e}")
             return False
 
     def apply_transparency(self):
@@ -1213,24 +1208,24 @@ class MainWindow(QMainWindow):
                 try:
                     # Set window transparency
                     self.setWindowOpacity(transparency / 100.0)
-                    print(f"Applied window transparency: {transparency}%")
+                    self.logger.info(f"Applied window transparency: {transparency}%")
                 except Exception as e:
                     # Log the error but continue
-                    print(f"Error applying window transparency: {str(e)}")
+                    self.logger.error(f"Error applying window transparency: {str(e)}")
                     # Reset to fully opaque
                     self.settings.set_setting("window_transparency", 100)
             else:
                 # Fully opaque
                 self.setWindowOpacity(1.0)
         except Exception as e:
-            print(f"Error in apply_transparency: {str(e)}")
+            self.logger.error(f"Error in apply_transparency: {str(e)}")
             # Reset to default
             self.setWindowOpacity(1.0)
     
     def show_status_message(self, message, timeout=2000):
         """显示状态栏消息"""
         # 在控制台记录消息
-        logging.debug(f"状态消息: {message}")
+        self.logger.debug(f"状态消息: {message}")
         
         # 更新状态栏标签
         if hasattr(self, 'status_label'):

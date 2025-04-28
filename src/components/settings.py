@@ -2,7 +2,6 @@ import os
 import sys
 import platform
 import json
-from config import Icon
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLabel, QPushButton, 
                           QComboBox, QCheckBox, QGroupBox, QFormLayout, QSlider, QLineEdit,
                           QColorDialog, QFileDialog, QDialog, QScrollArea, QSpinBox, QStatusBar,
@@ -11,6 +10,9 @@ from PyQt5.QtCore import Qt, QSize, QSettings, QTranslator, QCoreApplication, QT
 from PyQt5.QtGui import QColor, QIcon, QMovie
 from utils.animations import AnimationUtils
 from utils.theme_manager import ThemeManager
+from utils.logger import Logger
+import logging
+
 
 class SettingsWidget(QWidget):
     """应用程序设置的窗口小部件"""
@@ -18,6 +20,7 @@ class SettingsWidget(QWidget):
     def __init__(self, settings, parent=None) -> None:
         """初始化设置组件"""
         self.settings = settings
+        self.logger = Logger().get_logger()
         self.main_window = parent
         super().__init__(parent)
         self.background_image_path = ""
@@ -682,7 +685,7 @@ class SettingsWidget(QWidget):
         try:
             if self.main_window is not None:
                 # Notify main window of animation setting change
-                print(f"Animation setting changed to: {is_enabled}")
+                self.logger.info(f"Animation setting changed to: {is_enabled}")
         except AttributeError:
             pass
 
@@ -700,7 +703,7 @@ class SettingsWidget(QWidget):
                     try:
                         if self.main_window is not None:
                             self.main_window.apply_theme()
-                            print(f"Theme changed to: {theme_id}")
+                            self.logger.info(f"Theme changed to: {theme_id}")
                     except AttributeError:
                         pass
         except AttributeError:
@@ -793,11 +796,11 @@ class SettingsWidget(QWidget):
                             value = value.lower() in ('true', 'yes', '1', 'on')
                         checkbox.setChecked(bool(value))
                     except Exception as e:
-                        print(f"Error loading setting for {setting_key}: {e}")
+                        self.logger.error(f"Error loading setting for {setting_key}: {e}")
             
-            print("设置加载完成")
+            self.logger.info("设置加载完成")
         except Exception as e:
-            print(f"Error loading settings: {e}")
+            self.logger.error(f"Error loading settings: {e}")
     
     def reset_settings(self):
         """重置设置为默认值"""
@@ -805,22 +808,22 @@ class SettingsWidget(QWidget):
         try:
             self.language_combo.setCurrentText("English")
         except AttributeError:
-            pass
+            self.logger.error("无法重置语言设置")
         
         try:
             self.start_minimized_check.setChecked(False)
         except AttributeError:
-            pass
+            self.logger.error("无法重置最小化设置")
         
         try:
             self.close_to_tray_check.setChecked(False)
         except AttributeError:
-            pass
+            self.logger.error("无法重置托盘设置")
         
         try:
             self.enable_animations_check.setChecked(False)
         except AttributeError:
-            pass
+            self.logger.error("无法重置动画设置")
         
         # 重置主题设置
         try:
@@ -834,86 +837,86 @@ class SettingsWidget(QWidget):
             if dark_index >= 0:
                 self.theme_combo.setCurrentIndex(dark_index)
         except AttributeError:
-            pass
+            self.logger.error("无法重置主题设置")
         
         # 重置自定义颜色
         try:
             self.update_color_buttons()
         except AttributeError:
-            pass
+            self.logger.error("无法重置自定义颜色")
         
         # 重置高级设置
         try:
             self.check_backup_before_repair.setChecked(True)
         except AttributeError:
-            pass
+            self.logger.error("无法重置备份设置")
         
         try:
             self.edit_backup_location.setText(os.path.join(os.environ.get("USERPROFILE", ""), "GlaryBackups"))
         except AttributeError:
-            pass
+            self.logger.error("无法重置备份位置")
         
         try:
             self.check_enable_logging.setChecked(True)
         except AttributeError:
-            pass
+            self.logger.error("无法重置日志设置")
         
         try:
             self.spinbox_max_backups.setValue(5)
         except AttributeError:
-            pass
+            self.logger.error("无法重置最大备份数量")
         
         # 重置扫描设置
         try:
             self.auto_scan_checkbox.setChecked(True)
         except AttributeError:
-            pass
+            self.logger.error("无法重置自动扫描设置")
         
         try:
             self.scan_freq_combo.setCurrentText("daily")
         except AttributeError:
-            pass
+            self.logger.error("无法重置扫描频率")
         
         try:
             self.temp_files_checkbox.setChecked(True)
         except AttributeError:
-            pass
+            self.logger.error("无法重置临时文件设置")
         
         try:
             self.recycle_bin_checkbox.setChecked(True)
         except AttributeError:
-            pass
+            self.logger.error("无法重置回收站设置")
         
         try:
             self.cache_files_checkbox.setChecked(True)
         except AttributeError:
-            pass
+            self.logger.error("无法重置缓存文件设置")
         
         try:
             self.log_files_checkbox.setChecked(True)
         except AttributeError:
-            pass
+            self.logger.error("无法重置日志文件设置")
         
         # 重置扫描选项
         try:
             self.check_scan_archives.setChecked(True)
         except AttributeError:
-            pass
+            self.logger.error("无法重置扫描归档设置")
         
         try:
             self.check_scan_rootkits.setChecked(True)
         except AttributeError:
-            pass
+            self.logger.error("无法重置扫描rootkits设置")
         
         try:
             self.check_scan_autofix.setChecked(False)
         except AttributeError:
-            pass
+            self.logger.error("无法重置扫描自动修复设置")
         
         try:
             self.slider_scan_level.setValue(2)
         except AttributeError:
-            pass
+            self.logger.error("无法重置扫描级别设置")
             
         # 重置其他设置
         for attr_name in ['deep_scan_check', 'auto_clean_check', 'auto_backup_check', 
@@ -924,14 +927,14 @@ class SettingsWidget(QWidget):
             try:
                 getattr(self, attr_name).setChecked(False)
             except (AttributeError, TypeError):
-                pass
+                self.logger.error(f"无法重置{attr_name}设置")
                 
         # 重置主窗口透明度
         try:
             self.transparency_slider.setValue(100)
             self.transparency_value_label.setText("100%")
         except AttributeError:
-            pass
+            self.logger.error("无法重置主窗口透明度")
             
         # 通知用户设置已重置
         try:
@@ -939,7 +942,7 @@ class SettingsWidget(QWidget):
             if self.main_window is not None:
                 self.main_window.show_status_message("设置已重置为默认值", 3000)
         except AttributeError:
-            print("无法显示状态消息 - main_window不可用")
+            self.logger.error("无法显示状态消息 - main_window不可用")
     
     def get_translation(self, key, default=None):
         """获取键的翻译"""
@@ -960,7 +963,7 @@ class SettingsWidget(QWidget):
                     try:
                         if self.main_window is not None:
                             self.main_window.change_language(language_code)
-                            print(f"Language changed to: {language_code}")
+                            self.logger.info(f"Language changed to: {language_code}")
                     except AttributeError:
                         pass
         except AttributeError:
@@ -1022,7 +1025,7 @@ class SettingsWidget(QWidget):
                 elif "强调颜色" in label.text():
                     label.setText(self.get_translation("accent_color", "强调颜色："))
         except Exception as e:
-            print(f"更新自定义颜色标签出错: {str(e)}")
+            self.logger.error(f"更新自定义颜色标签出错: {str(e)}")
                 
         # 更新颜色选择按钮
         for button in self.findChildren(QPushButton):
@@ -1147,7 +1150,7 @@ class SettingsWidget(QWidget):
             self.settings.sync()
             return True
         except Exception as e:
-            print(f"Error applying settings: {str(e)}")
+            self.logger.error(f"Error applying settings: {str(e)}")
             return False
 
     def _finish_applying(self, loading_label=None, movie=None):
@@ -1168,7 +1171,7 @@ class SettingsWidget(QWidget):
             self.updateGeometry()
             self.update()
         except Exception as e:
-            print(f"清理应用设置界面出错: {str(e)}")
+            self.logger.error(f"清理应用设置界面出错: {str(e)}")
 
     def save_custom_theme(self):
         """保存当前自定义主题设置到主题文件"""
@@ -1248,7 +1251,7 @@ class SettingsWidget(QWidget):
             
             return '#{:02x}{:02x}{:02x}'.format(int(r), int(g), int(b))
         except Exception as e:
-            print(f"计算颜色变化出错: {str(e)}")
+            self.logger.error(f"计算颜色变化出错: {str(e)}")
             return color
 
     def update_color_buttons(self):
@@ -1311,7 +1314,7 @@ class SettingsWidget(QWidget):
                 
             return True
         except Exception as e:
-            print(f"Error saving settings: {str(e)}")
+            self.logger.error(f"Error saving settings: {str(e)}")
             return False
 
     # 添加save_settings按钮的点击处理函数
@@ -1322,7 +1325,7 @@ class SettingsWidget(QWidget):
         
         if success:
             # Show a success message if needed
-            print("Settings saved successfully")
+            self.logger.info("Settings saved successfully")
             
             # Emit signal that settings were saved (if it exists)
             try:
@@ -1347,21 +1350,102 @@ class SettingsWidget(QWidget):
             )
 
     def on_checkbox_changed(self, setting_key, state):
-        """Handle checkbox state changes and update settings"""
-        # Convert state to boolean
-        is_checked = (state == Qt.Checked)
+        """处理复选框状态改变
         
-        # Debug output
-        print(f"Settings checkbox changed: {setting_key} -> {is_checked}")
+        Args:
+            setting_key: 设置键名
+            state: 复选框状态 (Qt.Checked 或 Qt.Unchecked)
+        """
+        try:
+            # 将Qt.Checked/Qt.Unchecked转换为布尔值
+            checked = (state == Qt.Checked)
+            
+            # 保存设置
+            self.settings.set_setting(setting_key, checked)
+            self.settings.sync()
+            
+            # 记录设置变更
+            self.logger.info(f"设置已更改: {setting_key} = {checked}")
+            
+            # 根据设置键执行特定操作
+            if setting_key == "enable_animations":
+                # 更新动画设置
+                self.apply_animation_settings(checked)
+            elif setting_key == "use_system_title_bar":
+                # 更新标题栏设置
+                self.apply_titlebar_settings(checked)
+            elif setting_key == "show_tooltips":
+                # 更新工具提示设置
+                self.apply_tooltip_settings(checked)
+            elif setting_key == "enable_logging":
+                # 更新日志设置
+                self.apply_logging_settings(checked)
+            
+            # 应用设置更改
+            self.apply_settings()
+            
+        except Exception as e:
+            self.logger.error(f"更改设置时出错: {str(e)}")
+            # 恢复复选框状态
+            sender = self.sender()
+            if sender:
+                sender.setChecked(not checked)
+                
+    def apply_animation_settings(self, enabled):
+        """应用动画设置
         
-        # Save the setting
-        self.settings.set_setting(setting_key, is_checked)
-        self.settings.sync()  # Ensure settings are saved immediately
+        Args:
+            enabled: 是否启用动画
+        """
+        try:
+            # 更新所有支持动画的组件
+            main_window = self.window()
+            if main_window:
+                main_window.refresh_all_components()
+        except Exception as e:
+            self.logger.error(f"应用动画设置时出错: {str(e)}")
+            
+    def apply_titlebar_settings(self, use_system):
+        """应用标题栏设置
         
-        # Apply any immediate changes if needed
-        if setting_key == "enable_animations":
-            if self.main_window:
-                # Refresh animation settings throughout the application
-                self.main_window.refresh_all_components()
+        Args:
+            use_system: 是否使用系统标题栏
+        """
+        try:
+            # 通知主窗口更新标题栏
+            main_window = self.window()
+            if main_window and hasattr(main_window, 'update_titlebar'):
+                main_window.update_titlebar(use_system)
+        except Exception as e:
+            self.logger.error(f"应用标题栏设置时出错: {str(e)}")
+            
+    def apply_tooltip_settings(self, show):
+        """应用工具提示设置
+        
+        Args:
+            show: 是否显示工具提示
+        """
+        try:
+            # 更新所有工具提示
+            main_window = self.window()
+            if main_window:
+                for widget in main_window.findChildren(QWidget):
+                    if widget.toolTip():
+                        widget.setToolTipDuration(-1 if show else 0)
+        except Exception as e:
+            self.logger.error(f"应用工具提示设置时出错: {str(e)}")
+            
+    def apply_logging_settings(self, enabled):
+        """应用日志设置
+        
+        Args:
+            enabled: 是否启用日志
+        """
+        try:
+            # 更新日志级别
+            log_level = logging.DEBUG if enabled else logging.WARNING
+            logging.getLogger().setLevel(log_level)
+        except Exception as e:
+            self.logger.error(f"应用日志设置时出错: {str(e)}")
 
    
