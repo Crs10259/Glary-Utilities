@@ -5,7 +5,8 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel,
                             QProgressBar, QGraphicsDropShadowEffect)
 from PyQt5.QtGui import QPixmap, QColor, QPainter, QFont
 from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve
-from config import Icon, version
+from config import Icon
+from config import App
 from utils.settings import Settings
 from utils.logger import Logger
 
@@ -195,9 +196,9 @@ class SplashScreen(QWidget):
         container_layout.addWidget(self.status_label)
         
         # 添加版权信息
-        copyright_text = self.get_translation("copyright", f"Version {version} | Copyright © 2025")
+        copyright_text = self.get_translation("copyright", f"Version {App.version} | Copyright © 2025")
         # 替换版本号变量
-        copyright_text = copyright_text.replace("{version}", version)
+        copyright_text = copyright_text.replace("{version}", App.version)
         version_label = QLabel(copyright_text)
         version_label.setStyleSheet("""
             color: #777777;

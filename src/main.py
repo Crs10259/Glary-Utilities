@@ -12,11 +12,11 @@ from PyQt5.QtCore import QCoreApplication, Qt, QLibraryInfo
 from utils.settings import Settings
 from main_window import MainWindow
 from config import Icon
-from utils.platform import PlatformUtils
+from tools.base_tools import PlatformManager
 from utils.logger import Logger, setup_logger
 from splash_screen import SplashScreen
 from config import ResourceManager
-from utils.logger import logging
+import logging
 
 class GlaryUtilitiesApp:
     """Main application class for Glary Utilities"""
@@ -25,6 +25,7 @@ class GlaryUtilitiesApp:
         self.argv = argv
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger("GlaryUtilities")
+        self.platform_manager = PlatformManager()
         self.settings = None
         self.app = None
         self.window = None
@@ -66,11 +67,11 @@ class GlaryUtilitiesApp:
     def setup_fonts(self) -> None:
         """设置全局字体"""
         # 创建字体
-        if PlatformUtils.is_windows():
+        if self.platform_manager.is_windows():
             # Windows系统上优先使用微软雅黑或Segoe UI
             font_name = "Microsoft YaHei" if "zh" in self.settings.get_setting("language", "en") else "Segoe UI"
             font = QFont(font_name, 9)
-        elif PlatformUtils.is_mac():
+        elif self.platform_manager.is_mac():
             # macOS上使用SF Pro
             font = QFont("SF Pro", 13)
         else:

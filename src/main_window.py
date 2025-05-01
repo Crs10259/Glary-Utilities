@@ -29,7 +29,8 @@ from components.dism_tool import DismToolWidget
 from components.network_reset import NetworkResetWidget
 from components.system_info import SystemInfoWidget
 from components.settings import SettingsWidget
-from config import Icon, version
+from config import Icon
+from config import App
 
 class MainWindow(QMainWindow):
     """主应用程序窗口"""
@@ -227,6 +228,9 @@ class MainWindow(QMainWindow):
         else:
             # 如果动画被禁用，直接设置为完全不透明
             self.setWindowOpacity(1.0)
+            
+        # 设置按钮提示
+        self.setup_tooltips()
         
     def setup_title_bar(self):
         """设置自定义标题栏"""
@@ -489,7 +493,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addStretch()
 
         # 添加版本信息
-        version_label = QLabel(f"{self.get_translation('version', 'Version')} {version}")
+        version_label = QLabel(f"{self.get_translation('version', 'Version')} {App.version}")
         version_label.setStyleSheet("color: #666666; font-size: 11px; margin-top: 8px; background-color: transparent; text-align: center;")
         version_label.setAlignment(Qt.AlignCenter)
         sidebar_layout.addWidget(version_label)
@@ -707,128 +711,64 @@ class MainWindow(QMainWindow):
         # 加载主题数据
         theme_data = self.settings.load_theme(theme_name)
         
-        if not theme_data:
-            # 如果主题数据不可用，使用内置的暗色主题
-            default_style = """
-                QWidget {
-                    background-color: #1e1e1e;
-                color: #cccccc;
-                    font-family: 'Segoe UI', Arial, sans-serif;
-            }
-                QLabel {
-                background-color: transparent;
-                    color: #cccccc;
-            }
-            QPushButton {
-                background-color: #3a3a3a;
-                    border: 1px solid #555555;
-                    border-radius: 4px;
-                    color: #e0e0e0;
-                    padding: 4px 8px;
-            }
-            QPushButton:hover {
-                    background-color: #505050;
-                }
-                QPushButton:pressed {
-                    background-color: #2a2a2a;
-                }
-                QLineEdit {
-                    background-color: #2d2d2d;
-                    border: 1px solid #555555;
-                    border-radius: 4px;
-                    color: #e0e0e0;
-                    padding: 4px;
-                }
-                QTabWidget::pane {
-                    border: 1px solid #555555;
-                }
-                QTabBar::tab {
-                    background-color: #3a3a3a;
-                    border: 1px solid #555555;
-                    border-bottom-color: #555555;
-                    border-top-left-radius: 4px;
-                    border-top-right-radius: 4px;
-                    padding: 6px 10px;
-                    color: #bbbbbb;
-                }
-                QTabBar::tab:selected {
-            background-color: #1e1e1e;
-                    border-bottom-color: #1e1e1e;
-                    color: #ffffff;
-                }
-                QTabBar::tab:!selected {
-                    margin-top: 2px;
-                }
-                QScrollBar:vertical {
-            border: none;
-                    background: #2d2d2d;
-                    width: 12px;
-                    margin: 0px 0px 0px 0px;
-                }
-                QScrollBar::handle:vertical {
-                    background: #4d4d4d;
+        if theme_data and "colors" in theme_data:
+            bg_color = theme_data["colors"].get("bg_color", "#2d2d2d")
+            text_color = theme_data["colors"].get("text_color", "#dcdcdc")
+            accent_color = theme_data["colors"].get("accent_color", "#007acc")
+            border_color = theme_data["colors"].get("border_color", "#444444")
+            
+            # 更新复选框样式
+            checkbox_style = f"""
+                QCheckBox {{
+                    color: {text_color};
+                    background-color: transparent;
+                    spacing: 5px;
+                    padding: 5px;
+                    font-size: 13px;
                     min-height: 20px;
-                    border-radius: 6px;
-                }
-                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                    height: 0px;
-                }
-                QScrollBar:horizontal {
-                    border: none;
-                    background: #2d2d2d;
-                    height: 12px;
-                    margin: 0px 0px 0px 0px;
-                }
-                QScrollBar::handle:horizontal {
-                    background: #4d4d4d;
-                    min-width: 20px;
-                    border-radius: 6px;
-                }
-                QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-                    width: 0px;
-                }
-            QMenuBar {
-                    background-color: #252525;
-                    border-bottom: 1px solid #333333;
-            }
-            QMenuBar::item {
-                    spacing: 6px;
-                    padding: 3px 10px;
-                    background: transparent;
-                    color: #e0e0e0;
-            }
-            QMenuBar::item:selected {
-                    background: #3a3a3a;
-                    border-radius: 4px;
-            }
-            QMenu {
-                    background-color: #2d2d2d;
-                    border: 1px solid #555555;
-                    border-radius: 4px;
-            }
-            QMenu::item {
-                    padding: 5px 30px 5px 15px;
-                    color: #e0e0e0;
-            }
-            QMenu::item:selected {
-                background-color: #3a3a3a;
-                    color: #ffffff;
-                }
-                QMenu::separator {
-                    height: 1px;
-                    background: #555555;
-                    margin: 5px 10px;
-                }
+                    margin: 2px 0;
+                }}
+                
+                QCheckBox::indicator {{
+                    width: 16px;
+                    height: 16px;
+                    border: 2px solid {accent_color};
+                    border-radius: 3px;
+                    background-color: {bg_color};
+                }}
+                
+                QCheckBox::indicator:unchecked {{
+                    background-color: {bg_color};
+                }}
+                
+                QCheckBox::indicator:checked {{
+                    background-color: {accent_color};
+                    border: 2px solid {accent_color};
+                    image: url(resources/icons/check.png);  /* 可选：添加勾选图标 */
+                }}
+                
+                QCheckBox::indicator:unchecked:hover {{
+                    border-color: {self.lighten_color(accent_color, 20)};
+                    background-color: {self.lighten_color(bg_color, 10)};
+                }}
+                
+                QCheckBox::indicator:checked:hover {{
+                    background-color: {self.lighten_color(accent_color, 10)};
+                    border-color: {self.lighten_color(accent_color, 10)};
+                }}
+                
+                QCheckBox:disabled {{
+                    color: {self.lighten_color(text_color, -30)};
+                }}
+                
+                QCheckBox::indicator:disabled {{
+                    border-color: {self.lighten_color(accent_color, -30)};
+                    background-color: {self.lighten_color(bg_color, -10)};
+                }}
             """
-            self.setStyleSheet(default_style)
-        else:
-            # 使用加载的主题数据
-            accent_color = self.settings.get_setting("accent_color", theme_data.get("accent_color", "#3498db"))
-            theme_style = theme_data.get("style", "")
-            # 替换任何颜色占位符
-            if "{accent_color}" in theme_style:
-                theme_style = theme_style.replace("{accent_color}", accent_color)
-            self.setStyleSheet(theme_style)
+            
+            # 将复选框样式添加到主样式表中
+            self.setStyleSheet(self.styleSheet() + checkbox_style)
             
         # 更新组件主题
         self.update_component_themes()
@@ -874,8 +814,8 @@ class MainWindow(QMainWindow):
     def apply_window_icon(self):
         """设置窗口图标"""
         try:
-            # 直接使用资源目录中的图标文件
-            icon_path = os.path.join(os.path.dirname(__file__), "resources", "icons", "icon.png")
+            # 使用根目录中的图标文件
+            icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resources", "icons", "icon.png")
             if not os.path.exists(icon_path):
                 self.logger.warning(f"警告: 窗口图标文件不存在: {icon_path}")
                 return
@@ -1077,21 +1017,68 @@ class MainWindow(QMainWindow):
             language: Language code or name to set
         """
         try:
+            # 关闭当前打开的帮助对话框（如果有）
+            for dialog in self.findChildren(QDialog):
+                if dialog.objectName() == "HelpDialog":
+                    dialog.reject()
+                    
             # Save language setting
             self.settings.set_setting("language", language)
             self.settings.sync()
             
-            # Update UI to reflect new language
-            self.update_ui_language()
-            
-            # Emit language change signal
-            self.language_changed.emit(language)
+            # 直接更新UI文本，而不是触发信号
+            self._update_ui_texts_directly(language)
             
             # Show a message indicating language was changed
             language_display = "English" if language == "en" else "中文"
             self.show_status_message(f"Language changed to {language_display}")
+            
         except Exception as e:
             self.logger.error(f"Error changing language: {str(e)}")
+
+    def _update_ui_texts_directly(self, language):
+        """直接更新UI文本，避免递归
+        
+        Args:
+            language: 当前语言代码
+        """
+        try:
+            # 获取当前活动页面
+            active_page = self.current_page
+            
+            # 直接从翻译字典获取翻译
+            translations = self.settings.translations.get(language, {})
+            main_window_translations = translations.get("main_window", {})
+            general_translations = translations.get("general", {})
+            
+            # 更新按钮文本
+            for button_name, button in self.page_buttons.items():
+                translation_key = button_name.lower().replace(' ', '_')
+                translated_name = main_window_translations.get(translation_key) or general_translations.get(translation_key) or button_name
+                button.setText(translated_name)
+            
+            # 更新标题
+            page_translation_key = active_page.lower().replace(' ', '_')
+            page_display_name = main_window_translations.get(page_translation_key) or general_translations.get(page_translation_key) or active_page
+            
+            window_title = f"Glary Utilities - {page_display_name}"
+            self.setWindowTitle(window_title)
+            if hasattr(self, 'title_label'):
+                self.title_label.setText(window_title)
+            
+            # 更新所有组件的语言
+            for i in range(self.content_area.count()):
+                widget = self.content_area.widget(i)
+                if hasattr(widget, 'refresh_language') and callable(widget.refresh_language):
+                    widget.refresh_language()
+            
+            # 更新状态栏
+            if hasattr(self, 'status_label'):
+                ready_text = general_translations.get("ready", "Ready")
+                self.status_label.setText(ready_text)
+                
+        except Exception as e:
+            self.logger.error(f"Error updating UI texts: {str(e)}")
     
     def update_ui_texts(self):
         """Update all UI text elements with current language translations"""
@@ -1327,231 +1314,426 @@ class MainWindow(QMainWindow):
         return self.settings.get_translation("main_window", key, default)
 
     def show_about_dialog(self):
-        """显示关于对话框"""
+        """显示关于界面（作为主窗口内的页面，而不是弹出对话框）"""
         
-        # 创建无边框对话框
-        about_dialog = QDialog(self)
-        about_dialog.setObjectName("AboutDialog")
-        about_dialog.setWindowTitle(self.tr("about_title"))
-        about_dialog.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
-        about_dialog.setAttribute(Qt.WA_TranslucentBackground)
-        about_dialog.setFixedSize(450, 420)
-        
-        # 创建主布局
-        main_layout = QVBoxLayout(about_dialog)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        
-        # 创建内容容器（带圆角和阴影）
-        content_container = QWidget()
-        content_container.setObjectName("AboutDialogContent")
-        content_container.setStyleSheet("""
-            #AboutDialogContent {
-                background-color: #1e1e1e;
-                border-radius: 10px;
-            }
-        """)
-        
-        # 添加阴影效果
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(20)
-        shadow.setColor(QColor(0, 0, 0, 80))
-        shadow.setOffset(0, 0)
-        content_container.setGraphicsEffect(shadow)
-        
-        content_layout = QVBoxLayout(content_container)
-        content_layout.setContentsMargins(0, 0, 20, 20)
-        
-        # 创建标题栏
-        title_bar = QWidget()
-        title_bar.setFixedHeight(40)
-        title_bar.setObjectName("AboutTitleBar")
-        title_bar_layout = QHBoxLayout(title_bar)
-        title_bar_layout.setContentsMargins(20, 10, 10, 0)
-        
-        # 添加标题
-        title_label = QLabel(self.tr("about_title"))
-        title_label.setObjectName("AboutTitle")
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff;")
-        
-        # 添加关闭按钮
-        close_button = QPushButton()
-        close_button.setFixedSize(24, 24)
-        
-        # 设置关闭按钮样式
-        if os.path.exists(Icon.Close.Path):
-            close_button.setIcon(QIcon(Icon.Close.Path))
-            close_button.setIconSize(QSize(16, 16))
-        else:
-            close_button.setText("×")
+        # 创建内联关于页面（如果不存在）
+        if not hasattr(self, 'about_page'):
+            # 创建关于页面
+            self.about_page = QWidget()
+            self.about_page.setObjectName("About")
             
-        close_button.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                border: none;
-                color: #999999;
-                font-size: 18px;
-            }
-            QPushButton:hover {
-                color: #ffffff;
-                background-color: #e81123;
-                border-radius: 12px;
-            }
-        """)
+            # 创建页面布局
+            about_layout = QVBoxLayout(self.about_page)
+            about_layout.setContentsMargins(20, 20, 20, 20)
+            about_layout.setSpacing(20)
+            
+            # 标题
+            title = QLabel(self.get_translation("about_title", "About"))
+            title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
+            about_layout.addWidget(title)
+            
+            # 应用图标和标题
+            icon_title_layout = QHBoxLayout()
+            
+            # 添加应用图标
+            app_icon_label = QLabel()
+            app_icon_label.setFixedSize(80, 80)
+            if os.path.exists(Icon.Icon.Path):
+                app_icon = QPixmap(Icon.Icon.Path)
+                app_icon_label.setPixmap(app_icon.scaled(80, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            app_icon_label.setStyleSheet("background-color: transparent;")
+            
+            # 添加标题和版本布局
+            title_version_layout = QVBoxLayout()
+            title_version_layout.setSpacing(10)
+            
+            app_title = QLabel("Glary Utilities")
+            app_title.setStyleSheet("font-size: 24px; font-weight: bold; color: #ffffff;")
+            
+            version_label = QLabel(f"{self.get_translation('version', 'Version')}: {App.version}")
+            version_label.setStyleSheet("font-size: 16px; color: #cccccc;")
+            
+            title_version_layout.addWidget(app_title)
+            title_version_layout.addWidget(version_label)
+            title_version_layout.addStretch()
+            
+            icon_title_layout.addWidget(app_icon_label)
+            icon_title_layout.addLayout(title_version_layout)
+            icon_title_layout.addStretch()
+            
+            about_layout.addLayout(icon_title_layout)
+            
+            # 添加分割线
+            line = QFrame()
+            line.setFrameShape(QFrame.HLine)
+            line.setStyleSheet("background-color: #444444; max-height: 1px;")
+            about_layout.addWidget(line)
+            
+            # 添加内容区域
+            content_widget = QWidget()
+            content_widget.setStyleSheet("background-color: #2a2a2a; border-radius: 8px;")
+            content_layout = QVBoxLayout(content_widget)
+            content_layout.setContentsMargins(20, 20, 20, 20)
+            content_layout.setSpacing(15)
+            
+            # 应用描述
+            description_label = QLabel(self.get_translation("app_description", "A powerful system optimization tool."))
+            description_label.setWordWrap(True)
+            description_label.setStyleSheet("font-size: 16px; color: #e0e0e0;")
+            content_layout.addWidget(description_label)
+            
+            # 添加主要功能
+            features_label = QLabel(self.get_translation("features", "Main Features"))
+            features_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff; margin-top: 10px;")
+            content_layout.addWidget(features_label)
+            
+            # 功能列表
+            features_layout = QVBoxLayout()
+            features_layout.setContentsMargins(15, 0, 0, 0)
+            features_layout.setSpacing(8)
+            
+            feature_items = [
+                self.get_translation("feature_clean", "System cleaning"),
+                self.get_translation("feature_repair", "System repair"),
+                self.get_translation("feature_security", "Security protection"),
+                self.get_translation("feature_disk", "Disk optimization")
+            ]
+            
+            for feature in feature_items:
+                feature_label = QLabel(f"• {feature}")
+                feature_label.setStyleSheet("font-size: 15px; color: #e0e0e0;")
+                features_layout.addWidget(feature_label)
+            
+            content_layout.addLayout(features_layout)
+            
+            # 添加系统要求
+            sys_req_label = QLabel(self.get_translation("system_requirements", "System Requirements"))
+            sys_req_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff; margin-top: 15px;")
+            content_layout.addWidget(sys_req_label)
+            
+            sys_req_details = QLabel(self.get_translation("requirements_details", "Windows 10/11, 4GB RAM, 200MB disk space"))
+            sys_req_details.setWordWrap(True)
+            sys_req_details.setStyleSheet("font-size: 15px; color: #e0e0e0; margin-left: 15px;")
+            content_layout.addWidget(sys_req_details)
+            
+            # 添加分割线
+            inner_line = QFrame()
+            inner_line.setFrameShape(QFrame.HLine)
+            inner_line.setStyleSheet("background-color: #444444; max-height: 1px; margin-top: 10px;")
+            content_layout.addWidget(inner_line)
+            
+            # 添加版权信息
+            copyright_label = QLabel(f"© 2025 Glarysoft Ltd. All rights reserved.")
+            copyright_label.setStyleSheet("font-size: 14px; color: #999999; margin-top: 10px;")
+            content_layout.addWidget(copyright_label)
+            
+            # 添加开发者信息
+            dev_label = QLabel(self.get_translation("developed_by", "Developed by Chen Runsen"))
+            dev_label.setStyleSheet("font-size: 14px; color: #999999;")
+            content_layout.addWidget(dev_label)
+            
+            # 添加网站链接
+            website_label = QLabel("<a href='https://www.chenrunsen.com' style='color: #5b9bd5;'>www.glarysoft.com</a>")
+            website_label.setOpenExternalLinks(True)
+            website_label.setStyleSheet("font-size: 14px; color: #5b9bd5;")
+            content_layout.addWidget(website_label)
+            
+            # 添加内容区域到主布局
+            about_layout.addWidget(content_widget)
+            
+            # 按钮布局
+            button_layout = QHBoxLayout()
+            button_layout.addStretch()
+            
+            # 添加帮助按钮
+            help_button = QPushButton(self.get_translation("help_button", "Help"))
+            help_button.setFixedSize(120, 36)
+            help_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #555555;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 5px 15px;
+                    font-size: 15px;
+                }
+                QPushButton:hover {
+                    background-color: #666666;
+                }
+                QPushButton:pressed {
+                    background-color: #444444;
+                }
+            """)
+            help_button.clicked.connect(self.show_help_dialog)
+            button_layout.addWidget(help_button)
+            
+            # 添加按钮布局到主布局
+            about_layout.addLayout(button_layout)
+            
+            # 添加弹性空间
+            about_layout.addStretch()
+            
+            # 添加关于页面到内容区域
+            self.content_area.addWidget(self.about_page)
+            
+            # 更新页面索引字典
+            self.page_indices["About"] = self.content_area.count() - 1
+            
+            # 创建侧边栏按钮（如果需要）
+            if "About" not in self.page_buttons:
+                # 添加关于按钮到侧边栏
+                about_btn = self.create_sidebar_button(
+                    self.get_translation("about_title", "About"),
+                    Icon.About.Path, 
+                    "About",
+                    self.get_translation("about_tooltip", "About Glary Utilities")
+                )
+                # 暂时不显示在侧边栏，只在需要时显示
+                about_btn.hide()
+                self.page_buttons["About"] = about_btn
         
-        # 连接关闭按钮信号到reject插槽，而不是close
-        close_button.clicked.connect(about_dialog.reject)
+        # 切换到关于页面
+        self.set_active_page("About")
+
+    def lighten_color(self, color, amount=0):
+        """使颜色变亮或变暗
         
-        title_bar_layout.addWidget(title_label)
-        title_bar_layout.addStretch()
-        title_bar_layout.addWidget(close_button)
+        Args:
+            color: 十六进制颜色代码
+            amount: 变化量，正数变亮，负数变暗（范围：-100 到 100）
+                
+        Returns:
+            新的十六进制颜色代码
+        """
+        try:
+            # 移除井号并转换为RGB
+            c = color.lstrip('#')
+            c = tuple(int(c[i:i+2], 16) for i in (0, 2, 4))
+            
+            # 调整每个颜色通道
+            r = int(max(0, min(255, c[0] + (amount * 2.55))))
+            g = int(max(0, min(255, c[1] + (amount * 2.55))))
+            b = int(max(0, min(255, c[2] + (amount * 2.55))))
+            
+            # 转换回十六进制格式
+            return f'#{r:02x}{g:02x}{b:02x}'
+        except Exception as e:
+            self.logger.error(f"颜色调整出错: {str(e)}")
+            return color  # 如果出错返回原始颜色
+
+    def show_help_dialog(self):
+        """显示帮助内容（作为主窗口内的页面，而不是弹出对话框）"""
         
-        content_layout.addWidget(title_bar)
+        # 创建内联帮助页面（如果不存在）
+        if not hasattr(self, 'help_page'):
+            # 创建帮助页面
+            self.help_page = QWidget()
+            self.help_page.setObjectName("Help")
+            
+            # 创建页面布局
+            help_layout = QVBoxLayout(self.help_page)
+            help_layout.setContentsMargins(20, 20, 20, 20)
+            help_layout.setSpacing(15)
+            
+            # 标题
+            title = QLabel(self.get_translation("help_title", "Help Documentation"))
+            title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
+            help_layout.addWidget(title)
+            
+            # 描述
+            description = QLabel(self.get_translation("help_description", "Find answers and learn how to use Glary Utilities effectively"))
+            description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
+            help_layout.addWidget(description)
+            
+            # 帮助内容
+            help_text = QTextBrowser()
+            help_text.setOpenExternalLinks(True)
+            help_text.setStyleSheet("""
+                QTextBrowser {
+                    background-color: #252525;
+                    color: #e0e0e0;
+                    border: 1px solid #3a3a3a;
+                    border-radius: 5px;
+                    padding: 15px;
+                    font-size: 14px;
+                }
+                QScrollBar:vertical {
+                    border: none;
+                    background: #2d2d2d;
+                    width: 10px;
+                    margin: 0px;
+                }
+                QScrollBar::handle:vertical {
+                    background: #555555;
+                    min-height: 20px;
+                    border-radius: 5px;
+                }
+                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                    height: 0px;
+                }
+            """)
+            
+            # 使用翻译条目构建帮助内容HTML
+            t = lambda key, default="": self.get_translation(key, default)
+            
+            help_html = f"""
+            <h2>{t('help_content_title', 'Glary Utilities Help Documentation')}</h2>
+            <p>{t('help_content_welcome', 'Welcome to Glary Utilities')}</p>
+            
+            <h3>{t('help_dashboard_title', 'Dashboard')}</h3>
+            <p>{t('help_dashboard_desc', 'The Dashboard provides an overview of your system status and quick access to common tasks.')}</p>
+            
+            <h3>{t('help_cleaner_title', 'System Cleaner')}</h3>
+            <p>{t('help_cleaner_desc', 'The System Cleaner tool helps you:')}</p>
+            <ul>
+                <li>{t('help_cleaner_item1', 'Clean temporary files')}</li>
+                <li>{t('help_cleaner_item2', 'Free up disk space')}</li>
+                <li>{t('help_cleaner_item3', 'Improve system performance')}</li>
+            </ul>
+            <p>{t('help_cleaner_usage', 'How to use: Click Scan to analyze your system, then select items to clean and click Clean button.')}</p>
+            
+            <h3>{t('help_repair_title', 'System Repair')}</h3>
+            <p>{t('help_repair_desc', 'System Repair can fix common Windows issues:')}</p>
+            <ul>
+                <li>{t('help_repair_item1', 'Registry errors')}</li>
+                <li>{t('help_repair_item2', 'System settings problems')}</li>
+                <li>{t('help_repair_item3', 'Windows service issues')}</li>
+            </ul>
+            <p>{t('help_repair_usage', 'How to use: Select issues to scan for, review results, then apply repairs.')}</p>
+            
+            <h3>{t('help_disk_title', 'Disk Check')}</h3>
+            <p>{t('help_disk_desc', 'The Disk Check tool can:')}</p>
+            <ul>
+                <li>{t('help_disk_item1', 'Detect disk errors')}</li>
+                <li>{t('help_disk_item2', 'Find bad sectors')}</li>
+                <li>{t('help_disk_item3', 'Optimize disk performance')}</li>
+            </ul>
+            <p>{t('help_disk_usage', 'How to use: Select a disk, choose check options, and click Check Disk button.')}</p>
+            
+            <h3>{t('help_boot_title', 'Boot Repair')}</h3>
+            <p>{t('help_boot_desc', 'The Boot Repair tool can:')}</p>
+            <ul>
+                <li>{t('help_boot_item1', 'Fix startup problems')}</li>
+                <li>{t('help_boot_item2', 'Restore boot records')}</li>
+                <li>{t('help_boot_item3', 'Repair boot configuration')}</li>
+            </ul>
+            <p>{t('help_boot_note', 'Note: Administrator privileges are required for this tool.')}</p>
+            
+            <h3>{t('help_virus_title', 'Virus Scan')}</h3>
+            <p>{t('help_virus_desc', 'The Virus Scan tool helps you:')}</p>
+            <ul>
+                <li>{t('help_virus_item1', 'Detect malware')}</li>
+                <li>{t('help_virus_item2', 'Remove harmful files')}</li>
+                <li>{t('help_virus_item3', 'Protect your system')}</li>
+            </ul>
+            <p>{t('help_virus_usage', 'How to use: Select areas to scan, click Scan button, and review results.')}</p>
+            
+            <h3>{t('help_network_title', 'Network Reset')}</h3>
+            <p>{t('help_network_desc', 'Network Reset helps with connection issues:')}</p>
+            <ul>
+                <li>{t('help_network_item1', 'Reset DNS cache')}</li>
+                <li>{t('help_network_item2', 'Reset Winsock catalog')}</li>
+                <li>{t('help_network_item3', 'Reset TCP/IP stack')}</li>
+                <li>{t('help_network_item4', 'Fix network adapters')}</li>
+            </ul>
+            <p>{t('help_network_usage', 'How to use: Select operations to perform and click Reset button.')}</p>
+            
+            <h3>{t('help_dism_title', 'DISM Tool')}</h3>
+            <p>{t('help_dism_desc', 'The DISM tool can:')}</p>
+            <ul>
+                <li>{t('help_dism_item1', 'Repair Windows system image')}</li>
+                <li>{t('help_dism_item2', 'Scan system health')}</li>
+                <li>{t('help_dism_item3', 'Clean up component store')}</li>
+            </ul>
+            <p>{t('help_dism_usage', 'How to use: Select DISM operation and click Execute button.')}</p>
+            
+            <h3>{t('help_sysinfo_title', 'System Information')}</h3>
+            <p>{t('help_sysinfo_desc', 'System Information provides details about:')}</p>
+            <ul>
+                <li>{t('help_sysinfo_item1', 'CPU and memory specifications')}</li>
+                <li>{t('help_sysinfo_item2', 'Operating system details')}</li>
+                <li>{t('help_sysinfo_item3', 'Network configuration')}</li>
+                <li>{t('help_sysinfo_item4', 'Graphics hardware')}</li>
+            </ul>
+            <p>{t('help_sysinfo_usage', 'How to use: Switch between tabs to view different categories of information.')}</p>
+            
+            <h3>{t('help_settings_title', 'Settings')}</h3>
+            <p>{t('help_settings_desc', 'In Settings you can:')}</p>
+            <ul>
+                <li>{t('help_settings_item1', 'Change language')}</li>
+                <li>{t('help_settings_item2', 'Adjust theme and appearance')}</li>
+                <li>{t('help_settings_item3', 'Configure cleaning options')}</li>
+                <li>{t('help_settings_item4', 'Set application preferences')}</li>
+            </ul>
+            
+            <h3>{t('help_contact_title', 'Contact & Support')}</h3>
+            <p>{t('help_contact_desc', 'For additional help, visit our website or contact support.')}</p>
+            """
+            
+            help_text.setHtml(help_html)
+            help_layout.addWidget(help_text)
+            
+            # 添加帮助页面到内容区域
+            self.content_area.addWidget(self.help_page)
+            
+            # 更新页面索引字典
+            self.page_indices["Help"] = self.content_area.count() - 1
+            
+            # 创建侧边栏按钮（如果需要）
+            if "Help" not in self.page_buttons:
+                # 添加帮助按钮到侧边栏
+                help_btn = self.create_sidebar_button(
+                    self.get_translation("help_title", "Help"),
+                    Icon.Help.Path, 
+                    "Help",
+                    self.get_translation("help_tooltip", "View help documentation")
+                )
+                # 暂时不显示在侧边栏，只在需要时显示
+                help_btn.hide()
+                self.page_buttons["Help"] = help_btn
         
-        # 创建内容区域
-        content_widget = QWidget()
-        content_widget_layout = QVBoxLayout(content_widget)
-        content_widget_layout.setContentsMargins(20, 0, 0, 0)
+        # 切换到帮助页面
+        self.set_active_page("Help")
         
-        # 添加应用图标和标题
-        icon_title_layout = QHBoxLayout()
-        
-        # 添加应用图标
-        app_icon_label = QLabel()
-        app_icon_label.setFixedSize(64, 64)
-        if os.path.exists(Icon.Icon.Path):
-            app_icon = QPixmap(Icon.Icon.Path)
-            app_icon_label.setPixmap(app_icon.scaled(64, 64, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-        app_icon_label.setStyleSheet("background-color: transparent;")
-        
-        # 添加标题和版本布局
-        title_version_layout = QVBoxLayout()
-        title_version_layout.setSpacing(5)
-        
-        app_title = QLabel("Glary Utilities")
-        app_title.setStyleSheet("font-size: 20px; font-weight: bold; color: #ffffff;")
-        
-        version_label = QLabel(f"{self.tr('version')}: {version}")
-        version_label.setStyleSheet("font-size: 14px; color: #cccccc;")
-        
-        title_version_layout.addWidget(app_title)
-        title_version_layout.addWidget(version_label)
-        title_version_layout.addStretch()
-        
-        icon_title_layout.addWidget(app_icon_label)
-        icon_title_layout.addLayout(title_version_layout)
-        icon_title_layout.addStretch()
-        
-        content_widget_layout.addLayout(icon_title_layout)
-        
-        # 添加应用描述
-        description_label = QLabel(self.tr("app_description"))
-        description_label.setWordWrap(True)
-        description_label.setStyleSheet("font-size: 14px; color: #cccccc; margin-top: 10px; margin-bottom: 10px;")
-        content_widget_layout.addWidget(description_label)
-        
-        # 添加主要功能
-        features_label = QLabel(self.tr("features"))
-        features_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #ffffff; margin-top: 10px;")
-        content_widget_layout.addWidget(features_label)
-        
-        # 功能列表
-        features_layout = QVBoxLayout()
-        features_layout.setContentsMargins(10, 0, 0, 0)
-        features_layout.setSpacing(5)
-        
-        feature_items = [
-            self.tr("feature_clean"),
-            self.tr("feature_repair"),
-            self.tr("feature_security"),
-            self.tr("feature_disk")
-        ]
-        
-        for feature in feature_items:
-            feature_label = QLabel(f"• {feature}")
-            feature_label.setStyleSheet("font-size: 13px; color: #cccccc;")
-            features_layout.addWidget(feature_label)
-        
-        content_widget_layout.addLayout(features_layout)
-        
-        # 添加系统要求
-        sys_req_label = QLabel(self.tr("system_requirements"))
-        sys_req_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #ffffff; margin-top: 10px;")
-        content_widget_layout.addWidget(sys_req_label)
-        
-        sys_req_details = QLabel(self.tr("requirements_details"))
-        sys_req_details.setStyleSheet("font-size: 13px; color: #cccccc; margin-left: 10px;")
-        content_widget_layout.addWidget(sys_req_details)
-        
-        # 添加版权信息
-        copyright_label = QLabel(f"© 2025 Glarysoft Ltd. All rights reserved.")
-        copyright_label.setStyleSheet("font-size: 13px; color: #999999; margin-top: 10px;")
-        content_widget_layout.addWidget(copyright_label)
-        
-        # 添加开发者信息
-        dev_label = QLabel(self.tr("developed_by"))
-        dev_label.setStyleSheet("font-size: 13px; color: #999999;")
-        content_widget_layout.addWidget(dev_label)
-        
-        # 添加网站链接
-        website_label = QLabel("<a href='https://www.chenrunsen.com' style='color: #5b9bd5;'>www.glarysoft.com</a>")
-        website_label.setOpenExternalLinks(True)
-        website_label.setStyleSheet("font-size: 13px; color: #5b9bd5;")
-        content_widget_layout.addWidget(website_label)
-        
-        content_widget_layout.addStretch()
-        
-        # 添加按钮布局
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-        
-        ok_button = QPushButton(self.tr("ok_button"))
-        ok_button.setFixedSize(100, 30)
-        ok_button.setStyleSheet("""
-            QPushButton {
-                background-color: #0078d7;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 5px 15px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #1084e1;
-            }
-            QPushButton:pressed {
-                background-color: #006cc1;
-            }
-        """)
-        
-        ok_button.clicked.connect(about_dialog.reject)
-        button_layout.addWidget(ok_button)
-        
-        content_widget_layout.addLayout(button_layout)
-        content_layout.addWidget(content_widget)
-        
-        main_layout.addWidget(content_container)
-        
-        # 实现拖动功能
-        self._old_pos = None
-        
-        def mousePressEvent(event):
-            if event.button() == Qt.LeftButton:
-                self._old_pos = event.globalPos()
-        
-        def mouseMoveEvent(event):
-            if self._old_pos:
-                delta = QPoint(event.globalPos() - self._old_pos)
-                about_dialog.move(about_dialog.pos() + delta)
-                self._old_pos = event.globalPos()
-        
-        def mouseReleaseEvent(event):
-            if event.button() == Qt.LeftButton:
-                self._old_pos = None
-        
-        about_dialog.mousePressEvent = mousePressEvent
-        about_dialog.mouseMoveEvent = mouseMoveEvent
-        about_dialog.mouseReleaseEvent = mouseReleaseEvent
-        
-        # 显示对话框
-        about_dialog.exec_()
+    def setup_tooltips(self):
+        """设置所有主要组件的工具提示，提供内联帮助"""
+        # Dashboard
+        if hasattr(self, 'dashboard_btn'):
+            self.dashboard_btn.setToolTip(self.get_translation("dashboard_tooltip", "View system overview and quick access to common tasks"))
+            
+        # System Cleaner
+        if hasattr(self, 'system_cleaner_btn'):
+            self.system_cleaner_btn.setToolTip(self.get_translation("system_cleaner_tooltip", "Clean temporary files and free up disk space"))
+            
+        # System Repair
+        if hasattr(self, 'registry_btn'):
+            self.registry_btn.setToolTip(self.get_translation("system_repair_tooltip", "Fix common Windows issues and optimize system settings"))
+            
+        # Disk Check
+        if hasattr(self, 'disk_tools_btn'):
+            self.disk_tools_btn.setToolTip(self.get_translation("disk_check_tooltip", "Check disk for errors and optimize performance"))
+            
+        # Boot Repair
+        if hasattr(self, 'startup_btn'):
+            self.startup_btn.setToolTip(self.get_translation("boot_repair_tooltip", "Fix startup issues and repair boot configuration"))
+            
+        # Virus Scan
+        if hasattr(self, 'uninstaller_btn'):
+            self.uninstaller_btn.setToolTip(self.get_translation("virus_scan_tooltip", "Scan for malware and protect your system"))
+            
+        # Network Reset
+        if hasattr(self, 'privacy_btn'):
+            self.privacy_btn.setToolTip(self.get_translation("network_reset_tooltip", "Fix network issues and reset connections"))
+            
+        # DISM Tool
+        if hasattr(self, 'driver_btn'):
+            self.driver_btn.setToolTip(self.get_translation("dism_tool_tooltip", "Repair Windows system image and check system health"))
+            
+        # System Information
+        if hasattr(self, 'optimizer_btn'):
+            self.optimizer_btn.setToolTip(self.get_translation("system_information_tooltip", "View detailed information about your hardware and software"))
+            
+        # Settings
+        if hasattr(self, 'settings_btn'):
+            self.settings_btn.setToolTip(self.get_translation("settings_tooltip", "Configure application settings and preferences"))
  

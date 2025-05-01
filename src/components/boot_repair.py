@@ -1,7 +1,4 @@
 import os
-import sys
-import platform
-import subprocess
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QLabel, QTextEdit, QProgressBar, QMessageBox,
                              QGroupBox, QRadioButton, QCheckBox, QTabWidget,
@@ -10,186 +7,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from components.base_component import BaseComponent
 from PyQt5.QtGui import QBrush, QColor
-from config import Icon
-from utils.startup_manager import StartupManager
-from utils.platform import PlatformUtils
-
-class BootRepairThread(QThread):
-    """Thread for running boot repair operations in the background"""
-    update_progress = pyqtSignal(int)
-    update_log = pyqtSignal(str)
-    finished_operation = pyqtSignal(bool, str)
-    
-    def __init__(self, repair_type, parent=None):
-        super().__init__(parent)
-        self.repair_type = repair_type
-        self.is_running = False
-        
-    def run(self):
-        self.is_running = True
-        
-        try:
-            if self.repair_type == "mbr":
-                self.repair_mbr()
-            elif self.repair_type == "bcd":
-                self.repair_bcd()
-            elif self.repair_type == "bootmgr":
-                self.repair_bootmgr()
-            elif self.repair_type == "winload":
-                self.repair_winload()
-            elif self.repair_type == "full":
-                self.full_repair()
-                
-            self.finished_operation.emit(True, "Boot repair completed successfully!")
-        except Exception as e:
-            self.update_log.emit(f"Error: {str(e)}")
-            self.finished_operation.emit(False, f"Boot repair failed: {str(e)}")
-        
-        self.is_running = False
-    
-    def repair_mbr(self):
-        """Repair the Master Boot Record"""
-        self.update_log.emit("Starting MBR repair...")
-        self.update_progress.emit(10)
-        
-        # For safety, this is a simulation
-        if platform.system() == "Windows":
-            self.update_log.emit("Checking disk status...")
-            self.update_progress.emit(30)
-            
-            # Simulate disk check
-            for i in range(30, 60, 5):
-                QThread.sleep(1)
-                self.update_progress.emit(i)
-                self.update_log.emit(f"Analyzing MBR structures... ({i}%)")
-            
-            self.update_log.emit("MBR repair would run the following command:")
-            self.update_log.emit("bootrec /fixmbr")
-            
-            QThread.sleep(2)
-            self.update_progress.emit(100)
-            self.update_log.emit("MBR repair completed (simulated)")
-        else:
-            self.update_log.emit("MBR repair is only available on Windows.")
-            self.update_progress.emit(100)
-    
-    def repair_bcd(self):
-        """Repair the Boot Configuration Data"""
-        self.update_log.emit("Starting BCD repair...")
-        self.update_progress.emit(10)
-        
-        # For safety, this is a simulation
-        if platform.system() == "Windows":
-            self.update_log.emit("Backing up existing BCD...")
-            self.update_progress.emit(20)
-            
-            # Simulate repair process
-            for i in range(20, 70, 5):
-                QThread.sleep(1)
-                self.update_progress.emit(i)
-                self.update_log.emit(f"Rebuilding boot configuration data... ({i}%)")
-            
-            self.update_log.emit("BCD repair would run the following commands:")
-            self.update_log.emit("bootrec /rebuildbcd")
-            
-            QThread.sleep(2)
-            self.update_progress.emit(100)
-            self.update_log.emit("BCD repair completed (simulated)")
-        else:
-            self.update_log.emit("BCD repair is only available on Windows.")
-            self.update_progress.emit(100)
-    
-    def repair_bootmgr(self):
-        """Repair the Boot Manager"""
-        self.update_log.emit("Starting Boot Manager repair...")
-        self.update_progress.emit(10)
-        
-        # For safety, this is a simulation
-        if platform.system() == "Windows":
-            self.update_log.emit("Checking Boot Manager...")
-            self.update_progress.emit(30)
-            
-            # Simulate repair process
-            for i in range(30, 80, 5):
-                QThread.sleep(1)
-                self.update_progress.emit(i)
-                self.update_log.emit(f"Repairing boot manager files... ({i}%)")
-            
-            self.update_log.emit("Boot Manager repair would run the following command:")
-            self.update_log.emit("bootrec /fixboot")
-            
-            QThread.sleep(2)
-            self.update_progress.emit(100)
-            self.update_log.emit("Boot Manager repair completed (simulated)")
-        else:
-            self.update_log.emit("Boot Manager repair is only available on Windows.")
-            self.update_progress.emit(100)
-    
-    def repair_winload(self):
-        """Repair the Windows Loader"""
-        self.update_log.emit("Starting Windows Loader repair...")
-        self.update_progress.emit(10)
-        
-        # For safety, this is a simulation
-        if platform.system() == "Windows":
-            self.update_log.emit("Checking Windows boot files...")
-            self.update_progress.emit(20)
-            
-            # Simulate repair process
-            for i in range(20, 90, 7):
-                QThread.sleep(1)
-                self.update_progress.emit(i)
-                self.update_log.emit(f"Restoring Windows Loader files... ({i}%)")
-            
-            self.update_log.emit("Windows Loader repair would use SFC to repair system files:")
-            self.update_log.emit("sfc /scannow")
-            
-            QThread.sleep(2)
-            self.update_progress.emit(100)
-            self.update_log.emit("Windows Loader repair completed (simulated)")
-        else:
-            self.update_log.emit("Windows Loader repair is only available on Windows.")
-            self.update_progress.emit(100)
-    
-    def full_repair(self):
-        """Perform a full boot repair sequence"""
-        self.update_log.emit("Starting full boot repair sequence...")
-        self.update_progress.emit(5)
-        
-        # For safety, this is a simulation
-        if platform.system() == "Windows":
-            # Simulate full repair
-            self.update_log.emit("Step 1: Fixing MBR...")
-            self.update_progress.emit(10)
-            QThread.sleep(2)
-            
-            self.update_log.emit("Step 2: Fixing boot sector...")
-            self.update_progress.emit(25)
-            QThread.sleep(2)
-            
-            self.update_log.emit("Step 3: Rebuilding BCD...")
-            self.update_progress.emit(40)
-            QThread.sleep(2)
-            
-            self.update_log.emit("Step 4: Repairing Windows boot files...")
-            self.update_progress.emit(60)
-            QThread.sleep(2)
-            
-            self.update_log.emit("Step 5: Scanning system files...")
-            self.update_progress.emit(80)
-            QThread.sleep(2)
-            
-            self.update_log.emit("Full boot repair would run the following commands:")
-            self.update_log.emit("1. bootrec /fixmbr")
-            self.update_log.emit("2. bootrec /fixboot")
-            self.update_log.emit("3. bootrec /rebuildbcd")
-            self.update_log.emit("4. sfc /scannow")
-            
-            self.update_progress.emit(100)
-            self.update_log.emit("Full boot repair completed (simulated)")
-        else:
-            self.update_log.emit("Boot repair is only available on Windows.")
-            self.update_progress.emit(100)
+from tools.boot_repair import BootRepairThread
+from tools.boot_repair import StartupManager
 
 class BootRepairWidget(BaseComponent):
     """Widget for boot repair operations"""
@@ -222,7 +41,7 @@ class BootRepairWidget(BaseComponent):
         self.main_layout.addWidget(self.description)
         
         # 非Windows系统的警告标签
-        if platform.system() != "Windows":
+        if not self.platform_manager.is_windows():
             warning_label = QLabel("⚠️ Boot repair features are only available on Windows")
             warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
             self.main_layout.addWidget(warning_label)
@@ -469,7 +288,7 @@ class BootRepairWidget(BaseComponent):
         button_layout = QHBoxLayout()
         
         # 添加按钮
-        self.add_button = QPushButton(self.get_translation("add", "添加启动项"))
+        self.add_button = QPushButton(self.get_translation("add_startup_item", "Add Startup Item"))
         self.add_button.clicked.connect(self.add_startup_item)
         button_layout.addWidget(self.add_button)
         
@@ -504,7 +323,7 @@ class BootRepairWidget(BaseComponent):
         self.update_button_states()
         
         # 如果不是Windows系统，禁用所有按钮
-        if not PlatformUtils.is_windows():
+        if not self.platform_manager.is_windows():
             self.add_button.setEnabled(False)
             self.refresh_button.setEnabled(False)
             self.enable_button.setEnabled(False)
@@ -716,7 +535,7 @@ class BootRepairWidget(BaseComponent):
             repair_type = "full"
         
         # Check if we're on Windows
-        if platform.system() != "Windows":
+        if not self.platform_manager.is_windows():
             QMessageBox.warning(self, "Compatibility Error", 
                                 "Boot repair features are only available on Windows systems.")
             return

@@ -5,18 +5,18 @@
         "zh": "紫色"
     },
     "colors": {
-        "bg_color": "#13111d",
+        "bg_color": "#1a1330",
         "text_color": "#e6edf3",
         "accent_color": "#9c27b0",
-        "bg_lighter": "#1b1825",
-        "bg_darker": "#0f0d18"
+        "bg_lighter": "#261745",
+        "bg_darker": "#120d21"
     },
     "component_specific": {
         "button": {
             "primary_bg": "#9c27b0",
             "primary_text": "#ffffff",
-            "primary_hover": "#ac37c0",
-            "primary_pressed": "#8c17a0"
+            "primary_hover": "#ba68c8",
+            "primary_pressed": "#7b1fa2"
         },
         "progressbar": {
             "chunk_color": "#9c27b0"

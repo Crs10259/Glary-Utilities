@@ -13,7 +13,6 @@ from utils.theme_manager import ThemeManager
 from utils.logger import Logger
 import logging
 
-
 class SettingsWidget(QWidget):
     """应用程序设置的窗口小部件"""
     

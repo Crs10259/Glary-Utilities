@@ -2,10 +2,13 @@ import os
 import json
 import platform
 from PyQt5.QtCore import QObject, QSettings
+from config import Path
+from .logger import Logger
 
 class Settings(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.logger = Logger().get_logger()
         self.settings = QSettings("GlaryUtilities", "GlaryUtilities")
         self.translations = {}
         self._current_language = None  # 添加语言缓存
@@ -13,11 +16,10 @@ class Settings(QObject):
         
     def load_translations(self):
         """加载所有可用的翻译"""
-        translations_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resources", "translations")
-        
+
         # 确保目录存在
-        if not os.path.exists(translations_dir):
-            os.makedirs(translations_dir)
+        if not os.path.exists(Path.TRANSLATIONS_DIR):
+            os.makedirs(Path.TRANSLATIONS_DIR)
         
         # 语言代码映射
         language_mapping = {
@@ -26,17 +28,19 @@ class Settings(QObject):
         }
         
         # 清空现有翻译
-        self.translations = {}
+        self.translations = {
+            "en": {},  # 默认的英语翻译
+            "zh": {}   # 默认的中文翻译
+        }
         
-        # 加载所有翻译文件
-        for file in os.listdir(translations_dir):
+        for file in os.listdir(Path.TRANSLATIONS_DIR):
             if file.endswith(".json"):
                 lang_code = language_mapping.get(file, file.split(".")[0])
                 try:
-                    with open(os.path.join(translations_dir, file), 'r', encoding='utf-8') as f:
+                    with open(os.path.join(Path.TRANSLATIONS_DIR, file), 'r', encoding='utf-8') as f:
                         self.translations[lang_code] = json.load(f)
                 except Exception as e:
-                    print(f"Error loading translation {file}: {e}")
+                    self.logger.error(f"Error loading translation {file}: {e}")
     
     def get_config_dir(self):
         """获取配置目录路径"""
@@ -77,7 +81,7 @@ class Settings(QObject):
             with open(theme_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Error loading theme {theme_name}: {e}")
+            self.logger.error(f"Error loading theme {theme_name}: {e}")
             return None
         
     def save_custom_theme(self, theme_data):
@@ -101,7 +105,7 @@ class Settings(QObject):
                 json.dump(theme_data, f, indent=4, ensure_ascii=False)
             return True
         except Exception as e:
-            print(f"Error saving custom theme: {e}")
+            self.logger.error(f"Error saving custom theme: {e}")
             return False
 
     def get_available_themes(self):
@@ -180,7 +184,7 @@ class Settings(QObject):
     def reset_settings(self):
         """重置所有设置为默认值"""
         self.settings.clear()
-        print("所有设置已重置为默认值")
+        self.logger.info("所有设置已重置为默认值")
         
         # 设置基本默认值
         self.set_setting("theme", "dark")
@@ -206,17 +210,25 @@ class Settings(QObject):
         
         lang_code = language_map.get(language.lower(), language)
             
-        # 如果语言不可用，则回退到英语
-        if lang_code not in self.translations:
-            lang_code = "en"
-            
-        # 如果找不到翻译，则返回键
-        if section not in self.translations[lang_code] or key not in self.translations[lang_code][section]:
+        # 如果语言不可用或者翻译字典为空，则创建一个默认结构
+        if not self.translations or lang_code not in self.translations:
+            # 尝试重新加载翻译
+            self.load_translations()
+            # 如果还是不存在，创建一个空的结构
+            if lang_code not in self.translations:
+                self.translations[lang_code] = {}
+        
+        # 检查section是否存在
+        if section not in self.translations[lang_code]:
+            self.translations[lang_code][section] = {}
+        
+        # 如果找不到翻译，则返回键或默认值
+        if key not in self.translations[lang_code][section]:
             # 尝试在英语中查找作为回退
             if "en" in self.translations and section in self.translations["en"] and key in self.translations["en"][section]:
                 return self.translations["en"][section][key]
             return default if default is not None else key
-            
+        
         return self.translations[lang_code][section][key]
 
     def set_language(self, language):
@@ -305,7 +317,7 @@ class Settings(QObject):
             
             return missing_translations
         except Exception as e:
-            print(f"Error validating translations: {e}")
+            self.logger.error(f"Error validating translations: {e}")
             if raise_error:
                 raise
             return {}

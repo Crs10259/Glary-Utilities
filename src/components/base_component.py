@@ -1,10 +1,12 @@
 from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout, QLabel, QCheckBox, QRadioButton, QButtonGroup
-from PyQt5.QtCore import QPropertyAnimation, QEasingCurve, QPoint, Qt, pyqtSignal
+from PyQt5.QtCore import QPropertyAnimation, QEasingCurve, QPoint, Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor, QFont
 from utils.animations import AnimationUtils
 from utils.settings import Settings
 from utils.theme_manager import ThemeManager
 from utils.logger import Logger
+from tools.base_tools import PlatformManager
+from tools.base_tools import SystemInformation
 
 class BaseComponent(QWidget):
     """Base component class for all application components"""
@@ -14,6 +16,8 @@ class BaseComponent(QWidget):
         self.settings = Settings()
         self.logger = Logger().get_logger()
         self.theme_manager = ThemeManager()
+        self.platform_manager = PlatformManager()
+        self.system_information = SystemInformation()
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.apply_theme()
         
@@ -226,16 +230,79 @@ class BaseComponent(QWidget):
     
     def show_with_animation(self):
         """Show the component with animation"""
+        # 如果组件已经在淡入，则不执行任何操作
+        if hasattr(self, "_animating_in") and self._animating_in:
+            return
+        
+        # 停止可能正在进行的淡出动画
+        if hasattr(self, "_animating_out") and self._animating_out:
+            if hasattr(self, "_fade_out_anim") and self._fade_out_anim is not None:
+                self._fade_out_anim.stop()
+                self._fade_out_anim = None
+            self._animating_out = False
+        
+        # 确保组件可见，但透明
+        self.setWindowOpacity(0.0)
         self.setVisible(True)
+        
+        # 启动淡入动画
         AnimationUtils.fade_in(self)
-    
+        
+        # 安全保障：确保组件最终会显示，即使动画失败
+        QTimer.singleShot(500, self._ensure_visibility)
+
+    def _ensure_visibility(self):
+        """确保组件可见，防止动画问题导致组件不显示"""
+        if self.isVisible() and self.windowOpacity() < 0.5:
+            # 如果组件应该可见但不透明度太低，强制设为完全不透明
+            self.setWindowOpacity(1.0)
+            if hasattr(self, "_animating_in"):
+                self._animating_in = False
+            if hasattr(self, "_fade_in_anim") and self._fade_in_anim is not None:
+                try:
+                    self._fade_in_anim.stop()
+                    self._fade_in_anim = None
+                except:
+                    pass
+
     def hide_with_animation(self, on_complete=None):
         """Hide the component with animation"""
+        # 如果组件已经在淡出，则不执行任何操作
+        if hasattr(self, "_animating_out") and self._animating_out:
+            # 如果有新的回调，将其连接到现有动画
+            if on_complete and hasattr(self, "_fade_out_anim") and self._fade_out_anim is not None:
+                # 添加额外的回调
+                original_callback = getattr(self._fade_out_anim, "finished_callback", None)
+                def combined_callback():
+                    if original_callback:
+                        original_callback()
+                    on_complete()
+                self._fade_out_anim.finished.disconnect()
+                self._fade_out_anim.finished.connect(combined_callback)
+            return
+        
+        # 停止可能正在进行的淡入动画
+        if hasattr(self, "_animating_in") and self._animating_in:
+            if hasattr(self, "_fade_in_anim") and self._fade_in_anim is not None:
+                self._fade_in_anim.stop()
+                self._fade_in_anim = None
+            self._animating_in = False
+        
+        # 启动淡出动画
         AnimationUtils.fade_out(self, finished_callback=lambda: self._handle_hide_complete(on_complete))
-    
+
     def _handle_hide_complete(self, callback=None):
-        """Handle hide animation completion"""
+        """处理隐藏动画完成"""
+        # 确保组件透明且隐藏
+        self.setWindowOpacity(0.0)
         self.setVisible(False)
+        
+        # 清除动画状态
+        self._animating_out = False
+        if hasattr(self, "_fade_out_anim"):
+            self._fade_out_anim = None
+        
+        # 执行回调
         if callback:
             callback()
     

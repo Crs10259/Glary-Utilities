@@ -1,7 +1,5 @@
-from PyQt5.QtWidgets import QWidget, QGraphicsOpacityEffect, QGraphicsColorizeEffect
 from PyQt5.QtCore import QPropertyAnimation, QSequentialAnimationGroup, QParallelAnimationGroup
-from PyQt5.QtCore import QEasingCurve, Qt, QSize, QPoint, QRect, QAbstractAnimation
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QEasingCurve, Qt, QSize, QPoint, QRect, QAbstractAnimation, QTimer
 from utils.settings import Settings
 
 class AnimationUtils:
@@ -59,10 +57,10 @@ class AnimationUtils:
                 pass
                 
         anim = QPropertyAnimation(widget, b"windowOpacity")
-        anim.setDuration(int(duration * 0.6))  # 进一步减少动画时间以使其感觉更快速
+        anim.setDuration(int(duration * 0.4))  # 进一步减少动画时间以使其感觉更快速
         anim.setStartValue(start)
         anim.setEndValue(end)
-        anim.setEasingCurve(QEasingCurve.OutQuint)  # 使用更平滑的缓动曲线
+        anim.setEasingCurve(QEasingCurve.OutQuad)  # 使用平滑的缓动曲线
         
         if callback:
             anim.finished.connect(callback)
@@ -267,9 +265,36 @@ class AnimationUtils:
             # 恢复位置确保正确显示
             new_page.move(old_page.pos())
             return None
+
+        # 防止过快的连续切换导致界面消失
+        # 如果任何页面有 _transition_preventing_timer 属性并且正在活动中，
+        # 则直接跳过动画，立即切换
+        for page in [old_page, new_page]:
+            if hasattr(page, "_transition_preventing_timer") and page._transition_preventing_timer:
+                # 立即切换，不执行动画
+                new_page.move(old_page.pos())
+                new_page.show()
+                old_page.hide()
+                return None
+
+        # 如果旧页面正在动画中，停止它
+        if hasattr(old_page, "_transition_anim") and old_page._transition_anim is not None:
+            try:
+                old_page._transition_anim.stop()
+                old_page._transition_anim = None
+            except Exception:
+                pass
+        
+        # 如果新页面正在动画中，停止它
+        if hasattr(new_page, "_transition_anim") and new_page._transition_anim is not None:
+            try:
+                new_page._transition_anim.stop()
+                new_page._transition_anim = None
+            except Exception:
+                pass
             
         # 优化动画性能 - 更快的动画
-        duration = int(duration * 0.5)  # 进一步减少动画时间
+        duration = int(duration * 0.15)  # 显著减少动画时间，使切换更快
         
         # 确保新页面可见
         new_page.show()
@@ -295,7 +320,7 @@ class AnimationUtils:
             old_anim.setEndValue(old_pos - QPoint(width, 0))
         else:
             old_anim.setEndValue(old_pos + QPoint(width, 0))
-        old_anim.setEasingCurve(QEasingCurve.OutQuart)  # 更快的缓动曲线
+        old_anim.setEasingCurve(QEasingCurve.OutQuad)  # 更平滑的缓动曲线
         
         # 新页面动画
         new_anim = QPropertyAnimation(new_page, b"pos")
@@ -305,19 +330,43 @@ class AnimationUtils:
         else:
             new_anim.setStartValue(old_pos - QPoint(width, 0))
         new_anim.setEndValue(old_pos)
-        new_anim.setEasingCurve(QEasingCurve.OutQuart)  # 更快的缓动曲线
+        new_anim.setEasingCurve(QEasingCurve.OutQuad)  # 更平滑的缓动曲线
         
         # 添加到动画组
         anim_group.addAnimation(old_anim)
         anim_group.addAnimation(new_anim)
         
-        # 完成后隐藏旧页面
+        # 保存动画引用
+        old_page._transition_anim = anim_group
+        new_page._transition_anim = anim_group
+        
+        # 完成后清理并防止过快切换
         def on_finished():
+            # 隐藏旧页面
             old_page.hide()
+            
+            # 清除动画引用
+            old_page._transition_anim = None
+            new_page._transition_anim = None
+            
+            # 确保新页面位于正确位置
+            new_page.move(old_pos)
+            
+            # 设置一个短暂的防抖定时器，防止过快切换
+            for page in [old_page, new_page]:
+                page._transition_preventing_timer = True
+                # 100ms后允许新的切换动画
+                QTimer.singleShot(100, lambda p=page: cls._reset_transition_timer(p))
         
         anim_group.finished.connect(on_finished)
         anim_group.start(QAbstractAnimation.DeleteWhenStopped)
         return anim_group
+        
+    @classmethod
+    def _reset_transition_timer(cls, page):
+        """重置页面切换防抖计时器"""
+        if hasattr(page, "_transition_preventing_timer"):
+            page._transition_preventing_timer = False
 
     @classmethod
     def text_flow(cls, label, duration=800):
@@ -330,4 +379,78 @@ class AnimationUtils:
         anim.setKeyValueAt(0.5, start_pos + QPoint(10, 0))  # 减小位移
         anim.setKeyValueAt(1, start_pos)
         anim.setLoopCount(1)  # 减少循环次数
-        anim.start() 
+        anim.start()
+
+    @classmethod
+    def fade_in(cls, widget, duration=200, callback=None):
+        """淡入动画
+        
+        Args:
+            widget: 要动画的部件
+            duration: 持续时间(毫秒)
+            callback: 动画完成后的回调函数
+        """
+        # 标记组件为正在动画中
+        widget._animating_in = True
+        
+        # 如果有正在进行的淡出动画，先停止它
+        if hasattr(widget, "_fade_out_anim") and widget._fade_out_anim is not None:
+            try:
+                widget._fade_out_anim.stop()
+                widget._fade_out_anim = None
+            except Exception:
+                pass
+        
+        # 创建淡入动画
+        anim = cls.fade(widget, duration, 0.0, 1.0, "in", callback=lambda: cls._on_fade_in_finished(widget, callback))
+        
+        # 保存动画引用
+        widget._fade_in_anim = anim
+        return anim
+
+    @classmethod
+    def _on_fade_in_finished(cls, widget, callback=None):
+        """淡入动画完成处理"""
+        # 移除动画标记
+        widget._animating_in = False
+        widget._fade_in_anim = None
+        
+        if callback:
+            callback()
+
+    @classmethod
+    def fade_out(cls, widget, duration=200, finished_callback=None):
+        """淡出动画
+        
+        Args:
+            widget: 要动画的部件
+            duration: 持续时间(毫秒)
+            finished_callback: 动画完成后的回调函数
+        """
+        # 标记组件为正在动画中
+        widget._animating_out = True
+        
+        # 如果有正在进行的淡入动画，先停止它
+        if hasattr(widget, "_fade_in_anim") and widget._fade_in_anim is not None:
+            try:
+                widget._fade_in_anim.stop()
+                widget._fade_in_anim = None
+            except Exception:
+                pass
+        
+        # 创建淡出动画
+        anim = cls.fade(widget, duration, 1.0, 0.0, "out", callback=lambda: cls._on_fade_out_finished(widget, finished_callback))
+        
+        # 保存动画引用
+        widget._fade_out_anim = anim
+        return anim
+
+    @classmethod
+    def _on_fade_out_finished(cls, widget, callback=None):
+        """淡出动画完成处理"""
+        # 移除动画标记
+        widget._animating_out = False
+        widget._fade_out_anim = None
+        
+        if callback:
+            callback() 

@@ -1,8 +1,8 @@
 {
-    "name": "custom",
+    "name": "dark",
     "display_name": {
-        "en": "Custom",
-        "zh": "自定义"
+        "en": "Dark",
+        "zh": "深色"
     },
     "colors": {
         "bg_color": "#1e1e1e",

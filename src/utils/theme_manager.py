@@ -6,6 +6,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtWidgets import QApplication
 from .settings import Settings
 from config import Icon
+from .logger import Logger
 
 class ThemeManager(QObject):
     """
@@ -26,6 +27,7 @@ class ThemeManager(QObject):
     def __init__(self, parent=None):
         """Initialize theme manager"""
         super().__init__(parent)
+        self.logger = Logger().get_logger()
         if ThemeManager._initialized:
             return
             
@@ -65,14 +67,14 @@ class ThemeManager(QObject):
                 
             # Validate theme structure
             if not self._validate_theme(theme_data):
-                print(f"Warning: Theme '{theme_name}' has invalid structure and was not loaded")
+                self.logger.warning(f"Warning: Theme '{theme_name}' has invalid structure and was not loaded")
                 return False
                 
             # Store the theme
             self.themes[theme_name] = theme_data
             return True
         except Exception as e:
-            print(f"Error loading theme '{theme_name}': {str(e)}")
+            self.logger.error(f"Error loading theme '{theme_name}': {str(e)}")
             return False
     
     def _validate_theme(self, theme_data: Dict[str, Any]) -> bool:
@@ -377,7 +379,7 @@ class ThemeManager(QObject):
                 json.dump(self.themes[theme_name], f, indent=4, ensure_ascii=False)
             return True
         except Exception as e:
-            print(f"Error saving theme '{theme_name}': {str(e)}")
+            self.logger.error(f"Error saving theme '{theme_name}': {str(e)}")
             return False
     
     def lighten_color(self, color: str, amount: int = 20) -> str:
@@ -847,6 +849,6 @@ class ThemeManager(QObject):
                 json.dump(theme_data, f, ensure_ascii=False, indent=4)
             return True
         except Exception as e:
-            print(f"创建主题失败: {e}")
+            self.logger.error(f"创建主题失败: {e}")
             return False 
         

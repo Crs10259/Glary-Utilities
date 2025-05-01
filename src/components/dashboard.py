@@ -1,6 +1,5 @@
 import os
 import sys
-import platform
 import psutil
 import shutil
 from PyQt5.QtWidgets import (
@@ -137,44 +136,73 @@ class ChartTile(QFrame):
             self.series.append(i, 0)
     
     def update_value(self, value):
-        """更新显示的值和图表"""
-        # 更新文本显示
-        if isinstance(value, float):
-                self.value_label.setText(f"{value:.1f}%")
+        """更新图表的数值，处理多种输入格式和错误状态"""
+        if isinstance(value, (int, float)):
+            # 是数字，显示为百分比
+            percent_text = f"{value:.1f}%"
+            self._update_percent_display(value, percent_text)
+        elif isinstance(value, str):
+            if value.endswith("°C"):
+                # 温度值，特殊处理（先移除°C）
+                try:
+                    temp = float(value.replace("°C", ""))
+                    self._update_temp_display(temp, value)
+                except ValueError:
+                    # 显示原始字符串
+                    self.value_label.setText(value)
+                    self._update_history_with_error()
+            elif value.startswith("Retry in"):
+                # 显示重试倒计时，使用特殊样式
+                self.value_label.setText(value)
+                self.value_label.setStyleSheet("color: #FFA500; font-size: 15px; font-weight: bold;")
+                # 使用警告色的虚线边框表示等待状态
+                # self.setStyleSheet(f"""
+                #     QFrame {{
+                #         background-color: #2d2d2d;
+                #         border: 2px dashed #FFA500;
+                #         border-radius: 8px;
+                #     }}
+                # """)
+                self._update_history_with_error()
+            elif value == "N/A":
+                # 显示N/A
+                self.value_label.setText("N/A")
+                self.value_label.setStyleSheet("color: #a0a0a0; font-size: 18px; font-weight: bold;")
+                # 设置灰色边框
+                self.setStyleSheet(f"""
+                    QFrame {{
+                        background-color: #2d2d2d;
+                        border: 2px solid #4d4d4d;
+                        border-radius: 8px;
+                    }}
+                """)
+                self._update_history_with_error()
+            elif value == "Error":
+                # 显示错误状态
+                self.value_label.setText("Error")
+                self.value_label.setStyleSheet("color: #ff5555; font-size: 18px; font-weight: bold;")
+                # 设置红色边框
+                self.setStyleSheet(f"""
+                    QFrame {{
+                        background-color: #2d2d2d;
+                        border: 2px solid #ff5555;
+                        border-radius: 8px;
+                    }}
+                """)
+                self._update_history_with_error()
+            else:
+                # 尝试解析为数字
+                try:
+                    num_value = float(value.replace("%", ""))
+                    self._update_percent_display(num_value, value)
+                except ValueError:
+                    # 显示原始字符串
+                    self.value_label.setText(value)
+                    self._update_history_with_error()
         else:
+            # 未知类型，显示为字符串
             self.value_label.setText(str(value))
-        
-        # 添加新数据点
-        if isinstance(value, str) and value != "N/A":
-            # 尝试从字符串解析数值
-            try:
-                numeric_value = float(value.replace("%", "").replace("°C", ""))
-                self.data_points.append(numeric_value)
-            except (ValueError, AttributeError):
-                self.data_points.append(0)
-        else:
-            # 如果值已经是数值或N/A
-            try:
-                numeric_value = float(value) if value != "N/A" else 0
-                self.data_points.append(numeric_value)
-            except (ValueError, TypeError):
-                self.data_points.append(0)
-        
-        # 更新图表数据
-        self.series.clear()
-        
-        # 平滑数据点（简单平均）以使图表看起来更平滑
-        smoothed_points = self._smooth_data(list(self.data_points), 3)
-        
-        for i, point in enumerate(smoothed_points):
-            self.series.append(i, point)
-            
-        # 如果需要，调整Y轴范围
-        max_value = max(self.data_points)
-        if max_value > 0:
-            # 将上限设置为最大值的下一个25的倍数，并添加一点额外空间
-            upper_limit = ((int(max_value) // 25) + 1) * 25
-            self.axis_y.setRange(0, max(100, upper_limit))
+            self._update_history_with_error()
     
     def _smooth_data(self, data_points, window_size=3):
         """简单的移动平均平滑算法
@@ -200,6 +228,98 @@ class ChartTile(QFrame):
             
         return result
         
+    def _update_percent_display(self, value_num, text):
+        """更新百分比类型数据的显示"""
+        self.value_label.setText(text)
+        self.value_label.setStyleSheet("color: #e0e0e0; font-size: 18px; font-weight: bold;")
+        
+        # # 根据值设置边框颜色
+        # border_color = "#00a8ff"  # 默认
+        # if value_num >= 90:
+        #     border_color = "#ff5555"  # 高负载时为红色
+        # elif value_num >= 70:
+        #     border_color = "#ffaa00"  # 中等负载时为黄色
+        
+        # 设置灰色边框
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: #2d2d2d;
+                border: 2px solid #4d4d4d;
+                border-radius: 8px;
+            }}
+        """)
+        
+        # 更新图表数据
+        self._update_chart_data(value_num)
+        
+    def _update_temp_display(self, temp_value, text):
+        """更新温度类型数据的显示"""
+        self.value_label.setText(text)
+        self.value_label.setStyleSheet("color: #e0e0e0; font-size: 18px; font-weight: bold;")
+        
+        # 根据温度值设置边框颜色
+        border_color = "#10893E"  # 默认绿色
+        if temp_value >= 80:
+            border_color = "#ff5555"  # 高温为红色
+        elif temp_value >= 60:
+            border_color = "#ffaa00"  # 中等温度为黄色
+        
+        # 设置边框
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: #2d2d2d;
+                border: 2px solid {border_color};
+                border-radius: 8px;
+            }}
+        """)
+        
+        # 更新图表数据
+        self._update_chart_data(temp_value)
+        
+    def _update_history_with_error(self):
+        """处理图表历史记录，当出现错误或特殊状态时"""
+        # 保持当前的图表状态不变，只添加一个零值点
+        # 这样可以在图表上显示出有问题的时间段
+        self.data_points.append(0)
+        
+        # 只保留最近的MAX_DATA_POINTS个数据点
+        while len(self.data_points) > 60:  # 假设MAX_DATA_POINTS是60
+            self.data_points.pop(0)
+        
+        # 更新图表
+        self.series.clear()
+        
+        # 平滑数据点（简单平均）以使图表看起来更平滑
+        smoothed_points = self._smooth_data(list(self.data_points), 3)
+        
+        for i, point in enumerate(smoothed_points):
+            self.series.append(i, point)
+            
+    def _update_chart_data(self, value):
+        """更新图表数据"""
+        # 添加新数据点
+        self.data_points.append(value)
+        
+        # 只保留最近的MAX_DATA_POINTS个数据点
+        while len(self.data_points) > 60:  # 假设MAX_DATA_POINTS是60
+            self.data_points.pop(0)
+            
+        # 更新图表数据
+        self.series.clear()
+        
+        # 平滑数据点（简单平均）以使图表看起来更平滑
+        smoothed_points = self._smooth_data(list(self.data_points), 3)
+        
+        for i, point in enumerate(smoothed_points):
+            self.series.append(i, point)
+            
+        # 如果需要，调整Y轴范围
+        max_value = max(self.data_points) if self.data_points else 0
+        if max_value > 0:
+            # 将上限设置为最大值的下一个25的倍数，并添加一点额外空间
+            upper_limit = ((int(max_value) // 25) + 1) * 25
+            self.axis_y.setRange(0, max(100, upper_limit))
+
 class ActionTile(QFrame):
     """自定义样式的操作块小部件"""
     def __init__(self, title, description, icon_path=None, parent=None, color="#4285F4"):
@@ -336,12 +456,7 @@ class DashboardWidget(BaseComponent):
         # 添加伸缩项，确保内容垂直居中且组件合理分布空间
         self.main_layout.addStretch(1)
     
-    def create_system_stats_section(self):
-        # 统计标题
-        stats_title = QLabel(self.get_translation("system_resources"))
-        stats_title.setStyleSheet("font-size: 22px; font-weight: bold; color: #e0e0e0; margin-top: 10px; background-color: transparent;")
-        self.main_layout.addWidget(stats_title)
-        
+    def create_system_stats_section(self):        
         # 统计容器
         self.stats_frame = QFrame()
         self.stats_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -462,7 +577,7 @@ class DashboardWidget(BaseComponent):
         
         # 磁盘使用情况（系统驱动器）
         try:
-            if platform.system() == 'Windows':
+            if self.platform_manager == 'Windows':
                 # 在Windows上，获取C:驱动器的使用情况
                 total, used, free = shutil.disk_usage('C:')
                 disk_percent = (used / total) * 100
@@ -480,41 +595,42 @@ class DashboardWidget(BaseComponent):
         self._update_temperature()
     
     def _update_temperature(self):
-        """更新温度显示，使用更全面的检测方法"""
+        """更新温度显示，使用 SystemInformation 来获取温度数据"""
         try:
-            # 首先检查psutil是否支持温度传感器
-            if hasattr(psutil, "sensors_temperatures"):
-                temps = psutil.sensors_temperatures()
-                if temps:
-                    # 优先级顺序：CPU > 核心温度 > GPU > 其他
-                    for priority_sensor in ['coretemp', 'cpu_thermal', 'cpu-thermal', 'k10temp', 'acpitz', 'nvme']:
-                        if priority_sensor in temps:
-                            for entry in temps[priority_sensor]:
-                                if entry.current > 0:
-                                    self.temp_chart.update_value(f"{entry.current}°C")
-                                    return
-                    
-                    # 如果没有找到优先级高的传感器，使用第一个可用的
-                    for name, entries in temps.items():
-                        for entry in entries:
-                            if entry.current > 0:
-                                self.temp_chart.update_value(f"{entry.current}°C")
-                                return
-                                
-            # 尝试Windows特定的WMI方法（需要安装wmi包）
-            if platform.system() == 'Windows':
-                try:
-                    import wmi
-                    w = wmi.WMI(namespace="root\\wmi")
-                    temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
-                    temperature = (temperature_info.CurrentTemperature / 10.0) - 273.15  # 转换为摄氏度
-                    self.temp_chart.update_value(f"{temperature:.1f}°C")
-                    return
-                except (ImportError, Exception):
-                    pass
-                    
-            # 如果所有方法都失败，显示N/A
-                self.temp_chart.update_value("N/A")
+            # 使用 SystemInformation 类的 get_temperature 方法获取温度
+            temperature_data = self.system_information.get_temperature()
+            
+            # 检查是否处于重试延迟中
+            if len(temperature_data) == 2 and "CPU" in temperature_data and "System" in temperature_data:
+                if temperature_data["CPU"] == "N/A" and temperature_data["System"] == "N/A":
+                    # 如果处于延迟重试状态，显示特殊状态指示
+                    if self.system_information._temp_failure_count > 1:
+                        # 计算下次尝试剩余时间
+                        import time
+                        time_elapsed = time.time() - self.system_information._temp_last_attempt
+                        remaining = max(0, self.system_information._temp_retry_delay - time_elapsed)
+                        
+                        if remaining > 60:
+                            # 如果剩余时间超过1分钟，显示分钟
+                            self.temp_chart.update_value(f"Retry in {int(remaining/60)}m")
+                        else:
+                            # 否则显示秒数
+                            self.temp_chart.update_value(f"Retry in {int(remaining)}s")
+                        return
+            
+            # 如果有 CPU 温度，优先显示它
+            if "CPU" in temperature_data:
+                self.temp_chart.update_value(temperature_data["CPU"])
+                return
+            
+            # 如果没有 CPU 温度，但有其他温度数据，显示第一个
+            if temperature_data:
+                first_temp = next(iter(temperature_data.values()))
+                self.temp_chart.update_value(first_temp)
+                return
+                
+            # 如果没有找到温度数据，显示 N/A
+            self.temp_chart.update_value("N/A")
         except Exception as e:
             self.temp_chart.update_value("N/A")
             self.logger.error(f"Error getting temperature: {e}")  # 获取温度时出错

@@ -9,14 +9,14 @@
         "text_color": "#e6edf3",
         "accent_color": "#58a6ff",
         "bg_lighter": "#161b22",
-        "bg_darker": "#0a0d12"
+        "bg_darker": "#090c10"
     },
     "component_specific": {
         "button": {
             "primary_bg": "#58a6ff",
             "primary_text": "#ffffff",
-            "primary_hover": "#6cb6ff",
-            "primary_pressed": "#4896ef"
+            "primary_hover": "#79beff",
+            "primary_pressed": "#4993e6"
         },
         "progressbar": {
             "chunk_color": "#58a6ff"
