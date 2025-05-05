@@ -5,7 +5,7 @@ import subprocess
 import re
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                             QFrame, QPushButton, QSizePolicy, QSpacerItem,
-                            QRadioButton, QTextEdit, QButtonGroup, QGroupBox)
+                            QRadioButton, QTextEdit, QCheckBox, QButtonGroup, QGroupBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from components.base_component import BaseComponent
 from tools.dism_tools import DismThread
@@ -17,8 +17,6 @@ class DismToolWidget(BaseComponent):
         
         # 初始化属性
         self.dism_worker = None
-        
-
     
     def get_translation(self, key, default=None):
         """重写 get_translation 以使用正确的部分名称"""
@@ -75,24 +73,25 @@ class DismToolWidget(BaseComponent):
         # 操作选择的复选框
         self.operation_group = QButtonGroup(self)
         self.operation_group.setObjectName("dism_operation_group")
-        
-        self.check_health_rb = QRadioButton(self.get_translation("check_health"))
+       
+        self.check_health_rb = QCheckBox(self.get_translation("check_health"))
         self.check_health_rb.setChecked(True)
         self.check_health_rb.setObjectName("dism_check_health")
+        
         operations_layout.addWidget(self.check_health_rb)
         self.operation_group.addButton(self.check_health_rb)
         
-        self.scan_health_rb = QRadioButton(self.get_translation("scan_health"))
+        self.scan_health_rb = QCheckBox(self.get_translation("scan_health"))
         self.scan_health_rb.setObjectName("dism_scan_health")
         operations_layout.addWidget(self.scan_health_rb)
         self.operation_group.addButton(self.scan_health_rb)
         
-        self.restore_health_rb = QRadioButton(self.get_translation("restore_health"))
+        self.restore_health_rb = QCheckBox(self.get_translation("restore_health"))
         self.restore_health_rb.setObjectName("dism_restore_health")
         operations_layout.addWidget(self.restore_health_rb)
         self.operation_group.addButton(self.restore_health_rb)
         
-        self.cleanup_image_rb = QRadioButton(self.get_translation("cleanup_image"))
+        self.cleanup_image_rb = QCheckBox(self.get_translation("cleanup_image"))
         self.cleanup_image_rb.setObjectName("dism_cleanup_image")
         operations_layout.addWidget(self.cleanup_image_rb)
         self.operation_group.addButton(self.cleanup_image_rb)

@@ -22,7 +22,7 @@ from components.base_component import BaseComponent
 from components.dashboard import DashboardWidget
 from components.system_cleaner import SystemCleanerWidget
 from components.disk_check import DiskCheckWidget
-from components.boot_repair import BootRepairWidget
+from components.boot_repair import BootToolsWidget
 from components.virus_scan import VirusScanWidget
 from components.system_repair import SystemRepairWidget
 from components.dism_tool import DismToolWidget
@@ -437,30 +437,35 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(self.system_cleaner_btn)
         self.page_buttons["System Cleaner"] = self.system_cleaner_btn
         
-        self.registry_btn = self.create_sidebar_button(self.get_translation("system_repair", "System Repair"), Icon.Repair.Path, "System Repair", self.get_translation("system_repair_tooltip", "系统修复"))
+        # System Tools (previously System Repair)
+        self.registry_btn = self.create_sidebar_button(self.get_translation("system_repair", "System Tools"), Icon.Repair.Path, "System Tools", self.get_translation("system_repair_tooltip", "系统工具"))
         sidebar_layout.addWidget(self.registry_btn)
-        self.page_buttons["System Repair"] = self.registry_btn
+        self.page_buttons["System Tools"] = self.registry_btn
         
-        self.disk_tools_btn = self.create_sidebar_button(self.get_translation("disk_check", "Disk Check"), Icon.Disk.Path, "Disk Check", self.get_translation("disk_check_tooltip", "磁盘检查"))
+        # Disk Tools (previously Disk Check)
+        self.disk_tools_btn = self.create_sidebar_button(self.get_translation("disk_check", "Disk Tools"), Icon.Disk.Path, "Disk Tools", self.get_translation("disk_check_tooltip", "磁盘工具"))
         sidebar_layout.addWidget(self.disk_tools_btn)
-        self.page_buttons["Disk Check"] = self.disk_tools_btn
+        self.page_buttons["Disk Tools"] = self.disk_tools_btn
         
-        self.startup_btn = self.create_sidebar_button(self.get_translation("boot_repair", "Boot Repair"), Icon.Boot.Path, "Boot Repair", self.get_translation("boot_repair_tooltip", "启动修复"))
+        # Boot Tools (previously Boot Repair)
+        self.startup_btn = self.create_sidebar_button(self.get_translation("boot_repair", "Boot Tools"), Icon.Boot.Path, "Boot Tools", self.get_translation("boot_repair_tooltip", "启动工具"))
         sidebar_layout.addWidget(self.startup_btn)
-        self.page_buttons["Boot Repair"] = self.startup_btn
+        self.page_buttons["Boot Tools"] = self.startup_btn
         
-        self.uninstaller_btn = self.create_sidebar_button(self.get_translation("virus_scan", "Virus Scan"), Icon.Virus.Path, "Virus Scan", self.get_translation("virus_scan_tooltip", "病毒扫描"))
+        # Security Tools (previously Virus Scan)
+        self.uninstaller_btn = self.create_sidebar_button(self.get_translation("virus_scan", "Security Tools"), Icon.Virus.Path, "Security Tools", self.get_translation("virus_scan_tooltip", "安全工具"))
         sidebar_layout.addWidget(self.uninstaller_btn)
-        self.page_buttons["Virus Scan"] = self.uninstaller_btn
+        self.page_buttons["Security Tools"] = self.uninstaller_btn
         
         # 添加分类标题：安全
         security_title = QLabel(self.get_translation("security_section", "Security"))
         security_title.setStyleSheet("color: #999999; font-size: 13px; margin-top: 15px; background-color: transparent; font-weight: bold; padding-left: 12px;")
         sidebar_layout.addWidget(security_title)
         
-        self.privacy_btn = self.create_sidebar_button(self.get_translation("network_reset", "Network Reset"), Icon.Privacy.Path, "Network Reset", self.get_translation("network_reset_tooltip", "网络重置"))
+        # Network Tools (previously Network Reset)
+        self.privacy_btn = self.create_sidebar_button(self.get_translation("network_reset", "Network Tools"), Icon.Privacy.Path, "Network Tools", self.get_translation("network_reset_tooltip", "网络工具"))
         sidebar_layout.addWidget(self.privacy_btn)
-        self.page_buttons["Network Reset"] = self.privacy_btn
+        self.page_buttons["Network Tools"] = self.privacy_btn
         
         # 添加分类标题：高级
         advanced_title = QLabel(self.get_translation("advanced_section", "Advanced"))
@@ -649,19 +654,19 @@ class MainWindow(QMainWindow):
         self.system_cleaner_page.setObjectName("System Cleaner")
         
         self.registry_page = SystemRepairWidget(self)
-        self.registry_page.setObjectName("System Repair")
+        self.registry_page.setObjectName("System Tools")
         
         self.disk_tools_page = DiskCheckWidget(self)
-        self.disk_tools_page.setObjectName("Disk Check")
+        self.disk_tools_page.setObjectName("Disk Tools")
         
-        self.startup_page = BootRepairWidget(self)
-        self.startup_page.setObjectName("Boot Repair")
+        self.startup_page = BootToolsWidget(self)
+        self.startup_page.setObjectName("Boot Tools")
         
         self.uninstaller_page = VirusScanWidget(self)
-        self.uninstaller_page.setObjectName("Virus Scan")
+        self.uninstaller_page.setObjectName("Security Tools")
         
         self.privacy_page = NetworkResetWidget(self)
-        self.privacy_page.setObjectName("Network Reset")
+        self.privacy_page.setObjectName("Network Tools")
         
         self.driver_page = DismToolWidget(self)
         self.driver_page.setObjectName("DISM Tool")
@@ -688,11 +693,11 @@ class MainWindow(QMainWindow):
         self.page_indices = {
             "Dashboard": 0,
             "System Cleaner": 1,
-            "System Repair": 2,
-            "Disk Check": 3,
-            "Boot Repair": 4,
-            "Virus Scan": 5,
-            "Network Reset": 6,
+            "System Tools": 2,
+            "Disk Tools": 3,
+            "Boot Tools": 4,
+            "Security Tools": 5,
+            "Network Tools": 6,
             "DISM Tool": 7,
             "System Information": 8,
             "Settings": 9

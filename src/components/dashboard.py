@@ -557,10 +557,10 @@ class DashboardWidget(BaseComponent):
         self.quick_layout.addWidget(self.info_tile, 1, 1)
         
         # Connect tiles to correct pages
-        self.repair_tile.mousePressEvent = lambda event: self.navigate_to_page(3)  # System Repair page index (assuming 3)
+        self.repair_tile.mousePressEvent = lambda event: self.navigate_to_page(3)  # System Tools
         self.clean_tile.mousePressEvent = lambda event: self.navigate_to_page(1)  # System Cleaner
-        self.virus_tile.mousePressEvent = lambda event: self.navigate_to_page(8)  # Virus Scan
-        self.info_tile.mousePressEvent = lambda event: self.navigate_to_page(9)  # System Information
+        self.virus_tile.mousePressEvent = lambda event: self.navigate_to_page(5)  # Security Tools
+        self.info_tile.mousePressEvent = lambda event: self.window().set_active_page("System Information") if self.window() else None
 
         self.main_layout.addWidget(self.quick_frame, 3)
     
@@ -641,15 +641,14 @@ class DashboardWidget(BaseComponent):
         page_names = {
             0: "Dashboard",
             1: "System Cleaner",
-            2: "GPU Information",
-            3: "System Repair",
-            4: "DISM Tool",
-            5: "Network Reset",
-            6: "Disk Check",
-            7: "Boot Repair",
-            8: "Virus Scan",
-            9: "System Information",
-            10: "Settings"
+            2: "System Tools",
+            3: "Disk Tools",
+            4: "Boot Tools",
+            5: "Security Tools",
+            6: "Network Tools",
+            7: "DISM Tool",
+            8: "System Information",
+            9: "Settings"
         }
         
         # 查找主窗口以更改页面

@@ -6,10 +6,10 @@
         "gpu_information": "GPU信息",
         "system_repair": "系统修复",
         "dism_tool": "DISM工具",
-        "network_reset": "网络重置",
-        "disk_check": "磁盘检查",
-        "boot_repair": "启动修复",
-        "virus_scan": "病毒扫描",
+        "network_reset": "网络工具",
+        "disk_check": "磁盘工具",
+        "boot_repair": "启动工具",
+        "virus_scan": "安全工具",
         "system_information": "系统信息",
         "system_info": "系统信息",
         "settings": "设置",
@@ -66,7 +66,7 @@
         "get_system_info": "获取系统信息",
         "system_resources": "系统资源",
         "welcome_message": "欢迎使用Glary Utilities",
-        "system_repair": "系统修复",
+        "system_repair": "系统工具",
         "system_repair_desc": "修复系统启动问题和服务配置"
     },
     "system_cleaner": {
@@ -135,7 +135,7 @@
         "refresh": "刷新信息"
     },
     "system_repair": {
-        "title": "系统修复",
+        "title": "系统工具",
         "description": "检查并修复系统问题",
         "scan_for": "扫描项目：",
         "scan_options": "扫描选项",
@@ -176,7 +176,7 @@
         "log_output": "操作日志"
     },
     "network_reset": {
-        "title": "网络重置",
+        "title": "网络工具",
         "description": "重置网络设置以解决连接问题",
         "warning": "警告：这将重置所有网络适配器和设置",
         "operations": "操作：",
@@ -188,7 +188,7 @@
         "log_output": "操作日志"
     },
     "disk_check": {
-        "title": "磁盘检查",
+        "title": "磁盘工具",
         "ready_message": "准备检查磁盘",
         "description": "检查磁盘错误并修复",
         "select_drive": "选择驱动器：",
@@ -202,7 +202,7 @@
         "log_output": "操作日志"
     },
     "virus_scan": {
-        "title": "病毒扫描",
+        "title": "安全工具",
         "description": "扫描病毒和恶意软件以保护您的系统",
         "scan_tab": "扫描",
         "quarantine_tab": "隔离区",
@@ -433,17 +433,17 @@
         "dashboard_tooltip": "仪表盘和系统概览",
         "system_cleaner": "系统清理",
         "system_cleaner_tooltip": "清理系统垃圾文件",
-        "system_repair": "系统修复",
-        "system_repair_tooltip": "修复系统问题",
-        "disk_check": "磁盘检查",
+        "system_repair": "系统工具",
+        "system_repair_tooltip": "修复系统问题和系统维护工具",
+        "disk_check": "磁盘工具",
         "disk_check_tooltip": "检查和修复磁盘问题",
-        "boot_repair": "启动修复",
-        "boot_repair_tooltip": "修复启动问题",
-        "virus_scan": "病毒扫描",
-        "virus_scan_tooltip": "扫描病毒和恶意软件",
+        "boot_repair": "启动工具",
+        "boot_repair_tooltip": "修复启动问题和管理启动项",
+        "virus_scan": "安全工具",
+        "virus_scan_tooltip": "扫描病毒和管理系统安全",
         "security_section": "安全",
-        "network_reset": "网络重置",
-        "network_reset_tooltip": "解决网络连接问题",
+        "network_reset": "网络工具",
+        "network_reset_tooltip": "修复网络连接问题和管理网络设置",
         "advanced_section": "高级",
         "dism_tool": "DISM工具",
         "dism_tool_tooltip": "部署映像服务和管理工具",
@@ -532,8 +532,8 @@
         "help_contact_desc": "如需帮助，请访问我们的网站 <a href=\"https://www.chenrunsen.com\">www.glarysoft.com</a> 或发送邮件至 support@glarysoft.com"
     },
     "boot_repair": {
-        "title": "启动修复",
-        "description": "修复启动问题和Windows启动",
+        "title": "启动工具",
+        "description": "修复启动问题和管理Windows启动项",
         "scan_types": "修复类型",
         "quick_scan": "快速修复",
         "full_scan": "完整修复",

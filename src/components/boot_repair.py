@@ -10,8 +10,8 @@ from PyQt5.QtGui import QBrush, QColor
 from tools.boot_repair import BootRepairThread
 from tools.boot_repair import StartupManager
 
-class BootRepairWidget(BaseComponent):
-    """Widget for boot repair operations"""
+class BootToolsWidget(BaseComponent):
+    """Widget for boot tools operations including repair and startup management"""
     def __init__(self, parent=None):
         # 初始化属性
         self.boot_worker = None
@@ -30,7 +30,7 @@ class BootRepairWidget(BaseComponent):
         self.setAttribute(Qt.WA_StyledBackground, True)
         
         # 标题
-        self.title = QLabel(self.get_translation("title", "Boot Repair & Startup Manager"))
+        self.title = QLabel(self.get_translation("title", "Boot Tools & Startup Manager"))
         self.title.setStyleSheet("font-size: 24px; font-weight: bold;")
         self.main_layout.addWidget(self.title)
         
@@ -42,7 +42,7 @@ class BootRepairWidget(BaseComponent):
         
         # 非Windows系统的警告标签
         if not self.platform_manager.is_windows():
-            warning_label = QLabel("⚠️ Boot repair features are only available on Windows")
+            warning_label = QLabel("⚠️ Boot tools features are only available on Windows")
             warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
             self.main_layout.addWidget(warning_label)
         
@@ -124,6 +124,11 @@ class BootRepairWidget(BaseComponent):
                     
                     QCheckBox::indicator {{ width: 16px; height: 16px; border: 2px solid {accent_color}; border-radius: 3px; background-color: {bg_color}; }}
                     QCheckBox::indicator:unchecked {{ background-color: {bg_color}; }}
+                    QCheckBox::indicator:checked {{ 
+                        background-color: {accent_color}; 
+                        border: 2px solid {accent_color};
+                        image: url("resources/icons/check.svg");
+                    }}
                     QCheckBox::indicator:unchecked:hover {{ border-color: {self.lighten_color(accent_color, 20)}; background-color: {self.lighten_color(bg_color, 10)}; }}
                     QCheckBox::indicator:checked:hover {{ background-color: {self.lighten_color(accent_color, 10)}; }}
                     
@@ -144,7 +149,7 @@ class BootRepairWidget(BaseComponent):
                     pass
                 
         except Exception as e:
-            self.logger.error(f"Error applying theme in BootRepairWidget: {e}")
+            self.logger.error(f"Error applying theme in BootToolsWidget: {e}")
             
     def lighten_color(self, color, amount=0):
         """使颜色变亮或变暗
@@ -181,34 +186,27 @@ class BootRepairWidget(BaseComponent):
         options_group = QGroupBox(self.get_translation("repair_options", "Repair Options"))
         options_layout = QVBoxLayout(options_group)
         
-        # 创建按钮组，确保单选按钮互斥
-        self.repair_button_group = QButtonGroup(self)
-        self.repair_button_group.setObjectName("boot_repair_button_group")
-        
         # 修复选项
-        self.repair_mbr_radio = QRadioButton(self.get_translation("fix_mbr", "Fix Boot Sector"))
+        self.repair_mbr_radio = QCheckBox(self.get_translation("fix_mbr", "Fix Boot Sector"))
         self.repair_mbr_radio.setObjectName("repair_mbr_radio")
         self.repair_mbr_radio.setChecked(True)
-        self.repair_button_group.addButton(self.repair_mbr_radio)
+        self.repair_mbr_radio.clicked.connect(lambda: self.on_repair_option_clicked(self.repair_mbr_radio))
         
-        self.repair_bcd_radio = QRadioButton(self.get_translation("rebuild_bcd", "Repair Boot Configuration Data (BCD)"))
+        self.repair_bcd_radio = QCheckBox(self.get_translation("rebuild_bcd", "Repair Boot Configuration Data (BCD)"))
         self.repair_bcd_radio.setObjectName("repair_bcd_radio")
-        self.repair_button_group.addButton(self.repair_bcd_radio)
+        self.repair_bcd_radio.clicked.connect(lambda: self.on_repair_option_clicked(self.repair_bcd_radio))
         
-        self.repair_bootmgr_radio = QRadioButton(self.get_translation("fix_boot", "Repair Boot Manager"))
+        self.repair_bootmgr_radio = QCheckBox(self.get_translation("fix_boot", "Repair Boot Manager"))
         self.repair_bootmgr_radio.setObjectName("repair_bootmgr_radio")
-        self.repair_button_group.addButton(self.repair_bootmgr_radio)
+        self.repair_bootmgr_radio.clicked.connect(lambda: self.on_repair_option_clicked(self.repair_bootmgr_radio))
         
-        self.repair_winload_radio = QRadioButton(self.get_translation("repair_winload", "Repair Windows Loader"))
+        self.repair_winload_radio = QCheckBox(self.get_translation("repair_winload", "Repair Windows Loader"))
         self.repair_winload_radio.setObjectName("repair_winload_radio")
-        self.repair_button_group.addButton(self.repair_winload_radio)
+        self.repair_winload_radio.clicked.connect(lambda: self.on_repair_option_clicked(self.repair_winload_radio))
         
-        self.repair_full_radio = QRadioButton(self.get_translation("full_repair", "Full Repair"))
+        self.repair_full_radio = QCheckBox(self.get_translation("full_repair", "Full Repair"))
         self.repair_full_radio.setObjectName("repair_full_radio")
-        self.repair_button_group.addButton(self.repair_full_radio)
-        
-        # 连接按钮组信号
-        self.repair_button_group.buttonClicked.connect(self.on_repair_type_changed)
+        self.repair_full_radio.clicked.connect(lambda: self.on_repair_option_clicked(self.repair_full_radio))
         
         options_layout.addWidget(self.repair_mbr_radio)
         options_layout.addWidget(self.repair_bcd_radio)
@@ -522,17 +520,31 @@ class BootRepairWidget(BaseComponent):
     
     def start_repair(self):
         """Start the boot repair process"""
-        # Determine which repair option is selected
+        # Find the selected repair option (now only one can be selected)
+        selected_repair = None
+        repair_name = None
+        
         if self.repair_mbr_radio.isChecked():
-            repair_type = "mbr"
+            selected_repair = "mbr"
+            repair_name = "MBR"
         elif self.repair_bcd_radio.isChecked():
-            repair_type = "bcd"
+            selected_repair = "bcd"
+            repair_name = "BCD"
         elif self.repair_bootmgr_radio.isChecked():
-            repair_type = "bootmgr"
+            selected_repair = "bootmgr"
+            repair_name = "Boot Manager"
         elif self.repair_winload_radio.isChecked():
-            repair_type = "winload"
+            selected_repair = "winload"
+            repair_name = "Windows Loader"
         elif self.repair_full_radio.isChecked():
-            repair_type = "full"
+            selected_repair = "full"
+            repair_name = "Full Repair"
+        
+        # Check if any repair option is selected
+        if not selected_repair:
+            QMessageBox.warning(self, "No Selection", 
+                                "Please select at least one repair option.")
+            return
         
         # Check if we're on Windows
         if not self.platform_manager.is_windows():
@@ -542,20 +554,20 @@ class BootRepairWidget(BaseComponent):
             
         # Confirmation dialog
         reply = QMessageBox.question(self, 'Confirm Boot Repair', 
-                                    f"Are you sure you want to perform {repair_type.upper()} boot repair?\n\n"
+                                    f"Are you sure you want to perform this repair: {repair_name}?\n\n"
                                     "Note: This is a simulated operation for safety.",
                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         
         if reply == QMessageBox.Yes:
             # Clear previous log
             self.log_output.clear()
-            self.log_output.append(f"Starting {repair_type.upper()} boot repair...")
+            self.log_output.append(f"Starting boot repair: {repair_name}...")
             
             # Reset progress bar
             self.progress_bar.setValue(0)
             
             # Create and start thread
-            self.boot_worker = BootRepairThread(repair_type)
+            self.boot_worker = BootRepairThread(selected_repair)
             self.boot_worker.update_progress.connect(self.update_progress)
             self.boot_worker.update_log.connect(self.update_log)
             self.boot_worker.finished_operation.connect(self.repair_finished)
@@ -656,24 +668,42 @@ class BootRepairWidget(BaseComponent):
                 self.get_translation("impact", "Impact")
             ]) 
             
-    def on_repair_type_changed(self, button):
-        """处理修复类型选择改变"""
-        button_id = button.objectName()
-        button_text = button.text()
-        self.logger.info(f"启动修复类型更改为: {button_text}")
+    def on_repair_option_clicked(self, checkbox):
+        """处理修复选项点击"""
+        button_id = checkbox.objectName()
+        self.logger.info(f"启动修复选项更改为: {checkbox.text()}")
         
-        # 保存设置
-        self.settings.set_setting("boot_repair_type", button_id)
-        self.settings.set_setting("boot_repair_text", button_text)
-        self.settings.sync()
-        
-        # 更新UI文本
-        self.log_output.setText(self.get_translation("boot_repair_ready", "Boot repair tool is ready, please select a repair option and click the \"Start Repair\" button."))
-        
-        # 您可以根据不同的修复类型添加特定逻辑
-        if button_id == "repair_full_radio":
-            self.log_output.append(self.get_translation("full_repair_warning", "警告: 完整修复将重建所有启动组件，请确保您有足够的权限和备份。"))
+        # 如果用户选中一个选项
+        if checkbox.isChecked():
+            # 保存设置
+            self.settings.set_setting("boot_repair_type", button_id)
+            self.settings.sync()
             
+            # 确保其他选项被取消选中（互斥性）
+            if checkbox != self.repair_mbr_radio:
+                self.repair_mbr_radio.setChecked(False)
+            if checkbox != self.repair_bcd_radio:
+                self.repair_bcd_radio.setChecked(False)
+            if checkbox != self.repair_bootmgr_radio:
+                self.repair_bootmgr_radio.setChecked(False)
+            if checkbox != self.repair_winload_radio:
+                self.repair_winload_radio.setChecked(False)
+            if checkbox != self.repair_full_radio:
+                self.repair_full_radio.setChecked(False)
+            
+            # 记录所选修复选项
+            repair_type = button_id.replace("_radio", "")
+            self.log_output.append(self.get_translation("selected_repair", f"已选择修复选项: {checkbox.text()}"))
+        else:
+            # 如果用户取消了当前选项，确保至少有一个选项是选中的
+            if not (self.repair_mbr_radio.isChecked() or 
+                    self.repair_bcd_radio.isChecked() or 
+                    self.repair_bootmgr_radio.isChecked() or 
+                    self.repair_winload_radio.isChecked() or 
+                    self.repair_full_radio.isChecked()):
+                # 默认选中当前选项（不允许没有选项被选中）
+                checkbox.setChecked(True)
+
     def toggle_startup_item(self, state):
         """处理启动项复选框状态改变"""
         if state == Qt.Checked:

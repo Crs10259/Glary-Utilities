@@ -85,8 +85,6 @@ class VirusScanWidget(BaseComponent):
         # 添加到主布局
         self.main_layout.addWidget(self.tabs)
         
-        # 在初始化后特别处理单选按钮的大小和样式
-        self.update_radio_buttons_size()
     
     def apply_theme(self):
         """应用主题样式到组件"""
@@ -136,6 +134,11 @@ class VirusScanWidget(BaseComponent):
                 
                 QCheckBox::indicator {{ width: 16px; height: 16px; border: 2px solid {accent_color}; border-radius: 3px; background-color: {bg_color}; }}
                 QCheckBox::indicator:unchecked {{ background-color: {bg_color}; }}
+                QCheckBox::indicator:checked {{ 
+                    background-color: {accent_color}; 
+                    border: 2px solid {accent_color};
+                    image: url("resources/icons/check.svg");
+                }}
                 QCheckBox::indicator:unchecked:hover {{ border-color: {self.lighten_color(accent_color, 20)}; background-color: {self.lighten_color(bg_color, 10)}; }}
                 QCheckBox::indicator:checked:hover {{ background-color: {self.lighten_color(accent_color, 10)}; }}
                 
@@ -248,27 +251,26 @@ class VirusScanWidget(BaseComponent):
         options_layout = QVBoxLayout(scan_options_group)
         
         # 创建扫描类型按钮组
-        self.scan_type_group = QButtonGroup()
-        self.scan_type_group.setObjectName("virus_scan_type_group")
+        # 不使用QButtonGroup，让复选框独立工作
         
         # 快速扫描选项
-        self.quick_scan_rb = QRadioButton(self.get_translation("quick_scan", "Quick Scan"))
+        self.quick_scan_rb = QCheckBox(self.get_translation("quick_scan", "Quick Scan"))
         self.quick_scan_rb.setChecked(True)
         self.quick_scan_rb.setObjectName("virus_scan_quick")
+        self.quick_scan_rb.clicked.connect(lambda: self.on_scan_option_clicked(self.quick_scan_rb))
         options_layout.addWidget(self.quick_scan_rb)
-        self.scan_type_group.addButton(self.quick_scan_rb)
         
         # 完整扫描选项
-        self.full_scan_rb = QRadioButton(self.get_translation("full_scan", "Full Scan"))
+        self.full_scan_rb = QCheckBox(self.get_translation("full_scan", "Full Scan"))
         self.full_scan_rb.setObjectName("virus_scan_full")
+        self.full_scan_rb.clicked.connect(lambda: self.on_scan_option_clicked(self.full_scan_rb))
         options_layout.addWidget(self.full_scan_rb)
-        self.scan_type_group.addButton(self.full_scan_rb)
         
         # 自定义扫描选项
-        self.custom_scan_rb = QRadioButton(self.get_translation("custom_scan", "Custom Scan"))
+        self.custom_scan_rb = QCheckBox(self.get_translation("custom_scan", "Custom Scan"))
         self.custom_scan_rb.setObjectName("virus_scan_custom")
+        self.custom_scan_rb.clicked.connect(lambda: self.on_scan_option_clicked(self.custom_scan_rb))
         options_layout.addWidget(self.custom_scan_rb)
-        self.scan_type_group.addButton(self.custom_scan_rb)
         
         # 自定义扫描路径选择
         custom_scan_layout = QHBoxLayout()
@@ -407,27 +409,27 @@ class VirusScanWidget(BaseComponent):
         if progress_group:
             progress_group.setTitle(self.get_translation("progress", "Scan Progress"))
         
-        # 更新单选按钮
-        if hasattr(self, "radio_quick"):
-            self.radio_quick.setText(self.get_translation("quick_scan"))
-        if hasattr(self, "radio_full"):
-            self.radio_full.setText(self.get_translation("full_scan"))
-        if hasattr(self, "radio_custom"):
-            self.radio_custom.setText(self.get_translation("custom_scan"))
+        # # 更新单选按钮
+        # if hasattr(self, "radio_quick"):
+        #     self.radio_quick.setText(self.get_translation("quick_scan"))
+        # if hasattr(self, "radio_full"):
+        #     self.radio_full.setText(self.get_translation("full_scan"))
+        # if hasattr(self, "radio_custom"):
+        #     self.radio_custom.setText(self.get_translation("custom_scan"))
         
-        # 更新自定义扫描控件
-        if hasattr(self, "add_target_button"):
-            self.add_target_button.setText(self.get_translation("select_folder"))
-        if hasattr(self, "remove_target_button"):
-            self.remove_target_button.setText(self.get_translation("remove", "Remove Selected"))
+        # # 更新自定义扫描控件
+        # if hasattr(self, "add_target_button"):
+        #     self.add_target_button.setText(self.get_translation("select_folder"))
+        # if hasattr(self, "remove_target_button"):
+        #     self.remove_target_button.setText(self.get_translation("remove", "Remove Selected"))
         
         # 更新扫描选项复选框
-        if hasattr(self, "option_archive"):
-            self.option_archive.setText(self.get_translation("scan_archives", "Scan inside archives (zip, rar, etc.)"))
-        if hasattr(self, "option_rootkits"):
-            self.option_rootkits.setText(self.get_translation("scan_rootkits", "Scan for rootkits and bootkits"))
-        if hasattr(self, "option_autofix"):
-            self.option_autofix.setText(self.get_translation("autofix", "Automatically attempt to fix detected issues"))
+        # if hasattr(self, "option_archive"):
+        #     self.option_archive.setText(self.get_translation("scan_archives", "Scan inside archives (zip, rar, etc.)"))
+        # if hasattr(self, "option_rootkits"):
+        #     self.option_rootkits.setText(self.get_translation("scan_rootkits", "Scan for rootkits and bootkits"))
+        # if hasattr(self, "option_autofix"):
+        #     self.option_autofix.setText(self.get_translation("autofix", "Automatically attempt to fix detected issues"))
         
         # 更新威胁组
         threats_group = self.findChild(QGroupBox, "threats_group")
@@ -439,15 +441,15 @@ class VirusScanWidget(BaseComponent):
         if log_group:
             log_group.setTitle(self.get_translation("log_output", "Scan Log"))
         
-        # 更新按钮
-        if hasattr(self, "start_button"):
-            self.start_button.setText(self.get_translation("scan_button"))
-        if hasattr(self, "stop_button"):
-            self.stop_button.setText(self.get_translation("stop_button"))
-        if hasattr(self, "fix_button"):
-            self.fix_button.setText(self.get_translation("clean_threats"))
-        if hasattr(self, "clear_log_button"):
-            self.clear_log_button.setText(self.get_translation("clear_log", "Clear Log"))
+        # # 更新按钮
+        # if hasattr(self, "start_button"):
+        #     self.start_button.setText(self.get_translation("scan_button"))
+        # if hasattr(self, "stop_button"):
+        #     self.stop_button.setText(self.get_translation("stop_button"))
+        # if hasattr(self, "fix_button"):
+        #     self.fix_button.setText(self.get_translation("clean_threats"))
+        # if hasattr(self, "clear_log_button"):
+        #     self.clear_log_button.setText(self.get_translation("clear_log", "Clear Log"))
 
     def clear_log(self):
         """清除日志输出"""
@@ -456,18 +458,23 @@ class VirusScanWidget(BaseComponent):
         
     def start_scan(self):
         """Start the virus scan process"""
-        # Determine scan type
-        if self.quick_scan_rb.isChecked():
-            scan_type = "quick"
-        elif self.full_scan_rb.isChecked():
-            scan_type = "full"
-        elif self.custom_scan_rb.isChecked():
+        # Determine scan type - choose the first selected option
+        scan_type = "quick"  # Default to quick scan
+        
+        if self.custom_scan_rb.isChecked():
             scan_type = "custom"
             if not self.custom_scan_targets:
                 QMessageBox.warning(self, 
                                   self.get_translation("no_targets", "未选择目标"), 
                                   self.get_translation("select_targets_msg", "请至少选择一个要扫描的文件或文件夹。"))
                 return
+        elif self.full_scan_rb.isChecked():
+            scan_type = "full"
+        elif self.quick_scan_rb.isChecked():
+            scan_type = "quick"
+        else:
+            # If nothing is selected, default to quick scan
+            self.quick_scan_rb.setChecked(True)
         
         # Collect scan options
         scan_options = {
@@ -730,67 +737,6 @@ class VirusScanWidget(BaseComponent):
                                    self.get_translation("quarantine_complete", "隔离完成"), 
                                    self.get_translation("quarantine_success", "选中的威胁已成功隔离！")) 
 
-    def on_scan_type_changed(self, button):
-        """处理扫描类型选择改变"""
-        button_id = button.objectName()
-        self.logger.info(f"病毒扫描类型更改为: {button.text()}")
-        
-        # 保存设置
-        self.settings.set_setting("virus_scan_type", button_id)
-        self.settings.sync()
-        
-        # 更新UI状态
-        if button_id == "virus_scan_custom":
-            self.custom_path_edit.setEnabled(True)
-            self.browse_button.setEnabled(True)
-        else:
-            self.custom_path_edit.setEnabled(False)
-            self.browse_button.setEnabled(False)
-        
-        # 在初始化后特别处理单选按钮的大小和样式
-        self.update_radio_buttons_size()
-
-    def update_radio_buttons_size(self):
-        """更新单选按钮的大小和样式，适配当前主题"""
-        # 获取当前主题颜色
-        theme_name = self.settings.get_setting("theme", "dark")
-        theme_data = self.settings.load_theme(theme_name)
-        
-        # 设置默认颜色
-        text_color = "#dcdcdc"
-        accent_color = "#007acc"
-        
-        # 更新颜色值（如果有主题数据）
-        if theme_data and "colors" in theme_data:
-            text_color = theme_data["colors"].get("text_color", text_color)
-            accent_color = theme_data["colors"].get("accent_color", accent_color)
-
-        # 生成通用的样式
-        radio_style = f"""
-            QRadioButton {{
-                min-height: 30px;
-                font-size: 13px;
-                padding: 4px;
-                color: {text_color};
-                spacing: 8px;
-            }}
-            QRadioButton::indicator {{
-                width: 18px;
-                height: 18px;
-                border: 2px solid {accent_color};
-                border-radius: 10px;
-            }}
-            QRadioButton::indicator:checked {{
-                background-color: {accent_color};
-                border: 4px solid {accent_color};
-                width: 10px;
-                height: 10px;
-            }}
-            QRadioButton:checked {{
-                font-weight: bold;
-            }}
-        """
-
     def apply_settings(self, settings=None):
         """应用设置更改到此组件
         
@@ -842,15 +788,54 @@ class VirusScanWidget(BaseComponent):
             scan_type: 要应用的扫描类型ID
         """
         try:
-            # 设置相应的单选按钮为选中状态
-            if scan_type == 'virus_scan_quick' and hasattr(self, 'quick_scan_rb'):
+            # 先将所有选项都设为未选中
+            self.quick_scan_rb.setChecked(False)
+            self.full_scan_rb.setChecked(False)
+            self.custom_scan_rb.setChecked(False)
+            self.toggle_custom_scan(False)
+                
+            # 设置相应的复选框为选中状态
+            if scan_type == 'virus_scan_quick':
                 self.quick_scan_rb.setChecked(True)
-                self.toggle_custom_scan(False)
-            elif scan_type == 'virus_scan_full' and hasattr(self, 'full_scan_rb'):
+            elif scan_type == 'virus_scan_full':
                 self.full_scan_rb.setChecked(True)
-                self.toggle_custom_scan(False)
-            elif scan_type == 'virus_scan_custom' and hasattr(self, 'custom_scan_rb'):
+            elif scan_type == 'virus_scan_custom':
                 self.custom_scan_rb.setChecked(True)
                 self.toggle_custom_scan(True)
+            else:
+                # 默认选择快速扫描
+                self.quick_scan_rb.setChecked(True)
         except Exception as e:
-            self.logger.error(f"应用扫描类型时出错: {str(e)}") 
+            self.logger.error(f"应用扫描类型时出错: {str(e)}")
+
+    def on_scan_option_clicked(self, checkbox):
+        """处理扫描类型选择改变"""
+        button_id = checkbox.objectName()
+        self.logger.info(f"病毒扫描类型更改为: {checkbox.text()}")
+        
+        # 如果用户选中一个选项
+        if checkbox.isChecked():
+            # 保存设置
+            self.settings.set_setting("virus_scan_type", button_id)
+            self.settings.sync()
+            
+            # 确保其他选项被取消选中（互斥性）
+            if button_id == "virus_scan_quick":
+                self.full_scan_rb.setChecked(False)
+                self.custom_scan_rb.setChecked(False)
+                self.toggle_custom_scan(False)
+            elif button_id == "virus_scan_full":
+                self.quick_scan_rb.setChecked(False)
+                self.custom_scan_rb.setChecked(False)
+                self.toggle_custom_scan(False)
+            elif button_id == "virus_scan_custom":
+                self.quick_scan_rb.setChecked(False)
+                self.full_scan_rb.setChecked(False)
+                self.toggle_custom_scan(True)
+        else:
+            # 如果用户取消了当前选项，确保至少有一个选项是选中的
+            if not (self.quick_scan_rb.isChecked() or 
+                   self.full_scan_rb.isChecked() or 
+                   self.custom_scan_rb.isChecked()):
+                # 默认选中当前选项（不允许没有选项被选中）
+                checkbox.setChecked(True) 
