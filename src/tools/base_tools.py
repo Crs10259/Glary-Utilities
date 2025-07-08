@@ -301,7 +301,7 @@ class SystemInformation(PlatformManager):
                 if interface["addresses"]:
                     interfaces.append(interface)
             
-            info["interfaces"] = interfaces
+            # info["interfaces"] = interfaces
             
             return info
         except Exception as e:

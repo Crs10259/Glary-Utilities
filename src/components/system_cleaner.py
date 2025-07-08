@@ -28,6 +28,9 @@ class SystemCleanerWidget(BaseComponent):
         # 加载排除项和扩展名
         self.load_exclusions()
         self.load_extensions()
+
+        # Re-apply theme once UI is built so dynamic colors propagate
+        self.apply_theme()
     
     def get_translation(self, key, default=None):
         """重写 get_translation 以使用正确的部分名称"""
@@ -541,7 +544,35 @@ class SystemCleanerWidget(BaseComponent):
     def update_progress(self, progress, status):
         """更新进度条和状态标签"""
         self.progress_bar.setValue(progress)
-        self.log_text.append(status)
+
+        # If current language is not Chinese, translate known Chinese status strings
+        current_lang = self.settings.get_setting("language", "en")
+        language_map = {
+            "en": "en", "english": "en", "English": "en",
+            "zh": "zh", "中文": "zh", "chinese": "zh", "Chinese": "zh"
+        }
+        lang_code = language_map.get(str(current_lang).lower(), current_lang)
+
+        translated_status = status
+        if lang_code != "zh":
+            translations_map = {
+                "开始扫描...": self.get_translation("scanning", "Scanning..."),
+                "扫描临时文件...": self.get_translation("scanning_temp", "Scanning temporary files..."),
+                "扫描回收站...": self.get_translation("scanning_recycle", "Scanning recycle bin..."),
+                "扫描缓存文件...": self.get_translation("scanning_cache", "Scanning cache files..."),
+                "扫描日志文件...": self.get_translation("scanning_logs", "Scanning log files..."),
+                "扫描完成。": self.get_translation("scan_complete", "Scan complete."),
+                "清理": self.get_translation("cleaning", "Cleaning"),
+                "清理完成。": self.get_translation("clean_complete", "Clean complete."),
+            }
+
+            for cn, en in translations_map.items():
+                if status.startswith(cn):
+                    suffix = status[len(cn):]  # Preserve counts etc.
+                    translated_status = en + suffix
+                    break
+
+        self.log_text.append(translated_status)
     
     def scan_completed(self, results):
         """处理扫描完成"""
@@ -796,3 +827,76 @@ class SystemCleanerWidget(BaseComponent):
             self.logger.debug(f"已保存 {len(self.extensions)} 个扩展名")
         except Exception as e:
             self.logger.error(f"保存扩展名失败: {str(e)}") 
+
+    def apply_theme(self):
+        """Apply theme colors dynamically instead of hard-coded dark scheme."""
+        try:
+            # If UI not yet built, skip styling – BaseComponent will call again post-init
+            if not hasattr(self, "tab_widget"):
+                return
+
+            # Call base implementation to setup default palette
+            super().apply_theme()
+
+            colors = self.theme_manager.get_theme_colors()
+            bg_color = colors.get("bg_color", "#1e1e1e")
+            text_color = colors.get("text_color", "#e0e0e0")
+            accent_color = colors.get("accent_color", "#00a8ff")
+            bg_lighter = colors.get("bg_lighter", self.theme_manager.lighten_color(bg_color, 10))
+            bg_darker = colors.get("bg_darker", self.theme_manager.lighten_color(bg_color, -10))
+
+            # Update tab styles with dynamic colors
+            self.tab_widget.setStyleSheet(f"""
+                QTabWidget::pane {{
+                    border: 1px solid {accent_color};
+                    border-radius: 6px;
+                    background-color: {bg_lighter};
+                }}
+                QTabBar::tab {{
+                    background-color: {bg_darker};
+                    color: {text_color};
+                    border: 1px solid {accent_color};
+                    border-bottom: none;
+                    border-top-left-radius: 4px;
+                    border-top-right-radius: 4px;
+                    padding: 8px 12px;
+                    margin-right: 4px;
+                }}
+                QTabBar::tab:selected {{
+                    background-color: {bg_lighter};
+                    color: {text_color};
+                }}
+                QTabBar::tab:hover {{
+                    background-color: {self.theme_manager.lighten_color(bg_lighter, 10)};
+                }}
+            """)
+
+            # Progress bar colors
+            self.progress_bar.setStyleSheet(f"""
+                QProgressBar {{
+                    background-color: {bg_darker};
+                    color: {text_color};
+                    border: 1px solid {accent_color};
+                    border-radius: 4px;
+                    text-align: center;
+                }}
+                QProgressBar::chunk {{
+                    background-color: {accent_color};
+                    border-radius: 3px;
+                }}
+            """)
+
+            # Text edit background
+            self.log_text.setStyleSheet(f"""
+                QTextEdit {{
+                    background-color: {bg_darker};
+                    color: {text_color};
+                    border: 1px solid {accent_color};
+                    border-radius: 4px;
+                    font-family: monospace;
+                    font-size: 12px;
+                    line-height: 1.4;
+                }}
+            """)
+        except Exception as e:
+            self.logger.error(f"Error applying theme in SystemCleanerWidget: {e}") 

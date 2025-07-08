@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt5.QtGui import QIcon, QPixmap, QFont, QColor, QPainter, QPainterPath
 from PyQt5.QtCore import (Qt, QSize, QPoint, QPropertyAnimation, 
                         QParallelAnimationGroup, QSequentialAnimationGroup,
-                        QEasingCurve, pyqtSignal, QTimer, QAbstractAnimation,
+                        QEasingCurve, pyqtSignal, QTimer, QAbstractAnimation, QThread,
                         QRect, QEvent, QObject)
 from utils.logger import Logger
 
@@ -424,7 +424,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addLayout(logo_layout)
 
         # 添加分类标题：常用
-        common_title = QLabel("Common")
+        common_title = QLabel(self.get_translation("common_section", "Common"))
         common_title.setStyleSheet("color: #999999; font-size: 13px; margin-top: 5px; background-color: transparent; font-weight: bold; padding-left: 2px;")
         sidebar_layout.addWidget(common_title)
 
@@ -1027,8 +1027,8 @@ class MainWindow(QMainWindow):
                 if dialog.objectName() == "HelpDialog":
                     dialog.reject()
                     
-            # Save language setting
-            self.settings.set_setting("language", language)
+            # Update language setting and refresh translation cache
+            self.settings.set_language(language)
             self.settings.sync()
             
             # 直接更新UI文本，而不是触发信号
@@ -1438,7 +1438,7 @@ class MainWindow(QMainWindow):
             content_layout.addWidget(dev_label)
             
             # 添加网站链接
-            website_label = QLabel("<a href='https://www.chenrunsen.com' style='color: #5b9bd5;'>www.glarysoft.com</a>")
+            website_label = QLabel("<a href='https://www.chenrunsen.com' style='color: #5b9bd5;'>www.chenrunsen.com</a>")
             website_label.setOpenExternalLinks(True)
             website_label.setStyleSheet("font-size: 14px; color: #5b9bd5;")
             content_layout.addWidget(website_label)
@@ -1741,4 +1741,28 @@ class MainWindow(QMainWindow):
         # Settings
         if hasattr(self, 'settings_btn'):
             self.settings_btn.setToolTip(self.get_translation("settings_tooltip", "Configure application settings and preferences"))
+
+    def closeEvent(self, event):
+        """确保关闭窗口时终止所有后台线程/定时器，防止进程挂起"""
+        try:
+            # 停止所有 QTimer
+            for timer in self.findChildren(QTimer):
+                try:
+                    timer.stop()
+                except Exception:
+                    pass
+
+            # 终止所有 QThread
+            for thread in self.findChildren(QThread):
+                try:
+                    thread.requestInterruption()
+                    thread.quit()
+                    thread.wait(1000)
+                except Exception:
+                    pass
+        except Exception as e:
+            self.logger.error(f"Error while shutting down threads: {e}")
+
+        # 继续默认处理，最终退出应用
+        super().closeEvent(event)
  

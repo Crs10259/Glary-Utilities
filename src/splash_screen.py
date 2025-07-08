@@ -28,7 +28,8 @@ class CustomProgressBar(QProgressBar):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.logger = Logger().get_logger()
-        self.setTextVisible(True)
+        # Hide default text to avoid overlap with custom percentage drawing
+        self.setTextVisible(False)
         self.setAlignment(Qt.AlignCenter)
         
     def paintEvent(self, event):
@@ -168,7 +169,8 @@ class SplashScreen(QWidget):
         self.progress_bar = CustomProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
-        self.progress_bar.setTextVisible(True)
+        # Keep default text hidden; percentage is drawn manually in CustomProgressBar
+        self.progress_bar.setTextVisible(False)
         self.progress_bar.setFixedHeight(20)  # 增加高度以更好地显示文本
         self.progress_bar.setStyleSheet("""
             QProgressBar {

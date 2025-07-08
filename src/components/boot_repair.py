@@ -260,7 +260,7 @@ class BootToolsWidget(BaseComponent):
         layout.setSpacing(10)
         
         # 描述
-        description = QLabel(self.get_translation("startup_desc", "管理Windows启动项，启用或禁用自启动程序。"))
+        description = QLabel(self.get_translation("startup_desc", "Manage Windows startup items, enable or disable self-starting programs."))
         description.setStyleSheet("font-size: 14px;")
         description.setWordWrap(True)
         layout.addWidget(description)
@@ -269,10 +269,10 @@ class BootToolsWidget(BaseComponent):
         self.startup_table = QTableWidget()
         self.startup_table.setColumnCount(4)
         self.startup_table.setHorizontalHeaderLabels([
-            self.get_translation("startup_name", "名称"),
-            self.get_translation("startup_path", "路径"),
-            self.get_translation("startup_status", "状态"),
-            self.get_translation("startup_type", "类型")
+            self.get_translation("startup_name", "Name"),
+            self.get_translation("startup_path", "Path"),
+            self.get_translation("startup_status", "Status"),
+            self.get_translation("startup_type", "Type")
         ])
         
         # 设置表格属性
@@ -291,21 +291,21 @@ class BootToolsWidget(BaseComponent):
         button_layout.addWidget(self.add_button)
         
         # 刷新按钮
-        self.refresh_button = QPushButton(self.get_translation("refresh", "刷新列表"))
+        self.refresh_button = QPushButton(self.get_translation("refresh", "Refresh"))
         self.refresh_button.clicked.connect(self.refresh_startup_items)
         button_layout.addWidget(self.refresh_button)
         
         # 启用/禁用按钮
-        self.enable_button = QPushButton(self.get_translation("enable", "启用选中"))
+        self.enable_button = QPushButton(self.get_translation("enable", "Enable Selected"))
         self.enable_button.clicked.connect(self.enable_startup_item)
         button_layout.addWidget(self.enable_button)
         
-        self.disable_button = QPushButton(self.get_translation("disable", "禁用选中"))
+        self.disable_button = QPushButton(self.get_translation("disable", "Disable Selected"))
         self.disable_button.clicked.connect(self.disable_startup_item)
         button_layout.addWidget(self.disable_button)
         
         # 删除按钮
-        self.delete_button = QPushButton(self.get_translation("delete", "删除选中"))
+        self.delete_button = QPushButton(self.get_translation("delete", "Delete Selected"))
         self.delete_button.clicked.connect(self.delete_startup_item)
         button_layout.addWidget(self.delete_button)
         
@@ -328,7 +328,7 @@ class BootToolsWidget(BaseComponent):
             self.disable_button.setEnabled(False)
             self.delete_button.setEnabled(False)
             # 添加警告标签
-            warning_label = QLabel("⚠️ 启动项管理功能仅在Windows系统上可用")
+            warning_label = QLabel(self.get_translation("startup_warning", "⚠️ Startup management is only available on Windows systems"))
             warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
             layout.addWidget(warning_label)
 
@@ -392,21 +392,21 @@ class BootToolsWidget(BaseComponent):
             name = self.startup_table.item(row, 0).text()
             item_type = self.startup_table.item(row, 3).text()
             
-            self.log_output.append(self.get_translation("enabling", f"正在启用 {name}..."))
+            self.log_output.append(self.get_translation("enabling", f"Enabling {name}..."))
             
             # 尝试启用启动项
             if StartupManager.enable_startup_item(name, item_type):
                 # 更新状态
                 status_item = self.startup_table.item(row, 2)
-                status_item.setText("已启用")
+                status_item.setText("Enabled")
                 
                 # 恢复正常颜色
                 for col in range(4):
                     self.startup_table.item(row, col).setForeground(QBrush(QColor("#000000")))
                     
-                self.log_output.append(f"✓ {name} 已成功启用")
+                self.log_output.append(f"✓ {name} enabled successfully")
             else:
-                self.log_output.append(f"✗ 启用 {name} 失败")
+                self.log_output.append(f"✗ Failed to enable {name}")
                 
         self.update_button_states()
     
@@ -420,21 +420,21 @@ class BootToolsWidget(BaseComponent):
             name = self.startup_table.item(row, 0).text()
             item_type = self.startup_table.item(row, 3).text()
             
-            self.log_output.append(self.get_translation("disabling", f"正在禁用 {name}..."))
+            self.log_output.append(self.get_translation("disabling", f"Disabling {name}..."))
             
             # 尝试禁用启动项
             if StartupManager.disable_startup_item(name, item_type):
                 # 更新状态
                 status_item = self.startup_table.item(row, 2)
-                status_item.setText("已禁用")
+                status_item.setText("Disabled")
                 
                 # 设置灰色
                 for col in range(4):
                     self.startup_table.item(row, col).setForeground(QBrush(QColor("#888888")))
                     
-                self.log_output.append(f"✓ {name} 已成功禁用")
+                self.log_output.append(f"✓ {name} disabled successfully")
             else:
-                self.log_output.append(f"✗ 禁用 {name} 失败")
+                self.log_output.append(f"✗ Failed to disable {name}")
                 
         self.update_button_states()
     
@@ -447,8 +447,8 @@ class BootToolsWidget(BaseComponent):
         # 确认对话框
         reply = QMessageBox.question(
             self,
-            self.get_translation("confirm_delete", "确认删除"),
-            self.get_translation("confirm_delete_msg", "确定要删除选中的启动项吗？此操作无法撤销。"),
+            self.get_translation("confirm_delete", "Confirm Delete"),
+            self.get_translation("confirm_delete_msg", "Are you sure you want to delete the selected startup items? This action cannot be undone."),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
@@ -460,14 +460,14 @@ class BootToolsWidget(BaseComponent):
                 path = self.startup_table.item(row, 1).text()
                 item_type = self.startup_table.item(row, 3).text()
                 
-                self.log_output.append(self.get_translation("deleting", f"正在删除 {name}..."))
+                self.log_output.append(self.get_translation("deleting", f"Deleting {name}..."))
                 
                 # 尝试删除启动项
                 if StartupManager.delete_startup_item(name, path, item_type):
                     self.startup_table.removeRow(row)
-                    self.log_output.append(f"✓ {name} 已成功删除")
+                    self.log_output.append(f"✓ {name} deleted successfully")
                 else:
-                    self.log_output.append(f"✗ 删除 {name} 失败")
+                    self.log_output.append(f"✗ Failed to delete {name}")
             
             self.update_button_states()
     
@@ -476,9 +476,9 @@ class BootToolsWidget(BaseComponent):
         # 选择可执行文件
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            self.get_translation("select_program", "选择程序"),
+            self.get_translation("select_program", "Select Program"),
             "",
-            self.get_translation("exe_files", "可执行文件 (*.exe);;所有文件 (*.*)")
+            self.get_translation("exe_files", "Executable Files (*.exe);;All Files (*.*)")
         )
         
         if not file_path:
@@ -492,11 +492,11 @@ class BootToolsWidget(BaseComponent):
         
         # 尝试添加启动项
         if StartupManager.add_startup_item(name, file_path, item_type):
-            self.log_output.append(f"✓ {name} 已成功添加到启动项")
+            self.log_output.append(f"✓ {name} added to startup items successfully")
             # 刷新列表
             self.load_startup_items()
         else:
-            self.log_output.append(f"✗ 添加 {name} 到启动项失败")
+            self.log_output.append(f"✗ Failed to add {name} to startup items")
 
     def get_selected_rows(self):
         """获取选中的行索引"""
@@ -668,6 +668,12 @@ class BootToolsWidget(BaseComponent):
                 self.get_translation("impact", "Impact")
             ]) 
             
+        # Update page headline and description
+        if hasattr(self, "title"):
+            self.title.setText(self.get_translation("title", "Boot Tools"))
+        if hasattr(self, "description"):
+            self.description.setText(self.get_translation("description", ""))
+            
     def on_repair_option_clicked(self, checkbox):
         """处理修复选项点击"""
         button_id = checkbox.objectName()
@@ -693,7 +699,7 @@ class BootToolsWidget(BaseComponent):
             
             # 记录所选修复选项
             repair_type = button_id.replace("_radio", "")
-            self.log_output.append(self.get_translation("selected_repair", f"已选择修复选项: {checkbox.text()}"))
+            self.log_output.append(self.get_translation("selected_repair", f"Selected repair: {checkbox.text()}"))
         else:
             # 如果用户取消了当前选项，确保至少有一个选项是选中的
             if not (self.repair_mbr_radio.isChecked() or 
@@ -707,22 +713,20 @@ class BootToolsWidget(BaseComponent):
     def toggle_startup_item(self, state):
         """处理启动项复选框状态改变"""
         if state == Qt.Checked:
-            self.enable_startup_cb.setText(self.get_translation("enable_startup_checked"))
+            self.enable_startup_cb.setText(self.get_translation("enable_startup_checked", "Enable Selected"))
         else:
-            self.enable_startup_cb.setText(self.get_translation("enable_startup"))
+            self.enable_startup_cb.setText(self.get_translation("enable_startup", "Enable Selected"))
         
     def toggle_service(self, state):
         """处理服务复选框状态改变"""
         if state == Qt.Checked:
-            self.disable_service_cb.setText(self.get_translation("disable_service_checked"))
+            self.disable_service_cb.setText(self.get_translation("disable_service_checked", "Disable Selected"))
         else:
-            self.disable_service_cb.setText(self.get_translation("disable_service"))
+            self.disable_service_cb.setText(self.get_translation("disable_service", "Disable Selected"))
             
     def refresh_startup_items(self):
         """刷新启动项列表"""
-        self.log_output.append(self.get_translation("refreshing", "正在刷新启动项列表..."))
-        # 在实际应用中，这里应该查询系统中的启动项
-        # 现在我们只是重新加载示例数据
+        self.log_output.append(self.get_translation("refreshing", "Refreshing startup items..."))
         self.load_startup_items()
-        self.log_output.append(self.get_translation("refresh_complete", "刷新完成"))
+        self.log_output.append(self.get_translation("refresh_complete", "Refresh complete"))
             

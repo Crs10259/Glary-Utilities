@@ -440,7 +440,7 @@ class DashboardWidget(BaseComponent):
         title_container.addWidget(self.title)
         
         # 欢迎消息，右对齐
-        self.welcome_label = QLabel("Welcome to Glary Utilities")
+        self.welcome_label = QLabel(self.get_translation("welcome_message", "Welcome to Glary Utilities"))
         self.welcome_label.setStyleSheet("color: #a0a0a0; font-size: 16px; background-color: transparent;")
         self.welcome_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         title_container.addWidget(self.welcome_label)
@@ -530,7 +530,7 @@ class DashboardWidget(BaseComponent):
         clean_icon_path = Icon.Clean.Path
         self.clean_tile = ActionTile(
             self.get_translation("clean_junk"),
-            "Free up disk space by removing unnecessary files",  # 通过删除不必要的文件释放磁盘空间
+            self.get_translation("clean_junk_desc", "Free up disk space by removing unnecessary files"),
             clean_icon_path if os.path.exists(clean_icon_path) else (None if not Icon.Clean.Exist else Icon.Clean.Path),
             color="#EA4335"  # Google Red
         )
@@ -540,7 +540,7 @@ class DashboardWidget(BaseComponent):
         virus_icon_path = Icon.Virus.Path
         self.virus_tile = ActionTile(
             self.get_translation("scan_system"),
-            "Scan your system for viruses and malware",  # 扫描系统中的病毒和恶意软件
+            self.get_translation("scan_system_desc", "Scan your system for viruses and malware"),
             virus_icon_path if os.path.exists(virus_icon_path) else (None if not Icon.Virus.Exist else Icon.Virus.Path),
             color="#FBBC05"  # Google Yellow
         )
@@ -550,7 +550,7 @@ class DashboardWidget(BaseComponent):
         info_icon_path = Icon.Info.Path
         self.info_tile = ActionTile(
             self.get_translation("get_system_info"),
-            "Get system information",  # 获取系统信息
+            self.get_translation("get_system_info_desc", "Get system information"),
             info_icon_path if os.path.exists(info_icon_path) else (None if not Icon.Info.Exist else Icon.Info.Path),
             color="#34A853"  # Google Green
         )
@@ -659,7 +659,7 @@ class DashboardWidget(BaseComponent):
     def refresh_language(self):
         # 更新UI文本元素
         self.title.setText(self.get_translation("system_status"))
-        self.welcome_label.setText(self.get_translation("welcome_message"))
+        self.welcome_label.setText(self.get_translation("welcome_message", "Welcome to Glary Utilities"))
         self.quick_title.setText(self.get_translation("quick_access"))
         
         # 更新图表标题

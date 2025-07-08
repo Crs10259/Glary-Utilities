@@ -11,7 +11,16 @@ class Settings(QObject):
         self.logger = Logger().get_logger()
         self.settings = QSettings("GlaryUtilities", "GlaryUtilities")
         self.translations = {}
-        self._current_language = None  # 添加语言缓存
+
+        # Determine default language from system locale if user hasn't set one
+        import locale
+        if self.settings.value("language", None) is None:
+            sys_locale = locale.getdefaultlocale()[0] or "en"
+            default_lang = "zh" if sys_locale.lower().startswith("zh") else "en"
+            self.settings.setValue("language", default_lang)
+            self.logger.info(f"Language not set – defaulting to system locale: {default_lang}")
+
+        self._current_language = self.settings.value("language", "en")  # cache current language
         self.load_translations()
         
     def load_translations(self):
