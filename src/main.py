@@ -88,6 +88,8 @@ class GlaryUtilitiesApp:
         """显示启动画面"""
         self.splash = SplashScreen()
         self.splash.show()
+        # 立即处理一次事件循环，确保启动画面和渐变动画立刻显示
+        self.app.processEvents()
         
     def handle_translations(self, args: Dict[str, bool]) -> bool:
         """Handle translation checking

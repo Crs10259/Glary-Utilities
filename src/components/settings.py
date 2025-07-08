@@ -457,6 +457,7 @@ class SettingsWidget(QWidget):
         scan_group = QGroupBox(self.get_translation("scan_settings"))
         scan_group.setStyleSheet(""" 
             QGroupBox {
+                font-size: 16px;
                 font-weight: bold;
                 border: 1px solid #3a3a3a;
                 border-radius: 6px;
@@ -509,6 +510,7 @@ class SettingsWidget(QWidget):
         scan_options_group = QGroupBox(self.get_translation("scan_options"))
         scan_options_group.setStyleSheet(""" 
             QGroupBox {
+                font-size: 16px;
                 font-weight: bold;
                 border: 1px solid #3a3a3a;
                 border-radius: 6px;
@@ -578,6 +580,7 @@ class SettingsWidget(QWidget):
         backup_group = QGroupBox(self.get_translation("backup_settings"))
         backup_group.setStyleSheet(""" 
             QGroupBox {
+                font-size: 16px;
                 font-weight: bold;
                 border: 1px solid #3a3a3a;
                 border-radius: 6px;
@@ -641,6 +644,7 @@ class SettingsWidget(QWidget):
         logs_group = QGroupBox(self.get_translation("logs"))
         logs_group.setStyleSheet(""" 
             QGroupBox {
+                font-size: 16px;
                 font-weight: bold;
                 border: 1px solid #3a3a3a;
                 border-radius: 6px;
@@ -1181,6 +1185,24 @@ class SettingsWidget(QWidget):
             
             # Save settings to disk
             self.settings.sync()
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.information(
+                self,
+                self.get_translation("settings_applied_title", "Settings Applied"),
+                self.get_translation("settings_applied", "Settings applied successfully.")
+            )
+            self.logger.info("Settings saved successfully")
+            # Emit signal that settings were saved (if it exists)
+            try:
+                self.settings_saved.emit()
+            except AttributeError:
+                pass
+            # Show status message in main window if available
+            try:
+                if self.main_window is not None and hasattr(self.main_window, 'show_status_message'):
+                    self.main_window.show_status_message(self.get_translation("settings_saved", "Settings saved successfully."))
+            except AttributeError:
+                pass
             return True
         except Exception as e:
             self.logger.error(f"Error applying settings: {str(e)}")
@@ -1359,20 +1381,22 @@ class SettingsWidget(QWidget):
         success = self.save_settings()
         
         if success:
-            # Show a success message if needed
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.information(
+                self,
+                self.get_translation("settings_saved_title", "Settings Saved"),
+                self.get_translation("settings_saved", "Settings saved successfully.")
+            )
             self.logger.info("Settings saved successfully")
-            
             # Emit signal that settings were saved (if it exists)
             try:
                 self.settings_saved.emit()
             except AttributeError:
                 pass
-            
             # Show status message in main window if available
             try:
-                if self.main_window is not None:
-                    if hasattr(self.main_window, 'show_status_message'):
-                        self.main_window.show_status_message("Settings saved successfully")
+                if self.main_window is not None and hasattr(self.main_window, 'show_status_message'):
+                    self.main_window.show_status_message(self.get_translation("settings_saved", "Settings saved successfully."))
             except AttributeError:
                 pass
         else:

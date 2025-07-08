@@ -1,10 +1,9 @@
 import os
-import sys
 import time
 from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel, 
                             QProgressBar, QGraphicsDropShadowEffect)
 from PyQt5.QtGui import QPixmap, QColor, QPainter, QFont
-from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve
 from config import Icon
 from config import App
 from utils.settings import Settings
@@ -91,15 +90,9 @@ class SplashScreen(QWidget):
     
     def _preload_resources(self):
         """预加载资源文件"""
-        # 预加载图标以确保显示正常
-        self.app_icon = None
         icon_path = Icon.Icon.Path
-        if os.path.exists(icon_path):
-            try:
-                self.app_icon = QPixmap(icon_path)
-            except Exception as e:
-                self.logger.error(f"无法加载图标: {e}")
-                self.app_icon = None
+        # 直接尝试加载图标，若文件不存在则保持 None
+        self.app_icon = QPixmap(icon_path) if os.path.exists(icon_path) else None
     
     def get_translation(self, key, default):
         """获取翻译文本"""
@@ -169,8 +162,6 @@ class SplashScreen(QWidget):
         self.progress_bar = CustomProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
-        # Keep default text hidden; percentage is drawn manually in CustomProgressBar
-        self.progress_bar.setTextVisible(False)
         self.progress_bar.setFixedHeight(20)  # 增加高度以更好地显示文本
         self.progress_bar.setStyleSheet("""
             QProgressBar {

@@ -1,5 +1,4 @@
 import os
-import sys
 import psutil
 import shutil
 from PyQt5.QtWidgets import (
@@ -30,7 +29,6 @@ class ChartTile(QFrame):
             #chartTile {{
                 background-color: #2d2d2d;
                 border-radius: 12px;
-                border: 1px solid #3a3a3a;
             }}
         """)
         self.setMinimumHeight(200)
@@ -71,7 +69,8 @@ class ChartTile(QFrame):
         
         # 当前值标签（右对齐）
         self.value_label = QLabel("0%")
-        self.value_label.setStyleSheet(f"color: {chart_color}; font-size: 24px; font-weight: bold; background-color: transparent;")
+        # 初始字体大小与其他页面保持一致（18px）
+        self.value_label.setStyleSheet(f"color: {chart_color}; font-size: 18px; font-weight: bold; background-color: transparent;")
         self.value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         title_container.addWidget(self.value_label)
         
@@ -155,40 +154,21 @@ class ChartTile(QFrame):
                 # 显示重试倒计时，使用特殊样式
                 self.value_label.setText(value)
                 self.value_label.setStyleSheet("color: #FFA500; font-size: 15px; font-weight: bold;")
-                # 使用警告色的虚线边框表示等待状态
-                # self.setStyleSheet(f"""
-                #     QFrame {{
-                #         background-color: #2d2d2d;
-                #         border: 2px dashed #FFA500;
-                #         border-radius: 8px;
-                #     }}
-                # """)
+           
                 self._update_history_with_error()
             elif value == "N/A":
                 # 显示N/A
                 self.value_label.setText("N/A")
                 self.value_label.setStyleSheet("color: #a0a0a0; font-size: 18px; font-weight: bold;")
-                # 设置灰色边框
-                self.setStyleSheet(f"""
-                    QFrame {{
-                        background-color: #2d2d2d;
-                        border: 2px solid #4d4d4d;
-                        border-radius: 8px;
-                    }}
-                """)
+                # 保持无边框样式
+                self.setStyleSheet("QFrame { background-color: #2d2d2d; border-radius: 8px; }")
                 self._update_history_with_error()
             elif value == "Error":
                 # 显示错误状态
                 self.value_label.setText("Error")
                 self.value_label.setStyleSheet("color: #ff5555; font-size: 18px; font-weight: bold;")
-                # 设置红色边框
-                self.setStyleSheet(f"""
-                    QFrame {{
-                        background-color: #2d2d2d;
-                        border: 2px solid #ff5555;
-                        border-radius: 8px;
-                    }}
-                """)
+                # 文字使用红色，去除边框
+                self.setStyleSheet("QFrame { background-color: #2d2d2d; border-radius: 8px; }")
                 self._update_history_with_error()
             else:
                 # 尝试解析为数字
@@ -233,21 +213,8 @@ class ChartTile(QFrame):
         self.value_label.setText(text)
         self.value_label.setStyleSheet("color: #e0e0e0; font-size: 18px; font-weight: bold;")
         
-        # # 根据值设置边框颜色
-        # border_color = "#00a8ff"  # 默认
-        # if value_num >= 90:
-        #     border_color = "#ff5555"  # 高负载时为红色
-        # elif value_num >= 70:
-        #     border_color = "#ffaa00"  # 中等负载时为黄色
-        
-        # 设置灰色边框
-        self.setStyleSheet(f"""
-            QFrame {{
-                background-color: #2d2d2d;
-                border: 2px solid #4d4d4d;
-                border-radius: 8px;
-            }}
-        """)
+        # 保持无边框样式
+        self.setStyleSheet("QFrame { background-color: #2d2d2d; border-radius: 8px; }")
         
         # 更新图表数据
         self._update_chart_data(value_num)
@@ -255,23 +222,14 @@ class ChartTile(QFrame):
     def _update_temp_display(self, temp_value, text):
         """更新温度类型数据的显示"""
         self.value_label.setText(text)
-        self.value_label.setStyleSheet("color: #e0e0e0; font-size: 18px; font-weight: bold;")
-        
-        # 根据温度值设置边框颜色
+        # 根据温度值设置颜色
         border_color = "#10893E"  # 默认绿色
         if temp_value >= 80:
             border_color = "#ff5555"  # 高温为红色
         elif temp_value >= 60:
             border_color = "#ffaa00"  # 中等温度为黄色
         
-        # 设置边框
-        self.setStyleSheet(f"""
-            QFrame {{
-                background-color: #2d2d2d;
-                border: 2px solid {border_color};
-                border-radius: 8px;
-            }}
-        """)
+        self.value_label.setStyleSheet(f"color: {border_color}; font-size: 18px; font-weight: bold;")
         
         # 更新图表数据
         self._update_chart_data(temp_value)
@@ -506,7 +464,7 @@ class DashboardWidget(BaseComponent):
     def create_quick_access_section(self):
         # 快速访问标题
         self.quick_title = QLabel(self.get_translation("quick_access"))
-        self.quick_title.setStyleSheet("font-size: 22px; font-weight: bold; color: #e0e0e0; margin-top: 10px; background-color: transparent;")
+        self.quick_title.setStyleSheet("font-size: 18px; font-weight: bold; color: #e0e0e0; margin-top: 10px; background-color: transparent;")
         self.main_layout.addWidget(self.quick_title)
         
         # 快速访问容器
@@ -519,8 +477,8 @@ class DashboardWidget(BaseComponent):
         # System Repair tile (Corrected)
         repair_icon_path = Icon.Repair.Path
         self.repair_tile = ActionTile(
-            self.get_translation("system_repair"), # Use correct translation key
-            self.get_translation("system_repair_desc"), # Use correct description key
+            self.get_translation("system_repair", "System repair"), # Use correct translation key
+            self.get_translation("system_repair_desc", "Repair system"), # Use correct description key
             repair_icon_path if os.path.exists(repair_icon_path) else Icon.Repair.Path,
             color="#4285F4" # Keep color or adjust as needed
         )
@@ -529,7 +487,7 @@ class DashboardWidget(BaseComponent):
         # Clean Junk tile
         clean_icon_path = Icon.Clean.Path
         self.clean_tile = ActionTile(
-            self.get_translation("clean_junk"),
+            self.get_translation("clean_junk", "Clean junk"),
             self.get_translation("clean_junk_desc", "Free up disk space by removing unnecessary files"),
             clean_icon_path if os.path.exists(clean_icon_path) else (None if not Icon.Clean.Exist else Icon.Clean.Path),
             color="#EA4335"  # Google Red
@@ -539,7 +497,7 @@ class DashboardWidget(BaseComponent):
         # Virus Scan tile
         virus_icon_path = Icon.Virus.Path
         self.virus_tile = ActionTile(
-            self.get_translation("scan_system"),
+            self.get_translation("scan_system", "Scan system"),
             self.get_translation("scan_system_desc", "Scan your system for viruses and malware"),
             virus_icon_path if os.path.exists(virus_icon_path) else (None if not Icon.Virus.Exist else Icon.Virus.Path),
             color="#FBBC05"  # Google Yellow
@@ -549,7 +507,7 @@ class DashboardWidget(BaseComponent):
         # Get System Info tile
         info_icon_path = Icon.Info.Path
         self.info_tile = ActionTile(
-            self.get_translation("get_system_info"),
+            self.get_translation("get_system_info", "System information"),
             self.get_translation("get_system_info_desc", "Get system information"),
             info_icon_path if os.path.exists(info_icon_path) else (None if not Icon.Info.Exist else Icon.Info.Path),
             color="#34A853"  # Google Green

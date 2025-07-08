@@ -40,7 +40,7 @@ class DiskCheckWidget(BaseComponent):
         
         # Warning for non-Windows systems
         if not self.platform_manager.is_windows():
-            warning_label = QLabel("⚠️ " + self.get_translation("windows_only", "磁盘检查功能仅在Windows系统上可用"))
+            warning_label = QLabel("⚠️ " + self.get_translation("windows_only", "disk check features are only available on Windows"))
             warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
             self.main_layout.addWidget(warning_label)
         

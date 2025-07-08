@@ -40,8 +40,9 @@ class VirusScanWidget(BaseComponent):
         """设置UI元素"""
         # 主布局
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(10, 10, 10, 10)
-        self.main_layout.setSpacing(10)
+        # 与其他页面一致的边距和间距
+        self.main_layout.setContentsMargins(20, 20, 20, 20)
+        self.main_layout.setSpacing(20)
         
         # 添加标题
         self.title_label = QLabel(self.get_translation("title"))
