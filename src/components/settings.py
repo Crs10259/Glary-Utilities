@@ -169,6 +169,28 @@ class SettingsWidget(QWidget):
             }
         """)
         button_layout.addWidget(self.apply_button)
+
+        # Restart button – prompt and relaunch application
+        self.restart_button = QPushButton(self.get_translation("restart_now", "Restart Now"))
+        self.restart_button.setObjectName("restart_button")
+        self.restart_button.clicked.connect(self._on_restart_clicked)
+        self.restart_button.setStyleSheet("""
+            QPushButton {
+                background-color: #d35400;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #e67e22;
+            }
+            QPushButton:pressed {
+                background-color: #ba4a00;
+            }
+        """)
+        button_layout.addWidget(self.restart_button)
         
         # 添加按钮布局
         main_layout.addLayout(button_layout)
@@ -274,6 +296,16 @@ class SettingsWidget(QWidget):
         self.enable_animations_check.setObjectName("enable_animations")
         self.enable_animations_check.stateChanged.connect(self.on_animations_changed)
         
+        # Linux性能优化选项
+        from tools.base_tools import PlatformManager
+        platform_manager = PlatformManager()
+        if platform_manager.is_linux():
+            self.optimize_linux_performance_check = QCheckBox(self.get_translation("optimize_linux_performance", "优化Linux性能（禁用复杂动画）"))
+            self.optimize_linux_performance_check.setStyleSheet("color: #e0e0e0; margin-top: 5px;")
+            self.optimize_linux_performance_check.setObjectName("optimize_linux_performance")
+            self.optimize_linux_performance_check.setChecked(True)  # 默认启用
+            behavior_layout.addWidget(self.optimize_linux_performance_check)
+        
         behavior_layout.addWidget(self.start_minimized_check)
         behavior_layout.addWidget(self.close_to_tray_check)
         behavior_layout.addWidget(self.enable_animations_check)
@@ -344,12 +376,17 @@ class SettingsWidget(QWidget):
             }
         """)
         
-        # 加载可用主题 - 使用theme_manager
-        theme_names = self.theme_manager.get_theme_names()
-        theme_display_names = self.theme_manager.get_theme_display_names()
-        
-        for theme_name in theme_names:
-            display_name = theme_display_names.get(theme_name, theme_name.capitalize())
+        # 加载可用主题并按预定义顺序插入，确保索引与语言刷新一致
+        available_names = self.theme_manager.get_theme_names()
+        theme_display = self.theme_manager.get_theme_display_names()
+
+        preferred_order = ["dark", "light", "custom"]
+        ordered_names = [n for n in preferred_order if n in available_names]
+        # Append any additional themes not in the predefined list
+        ordered_names.extend([n for n in available_names if n not in ordered_names])
+
+        for theme_name in ordered_names:
+            display_name = theme_display.get(theme_name, theme_name.capitalize())
             self.theme_combo.addItem(display_name, theme_name)
         
         # 连接信号
@@ -430,6 +467,7 @@ class SettingsWidget(QWidget):
         scan_group = QGroupBox(self.get_translation("scan_settings"))
         scan_group.setStyleSheet(""" 
             QGroupBox {
+                font-size: 16px;
                 font-weight: bold;
                 border: 1px solid #3a3a3a;
                 border-radius: 6px;
@@ -482,6 +520,7 @@ class SettingsWidget(QWidget):
         scan_options_group = QGroupBox(self.get_translation("scan_options"))
         scan_options_group.setStyleSheet(""" 
             QGroupBox {
+                font-size: 16px;
                 font-weight: bold;
                 border: 1px solid #3a3a3a;
                 border-radius: 6px;
@@ -551,6 +590,7 @@ class SettingsWidget(QWidget):
         backup_group = QGroupBox(self.get_translation("backup_settings"))
         backup_group.setStyleSheet(""" 
             QGroupBox {
+                font-size: 16px;
                 font-weight: bold;
                 border: 1px solid #3a3a3a;
                 border-radius: 6px;
@@ -614,6 +654,7 @@ class SettingsWidget(QWidget):
         logs_group = QGroupBox(self.get_translation("logs"))
         logs_group.setStyleSheet(""" 
             QGroupBox {
+                font-size: 16px;
                 font-weight: bold;
                 border: 1px solid #3a3a3a;
                 border-radius: 6px;
@@ -694,17 +735,16 @@ class SettingsWidget(QWidget):
             if index >= 0:
                 theme_id = self.theme_combo.itemData(index)
                 if theme_id:
-                    # Save the setting
-                    self.settings.set_setting("theme", theme_id)
-                    self.settings.sync()
-                    
-                    # Apply the theme if main window is available
-                    try:
-                        if self.main_window is not None:
-                            self.main_window.apply_theme()
-                            self.logger.info(f"Theme changed to: {theme_id}")
-                    except AttributeError:
-                        pass
+                    current_theme = self.settings.get_setting("theme", "dark")
+                    if theme_id != current_theme:
+                        # Save but don't apply – require restart
+                        self.settings.set_setting("theme", theme_id)
+                        self.settings.sync()
+
+                        from PyQt5.QtWidgets import QMessageBox
+                        QMessageBox.information(self, self.get_translation("restart_required", "Restart Required"),
+                                                self.get_translation("restart_theme_note", "The theme change will take effect after restarting the application."))
+                        self.logger.info(f"Theme set to {theme_id}; restart required to apply.")
         except AttributeError:
             pass
     
@@ -954,17 +994,15 @@ class SettingsWidget(QWidget):
                 # Get language code from the combobox
                 language_code = self.language_combo.itemData(index)
                 if language_code:
-                    # Save the setting directly
-                    self.settings.set_setting("language", language_code)
-                    self.settings.sync()
-                    
-                    # Apply the language change if main window is available
-                    try:
-                        if self.main_window is not None:
-                            self.main_window.change_language(language_code)
-                            self.logger.info(f"Language changed to: {language_code}")
-                    except AttributeError:
-                        pass
+                    current_lang = self.settings.get_setting("language", "en")
+                    # Only proceed if language actually changed
+                    if language_code != current_lang:
+                        self.settings.set_language(language_code)
+                        self.settings.sync()
+                        from PyQt5.QtWidgets import QMessageBox
+                        QMessageBox.information(self, self.get_translation("restart_required", "Restart Required"),
+                                                self.get_translation("restart_language_note", "The language change will take effect after restarting the application."))
+                        self.logger.info(f"Language changed from {current_lang} to {language_code}; restart required.")
         except AttributeError:
             pass
     
@@ -1001,13 +1039,10 @@ class SettingsWidget(QWidget):
             theme_label.setText(self.get_translation("theme", "主题："))
             
         # 更新主题选项
-        if self.theme_combo.count() >= 6:
+        if self.theme_combo.count() >= 3:
             self.theme_combo.setItemText(0, self.get_translation("dark", "深色"))
             self.theme_combo.setItemText(1, self.get_translation("light", "浅色"))
-            self.theme_combo.setItemText(2, self.get_translation("blue", "蓝色主题"))
-            self.theme_combo.setItemText(3, self.get_translation("green", "绿色主题"))
-            self.theme_combo.setItemText(4, self.get_translation("purple", "紫色主题"))
-            self.theme_combo.setItemText(5, self.get_translation("custom", "自定义"))
+            self.theme_combo.setItemText(2, self.get_translation("custom", "自定义"))
             
         # 更新自定义颜色部分 - 考虑布局变更为QVBoxLayout
         try:
@@ -1042,6 +1077,8 @@ class SettingsWidget(QWidget):
         self.save_button.setText(self.get_translation("save_settings", "保存设置"))
         self.apply_button.setText(self.get_translation("apply_settings", "应用设置"))
         self.restore_defaults_button.setText(self.get_translation("restore_defaults", "恢复默认"))
+        if hasattr(self, "restart_button"):
+            self.restart_button.setText(self.get_translation("restart_now", "立即重启"))
     
     def check_all_translations(self):
         """检查所有必需的翻译是否存在"""
@@ -1101,13 +1138,17 @@ class SettingsWidget(QWidget):
             try:
                 current_idx = self.language_combo.currentIndex()
                 language_code = self.language_combo.itemData(current_idx)
-                self.settings.set_setting("language", language_code)
-                # If language changed, emit signal
-                try:
-                    if self.main_window:
-                        self.main_window.change_language(language_code)
-                except AttributeError:
-                    pass
+                current_lang = self.settings.get_setting("language", "en")
+                if language_code != current_lang:
+                    self.settings.set_language(language_code)
+                    # Prompt user restart; do not update UI immediately
+                    from PyQt5.QtWidgets import QMessageBox
+                    try:
+                        if self.main_window:
+                            QMessageBox.information(self, self.get_translation("restart_required", "Restart Required"),
+                                                    self.get_translation("restart_language_note", "The language change will take effect after restarting the application."))
+                    except AttributeError:
+                        pass
             except AttributeError:
                 pass
             
@@ -1115,13 +1156,17 @@ class SettingsWidget(QWidget):
             try:
                 current_idx = self.theme_combo.currentIndex()
                 theme_id = self.theme_combo.itemData(current_idx)
-                self.settings.set_setting("theme", theme_id)
-                # Apply theme if changed
-                try:
-                    if self.main_window:
-                        self.main_window.apply_theme()
-                except AttributeError:
-                    pass
+                current_theme = self.settings.get_setting("theme", "dark")
+                if theme_id != current_theme:
+                    self.settings.set_setting("theme", theme_id)
+                    # Prompt user restart
+                    from PyQt5.QtWidgets import QMessageBox
+                    try:
+                        if self.main_window:
+                            QMessageBox.information(self, self.get_translation("restart_required", "Restart Required"),
+                                                    self.get_translation("restart_theme_note", "The theme change will take effect after restarting the application."))
+                    except AttributeError:
+                        pass
             except AttributeError:
                 pass
             
@@ -1147,6 +1192,24 @@ class SettingsWidget(QWidget):
             
             # Save settings to disk
             self.settings.sync()
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.information(
+                self,
+                self.get_translation("settings_applied_title", "Settings Applied"),
+                self.get_translation("settings_applied", "Settings applied successfully.")
+            )
+            self.logger.info("Settings saved successfully")
+            # Emit signal that settings were saved (if it exists)
+            try:
+                self.settings_saved.emit()
+            except AttributeError:
+                pass
+            # Show status message in main window if available
+            try:
+                if self.main_window is not None and hasattr(self.main_window, 'show_status_message'):
+                    self.main_window.show_status_message(self.get_translation("settings_saved", "Settings saved successfully."))
+            except AttributeError:
+                pass
             return True
         except Exception as e:
             self.logger.error(f"Error applying settings: {str(e)}")
@@ -1277,7 +1340,9 @@ class SettingsWidget(QWidget):
             try:
                 lang_idx = self.language_combo.currentIndex()
                 lang_data = self.language_combo.itemData(lang_idx)
-                self.settings.set_setting("language", lang_data)
+                current_lang = self.settings.get_setting("language", "en")
+                if lang_data != current_lang:
+                    self.settings.set_language(lang_data)
             except AttributeError:
                 pass
             
@@ -1323,20 +1388,22 @@ class SettingsWidget(QWidget):
         success = self.save_settings()
         
         if success:
-            # Show a success message if needed
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.information(
+                self,
+                self.get_translation("settings_saved_title", "Settings Saved"),
+                self.get_translation("settings_saved", "Settings saved successfully.")
+            )
             self.logger.info("Settings saved successfully")
-            
             # Emit signal that settings were saved (if it exists)
             try:
                 self.settings_saved.emit()
             except AttributeError:
                 pass
-            
             # Show status message in main window if available
             try:
-                if self.main_window is not None:
-                    if hasattr(self.main_window, 'show_status_message'):
-                        self.main_window.show_status_message("Settings saved successfully")
+                if self.main_window is not None and hasattr(self.main_window, 'show_status_message'):
+                    self.main_window.show_status_message(self.get_translation("settings_saved", "Settings saved successfully."))
             except AttributeError:
                 pass
         else:
@@ -1446,5 +1513,39 @@ class SettingsWidget(QWidget):
             logging.getLogger().setLevel(log_level)
         except Exception as e:
             self.logger.error(f"应用日志设置时出错: {str(e)}")
+
+    def _on_restart_clicked(self):
+        """Save settings and restart the application"""
+        try:
+            from PyQt5.QtWidgets import QMessageBox, QApplication
+            import subprocess, sys, os
+ 
+            # Confirm restart
+            reply = QMessageBox.question(
+                self,
+                self.get_translation("restart_required", "Restart Required"),
+                self.get_translation("restart_confirm", "The application needs to restart to apply changes. Restart now?"),
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes
+            )
+            if reply == QMessageBox.No:
+                return
+ 
+            # Save any pending settings
+            self.save_settings()
+ 
+            # Relaunch
+            python = sys.executable
+            args = sys.argv
+            self.logger.info("Restarting application with: %s %s", python, " ".join(args))
+            try:
+                subprocess.Popen([python] + args)
+            except Exception as e:
+                self.logger.error(f"Failed to relaunch application: {e}")
+ 
+            # Quit current instance
+            QApplication.instance().quit()
+        except Exception as e:
+            self.logger.error(f"Error during restart: {e}")
 
    

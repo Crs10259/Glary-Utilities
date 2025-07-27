@@ -200,9 +200,9 @@ class SystemInfoWidget(BaseComponent):
         cpu_layout.setVerticalSpacing(8)
         
         # Add CPU information fields
+        self._cpu_value_labels = {}
         cpu_info = self.system_information.get_cpu_info()
         row = 0
-        col = 0
         for key, value in cpu_info.items():
             # 将 CPU 键名转换为翻译键名
             # 例如 cpu_brand -> cpu_brand, cpu_cores_physical -> cpu_cores_physical
@@ -224,6 +224,9 @@ class SystemInfoWidget(BaseComponent):
             value_label.setStyleSheet("color: #e0e0e0;")
             value_label.setWordWrap(True)  # 允许文本换行
             value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # 允许选择文本
+
+            # 保存引用以便刷新
+            self._cpu_value_labels[key] = value_label
             
             # 使用单列布局，确保在小窗口时也能清晰显示
             cpu_layout.addWidget(key_label, row, 0)
@@ -258,13 +261,13 @@ class SystemInfoWidget(BaseComponent):
         memory_layout.setVerticalSpacing(8)
         
         # Add memory information fields
+        self._memory_value_labels = {}
         memory_info = self.system_information.get_memory_info()
         row = 0
         for key, value in memory_info.items():
-            # 获取翻译，如果没有特定翻译则使用原始键名的可读形式
-            readable_key = key.replace('_', ' ').title()
-            translation_key = f"memory_{key.lower()}"
-            translated_text = self.get_translation(translation_key, readable_key)
+            # Normalize key by replacing spaces with underscores to build translation key
+            translation_key = f"memory_{key.lower().replace(' ', '_')}"
+            translated_text = self.get_translation(translation_key, key)
             
             key_label = QLabel(translated_text + ":")
             key_label.setStyleSheet("color: #a0a0a0;")
@@ -275,6 +278,9 @@ class SystemInfoWidget(BaseComponent):
             value_label.setStyleSheet("color: #e0e0e0;")
             value_label.setWordWrap(True)  # 允许文本换行
             value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # 允许选择文本
+
+            # 保存引用
+            self._memory_value_labels[key] = value_label
             
             # 使用单列布局，确保在小窗口时也能清晰显示
             memory_layout.addWidget(key_label, row, 0)
@@ -674,6 +680,20 @@ class SystemInfoWidget(BaseComponent):
     def refresh_info(self):
         """刷新所有系统信息"""
         try:
+            # Update CPU info labels
+            if hasattr(self, '_cpu_value_labels'):
+                cpu_info = self.system_information.get_cpu_info()
+                for key, value in cpu_info.items():
+                    if key in self._cpu_value_labels:
+                        self._cpu_value_labels[key].setText(str(value))
+
+            # Update memory info labels
+            if hasattr(self, '_memory_value_labels'):
+                memory_info = self.system_information.get_memory_info()
+                for key, value in memory_info.items():
+                    if key in self._memory_value_labels:
+                        self._memory_value_labels[key].setText(str(value))
+
             # 仅刷新数据，不重新创建UI元素
             # 更新磁盘信息
             if hasattr(self, 'disk_table'):

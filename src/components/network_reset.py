@@ -40,13 +40,15 @@ class NetworkResetWidget(BaseComponent):
             main_layout.addWidget(warning_label)
         
         # Warning label
-        warning_label = QLabel(self.get_translation("warning"))
-        warning_label.setStyleSheet("color: #ff9900; font-weight: bold; background-color: transparent;")
-        main_layout.addWidget(warning_label)
+        self.warning_label = QLabel(self.get_translation("warning"))
+        self.warning_label.setObjectName("warning_label")
+        self.warning_label.setStyleSheet("color: #ff9900; font-weight: bold; background-color: transparent;")
+        main_layout.addWidget(self.warning_label)
         
         # Operations group
-        operations_group = QGroupBox(self.get_translation("operations"))
-        operations_group.setStyleSheet("""
+        self.operations_group = QGroupBox(self.get_translation("operations"))
+        self.operations_group.setObjectName("operations_group")
+        self.operations_group.setStyleSheet("""
             QGroupBox {
                 color: #c0c0c0;
                 font-weight: bold;
@@ -63,7 +65,7 @@ class NetworkResetWidget(BaseComponent):
                 background-color: transparent;
             }
         """)
-        operations_layout = QVBoxLayout(operations_group)
+        operations_layout = QVBoxLayout(self.operations_group)
         
         # Checkboxes for operation selection
         self.flush_dns_cb = QCheckBox(self.get_translation("flush_dns"))
@@ -86,7 +88,7 @@ class NetworkResetWidget(BaseComponent):
         self.reset_firewall_cb.setChecked(False)
         operations_layout.addWidget(self.reset_firewall_cb)
         
-        main_layout.addWidget(operations_group)
+        main_layout.addWidget(self.operations_group)
         
         # Add some spacing
         main_layout.addItem(QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Minimum))
@@ -127,9 +129,10 @@ class NetworkResetWidget(BaseComponent):
         main_layout.addWidget(button_container)
         
         # Log output
-        log_label = QLabel(self.get_translation("log_output"))
-        log_label.setStyleSheet("color: #a0a0a0; margin-top: 10px; background-color: transparent;")
-        main_layout.addWidget(log_label)
+        self.log_label = QLabel(self.get_translation("log_output"))
+        self.log_label.setObjectName("log_label")
+        self.log_label.setStyleSheet("color: #a0a0a0; margin-top: 10px; background-color: transparent;")
+        main_layout.addWidget(self.log_label)
         
         self.log_output = QTextEdit()
         self.log_output.setReadOnly(True)
@@ -267,3 +270,25 @@ class NetworkResetWidget(BaseComponent):
                 self.reset_tcp_ip_cb.setStyleSheet(checkbox_style)
             if hasattr(self, 'reset_firewall_cb'):
                 self.reset_firewall_cb.setStyleSheet(checkbox_style)
+
+    def refresh_language(self):
+        """Update UI texts when language changes"""
+        # Main headings
+        self.title.setText(self.get_translation("title"))
+        self.description.setText(self.get_translation("description"))
+        # Warning and group titles
+        self.warning_label.setText(self.get_translation("warning"))
+        self.operations_group.setTitle(self.get_translation("operations"))
+        self.log_label.setText(self.get_translation("log_output"))
+
+        # Checkbox texts
+        self.flush_dns_cb.setText(self.get_translation("flush_dns"))
+        self.reset_winsock_cb.setText(self.get_translation("reset_winsock"))
+        self.reset_tcp_ip_cb.setText(self.get_translation("reset_tcp_ip"))
+        self.reset_firewall_cb.setText(self.get_translation("reset_firewall"))
+
+        # Buttons
+        self.reset_button.setText(self.get_translation("reset_button"))
+
+        # Simple visual cue
+        self._animate_refresh()

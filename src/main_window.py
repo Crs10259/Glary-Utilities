@@ -14,9 +14,10 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PyQt5.QtGui import QIcon, QPixmap, QFont, QColor, QPainter, QPainterPath
 from PyQt5.QtCore import (Qt, QSize, QPoint, QPropertyAnimation, 
                         QParallelAnimationGroup, QSequentialAnimationGroup,
-                        QEasingCurve, pyqtSignal, QTimer, QAbstractAnimation,
+                        QEasingCurve, pyqtSignal, QTimer, QAbstractAnimation, QThread,
                         QRect, QEvent, QObject)
 from utils.logger import Logger
+from tools.base_tools import PlatformManager
 
 from components.base_component import BaseComponent
 from components.dashboard import DashboardWidget
@@ -53,6 +54,9 @@ class MainWindow(QMainWindow):
         # 保存设置实例
         self.settings = settings
         
+        # 平台管理器
+        self.platform_manager = PlatformManager()
+        
         # 设置属性
         self.dragging = False
         self.drag_position = None
@@ -66,11 +70,17 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 1200, 800)
         self.setMinimumSize(900, 600)
         
-        # 设置无边框
-        self.setWindowFlags(Qt.FramelessWindowHint)
-        
-        # 设置样式表（基本样式，主题将在稍后应用）
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        # 根据平台设置窗口属性
+        if self.platform_manager.is_linux():
+            # Linux: 使用系统原生标题栏
+            self.setWindowFlags(Qt.Window)
+            self.setAttribute(Qt.WA_TranslucentBackground, False)
+            self.setFocusPolicy(Qt.StrongFocus)
+        else:
+            # Windows/macOS: 使用自定义无边框窗口
+            self.setWindowFlags(Qt.FramelessWindowHint)
+            self.setAttribute(Qt.WA_TranslucentBackground)
+            self.setFocusPolicy(Qt.StrongFocus)
         
         # 初始化UI
         self.initUI()
@@ -99,137 +109,32 @@ class MainWindow(QMainWindow):
                 for section, keys in sections.items():
                     self.logger.warning(f"  Section: {section}")
                     for key in keys:
-                        self.logger.warning(f"    - {key}")
-        
-        self.show_status_message(self.settings.get_translation("general", "welcome"), 5000)
-        
-        # 使用淡入动画显示窗口
-        self.setWindowOpacity(0.0)
+                        self.logger.warning(f"    Missing: {key}")
 
-        # 检查是否启用动画 - 确保正确读取布尔值
-        enable_animations = self.settings.get_setting("enable_animations", True)
-        if isinstance(enable_animations, str):
-            enable_animations = enable_animations.lower() in ('true', 'yes', '1', 'on')
-        elif isinstance(enable_animations, int):
-            enable_animations = enable_animations != 0
-        else:
-            enable_animations = bool(enable_animations)
-            
-        if enable_animations:
-            self.fade_in_effect = QPropertyAnimation(self, b"windowOpacity")
-            self.fade_in_effect.setDuration(400)  # 缩短时间，更快显示
-            self.fade_in_effect.setStartValue(0.0)
-            self.fade_in_effect.setEndValue(1.0)
-            self.fade_in_effect.setEasingCurve(QEasingCurve.OutQuint)  # 使用更平滑的缓动曲线
-            self.fade_in_effect.start(QAbstractAnimation.DeleteWhenStopped)
-        else:
-            # 如果动画被禁用，直接设置为完全不透明
-            self.setWindowOpacity(1.0)
-        
     def initUI(self):
         """初始化用户界面"""
-        # 主布局
-        main_layout = QVBoxLayout()
+        # 创建中央部件
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        
+        # 创建主布局
+        main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        # 自定义标题栏
-        if self.settings.get_setting("use_system_title_bar", False) != True:
-            self.title_bar = self.setup_title_bar()
+        # 只在非Linux平台上设置自定义标题栏
+        if not self.platform_manager.is_linux():
+            self.setup_title_bar()
             main_layout.addWidget(self.title_bar)
         
-        # 内容布局
-        content_layout = QHBoxLayout()
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(0)
-        
-        # 添加侧边栏
-        self.sidebar = self.setup_sidebar()
-        content_layout.addWidget(self.sidebar)
-        
-        # 添加内容区域
+        # 创建内容区域
         self.setup_content_area()
-        content_layout.addWidget(self.content_area)
+        main_layout.addWidget(self.content_widget)
         
-        # 添加内容布局到主布局
-        main_layout.addLayout(content_layout, 1)
+        # 设置状态栏
+        self.setup_status_bar()
         
-        # 添加底部状态栏
-        self.status_bar = self.setup_status_bar()
-        main_layout.addWidget(self.status_bar)
-        
-        # 创建中心窗口部件
-        central_widget = QWidget()
-        central_widget.setObjectName("central_widget")
-        central_widget.setLayout(main_layout)
-        
-        # 设置窗口的主样式
-        central_widget.setStyleSheet("""
-            QWidget#central_widget {
-                background-color: #252525;
-                border-radius: 10px;
-            }
-        """)
-        
-        # 为窗口设置阴影效果
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(20)
-        shadow.setColor(QColor(0, 0, 0, 180))
-        shadow.setOffset(0, 0)
-        central_widget.setGraphicsEffect(shadow)
-        
-        # 设置中心窗口部件
-        self.setCentralWidget(central_widget)
-        
-        # 设置初始大小和最小大小
-        self.resize(1200, 800)
-        self.setMinimumSize(1000, 700)
-        
-        # 设置默认起始页面
-        self.set_active_page("Dashboard")
-
-        # 获取翻译的欢迎消息（从常规翻译中获取，而不是从main_window中获取，避免递归）
-        welcome_message = "Welcome to Glary Utilities"
-        try:
-            lang = self.settings.get_setting("language", "en")
-            language_map = {
-                "en": "en", "english": "en", "English": "en",
-                "zh": "zh", "中文": "zh", "chinese": "zh", "Chinese": "zh"
-            }
-            lang_code = language_map.get(lang.lower(), lang)
-            
-            if lang_code in self.settings.translations:
-                translations = self.settings.translations[lang_code]
-                if "general" in translations and "welcome" in translations["general"]:
-                    welcome_message = translations["general"]["welcome"]
-        except Exception as e:
-            self.logger.error(f"Error getting welcome message: {e}")
-            
-        self.show_status_message(welcome_message, 5000)
-        
-        # 使用淡入动画显示窗口
-        self.setWindowOpacity(0.0)
-        # 检查是否启用动画 - 确保正确读取布尔值
-        enable_animations = self.settings.get_setting("enable_animations", True)
-        if isinstance(enable_animations, str):
-            enable_animations = enable_animations.lower() in ('true', 'yes', '1', 'on')
-        elif isinstance(enable_animations, int):
-            enable_animations = enable_animations != 0
-        else:
-            enable_animations = bool(enable_animations)
-            
-        if enable_animations:
-            self.fade_in_effect = QPropertyAnimation(self, b"windowOpacity")
-            self.fade_in_effect.setDuration(400)  # 缩短时间，更快显示
-            self.fade_in_effect.setStartValue(0.0)
-            self.fade_in_effect.setEndValue(1.0)
-            self.fade_in_effect.setEasingCurve(QEasingCurve.OutQuint)  # 使用更平滑的缓动曲线
-            self.fade_in_effect.start(QAbstractAnimation.DeleteWhenStopped)
-        else:
-            # 如果动画被禁用，直接设置为完全不透明
-            self.setWindowOpacity(1.0)
-            
-        # 设置按钮提示
+        # 设置工具提示
         self.setup_tooltips()
         
     def setup_title_bar(self):
@@ -326,6 +231,20 @@ class MainWindow(QMainWindow):
         # 允许通过标题栏拖动窗口
         self.draggable = True
         
+        # 为标题栏设置鼠标事件处理
+        self.title_bar.mousePressEvent = self.title_bar_mouse_press_event
+        self.title_bar.mouseMoveEvent = self.title_bar_mouse_move_event
+        self.title_bar.mouseReleaseEvent = self.title_bar_mouse_release_event
+        
+        # Linux特定优化：确保标题栏可以接收鼠标事件
+        if self.platform_manager.is_linux():
+            # 只在非Wayland环境下设置这些属性
+            if 'WAYLAND_DISPLAY' not in os.environ:
+                self.title_bar.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+                self.title_bar.setFocusPolicy(Qt.NoFocus)
+                # 设置标题栏为可拖拽区域
+                self.title_bar.setProperty("draggable", True)
+        
         return self.title_bar
 
     def toggle_maximize(self):
@@ -339,48 +258,113 @@ class MainWindow(QMainWindow):
             self.maximize_button.setToolTip("还原")
             self.maximize_button.setIcon(QIcon(Icon.Restore.Path))
     
-    # 事件处理用于窗口拖动与调整
-    def mousePressEvent(self, event):
-        """处理鼠标按下事件"""
+    def title_bar_mouse_press_event(self, event):
+        """标题栏鼠标按下事件"""
         if event.button() == Qt.LeftButton:
-            if self.title_bar.geometry().contains(event.pos()):
-                self.dragging = True
-                self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
-                event.accept()
-            else:
-                super().mousePressEvent(event)
+            self.dragging = True
+            self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+            event.accept()
+            # 只在非Wayland环境下激活窗口
+            if 'WAYLAND_DISPLAY' not in os.environ:
+                self.activateWindow()
+                self.raise_()
     
-    def mouseMoveEvent(self, event):
-        """处理鼠标移动事件"""
+    def title_bar_mouse_move_event(self, event):
+        """标题栏鼠标移动事件"""
         if self.dragging and event.buttons() == Qt.LeftButton:
-            if self.isMaximized():
-                # 如果窗口最大化，则先恢复到正常大小
-                self.showNormal()
-                # 调整拖拽位置，使光标位于窗口的相对位置
-                ratio = event.pos().x() / self.width()
-                self.drag_position = QPoint(int(self.width() * ratio), event.pos().y())
+            # 获取屏幕几何信息
+            screen_geometry = self.screen().availableGeometry()
+            new_pos = event.globalPos() - self.drag_position
             
-            self.move(event.globalPos() - self.drag_position)
+            # 限制窗口在屏幕范围内
+            new_pos.setX(max(0, min(new_pos.x(), screen_geometry.width() - self.width())))
+            new_pos.setY(max(0, min(new_pos.y(), screen_geometry.height() - self.height())))
+            self.move(new_pos)
             event.accept()
         else:
-            super().mouseMoveEvent(event)
+            # 如果不在拖拽状态，检查是否需要开始拖拽
+            if event.buttons() == Qt.LeftButton and not self.dragging:
+                self.dragging = True
+                self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
     
-    def mouseReleaseEvent(self, event):
-        """处理鼠标释放事件"""
+    def title_bar_mouse_release_event(self, event):
+        """标题栏鼠标释放事件"""
         if event.button() == Qt.LeftButton:
             self.dragging = False
             event.accept()
-        else:
-            super().mouseReleaseEvent(event)
     
+    # 事件处理用于窗口拖动与调整 - 优化Linux兼容性
+    def mousePressEvent(self, event):
+        """处理鼠标按下事件 - 只在非Linux平台上处理窗口拖拽"""
+        if not self.platform_manager.is_linux():
+            if event.button() == Qt.LeftButton:
+                # 检查是否点击在标题栏上
+                if hasattr(self, 'title_bar') and self.title_bar.geometry().contains(event.pos()):
+                    self.dragging = True
+                    self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+                    # 只在非Wayland环境下激活窗口
+                    if 'WAYLAND_DISPLAY' not in os.environ:
+                        self.activateWindow()
+                        self.raise_()
+                    event.accept()
+                # 允许通过窗口边缘拖动（适用于所有平台）
+                else:
+                    edge_margin = 5
+                    if (event.pos().x() <= edge_margin or
+                        event.pos().x() >= self.width() - edge_margin or
+                        event.pos().y() <= edge_margin or
+                        event.pos().y() >= self.height() - edge_margin):
+                        self.dragging = True
+                        self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
+                        # 只在非Wayland环境下激活窗口
+                        if 'WAYLAND_DISPLAY' not in os.environ:
+                            self.activateWindow()
+                            self.raise_()
+                        event.accept()
+                    else:
+                        super().mousePressEvent(event)
+            else:
+                super().mousePressEvent(event)
+        else:
+            # Linux上使用系统标题栏，不需要自定义拖拽处理
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """处理鼠标移动事件 - 只在非Linux平台上处理窗口拖拽"""
+        if not self.platform_manager.is_linux():
+            if self.dragging and event.buttons() == Qt.LeftButton:
+                new_pos = event.globalPos() - self.drag_position
+                self.move(new_pos)
+                event.accept()
+            else:
+                super().mouseMoveEvent(event)
+        else:
+            # Linux上使用系统标题栏，不需要自定义拖拽处理
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """处理鼠标释放事件 - 只在非Linux平台上处理窗口拖拽"""
+        if not self.platform_manager.is_linux():
+            if event.button() == Qt.LeftButton:
+                self.dragging = False
+                event.accept()
+            else:
+                super().mouseReleaseEvent(event)
+        else:
+            # Linux上使用系统标题栏，不需要自定义拖拽处理
+            super().mouseReleaseEvent(event)
+
     def mouseDoubleClickEvent(self, event):
-        """处理鼠标双击事件"""
-        if event.button() == Qt.LeftButton:
-            if self.title_bar.geometry().contains(event.pos()):
+        """处理鼠标双击事件 - 只在非Linux平台上处理最大化"""
+        if not self.platform_manager.is_linux():
+            if hasattr(self, 'title_bar') and self.title_bar.geometry().contains(event.pos()):
                 self.toggle_maximize()
                 event.accept()
             else:
                 super().mouseDoubleClickEvent(event)
+        else:
+            # Linux上使用系统标题栏，不需要自定义双击处理
+            super().mouseDoubleClickEvent(event)
     
     def create_animated_action(self, icon, text, callback):
         """创建带有动画效果的工具栏操作"""
@@ -424,7 +408,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addLayout(logo_layout)
 
         # 添加分类标题：常用
-        common_title = QLabel("Common")
+        common_title = QLabel(self.get_translation("common_section", "Common"))
         common_title.setStyleSheet("color: #999999; font-size: 13px; margin-top: 5px; background-color: transparent; font-weight: bold; padding-left: 2px;")
         sidebar_layout.addWidget(common_title)
 
@@ -595,38 +579,49 @@ class MainWindow(QMainWindow):
             self.press_animation = QParallelAnimationGroup()
             
             # 当鼠标悬停时增大图标
-            def on_hover(hovered):
-                if hovered:
-                    target_size = QSize(32, 32)  # 悬停时图标大小增加
-                    anim = QPropertyAnimation(button, b"iconSize")
-                    anim.setDuration(150)
-                    anim.setStartValue(button.iconSize())
-                    anim.setEndValue(target_size)
-                    anim.start()
-                else:
-                    # 恢复原始大小
-                    anim = QPropertyAnimation(button, b"iconSize")
-                    anim.setDuration(150)
-                    anim.setStartValue(button.iconSize())
-                    anim.setEndValue(button._original_icon_size)
-                    anim.start()
-            
-            # 当按下时缩小图标
-            def on_press(pressed):
-                if pressed:
-                    target_size = QSize(26, 26)  # 按下时图标大小减小
-                    anim = QPropertyAnimation(button, b"iconSize")
-                    anim.setDuration(100)
-                    anim.setStartValue(button.iconSize())
-                    anim.setEndValue(target_size)
-                    anim.start()
-            
-            # 连接事件
-            button.installEventFilter(self)
-            button.enterEvent = lambda e: on_hover(True)
-            button.leaveEvent = lambda e: on_hover(False)
-            button.pressed.connect(lambda: on_press(True))
-            button.released.connect(lambda: on_hover(True))  # 释放后恢复为悬停状态
+            # 检查Linux性能优化设置
+            optimize_linux = self.settings.get_setting("optimize_linux_performance", True)
+            if isinstance(optimize_linux, str):
+                optimize_linux = optimize_linux.lower() in ('true', 'yes', '1', 'on')
+            elif isinstance(optimize_linux, int):
+                optimize_linux = optimize_linux != 0
+            else:
+                optimize_linux = bool(optimize_linux)
+                
+            # 在Linux上禁用复杂的图标动画以提高性能
+            if not (self.platform_manager.is_linux() and optimize_linux):
+                def on_hover(hovered):
+                    if hovered:
+                        target_size = QSize(32, 32)  # 悬停时图标大小增加
+                        anim = QPropertyAnimation(button, b"iconSize")
+                        anim.setDuration(150)
+                        anim.setStartValue(button.iconSize())
+                        anim.setEndValue(target_size)
+                        anim.start()
+                    else:
+                        # 恢复原始大小
+                        anim = QPropertyAnimation(button, b"iconSize")
+                        anim.setDuration(150)
+                        anim.setStartValue(button.iconSize())
+                        anim.setEndValue(button._original_icon_size)
+                        anim.start()
+                
+                # 当按下时缩小图标
+                def on_press(pressed):
+                    if pressed:
+                        target_size = QSize(26, 26)  # 按下时图标大小减小
+                        anim = QPropertyAnimation(button, b"iconSize")
+                        anim.setDuration(100)
+                        anim.setStartValue(button.iconSize())
+                        anim.setEndValue(target_size)
+                        anim.start()
+                
+                # 连接事件
+                button.installEventFilter(self)
+                button.enterEvent = lambda e: on_hover(True)
+                button.leaveEvent = lambda e: on_hover(False)
+                button.pressed.connect(lambda: on_press(True))
+                button.released.connect(lambda: on_hover(True))  # 释放后恢复为悬停状态
         
         # 连接按钮点击事件
         button.clicked.connect(lambda: self.set_active_page(page_name))
@@ -634,80 +629,85 @@ class MainWindow(QMainWindow):
         return button
 
     def setup_content_area(self):
-        """设置主要内容区域"""
-        # 创建QStackedWidget以便在不同页面之间切换
+        """设置内容区域"""
+        # 创建内容部件
+        self.content_widget = QWidget()
+        self.content_widget.setObjectName("content_widget")
+        
+        # 创建内容布局
+        content_layout = QHBoxLayout(self.content_widget)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+        
+        # 添加侧边栏
+        self.sidebar = self.setup_sidebar()
+        content_layout.addWidget(self.sidebar)
+        
+        # 添加内容区域
+        self.setup_content_area_internal()
+        content_layout.addWidget(self.content_area)
+        
+        # 设置内容部件的样式
+        if not self.platform_manager.is_linux():
+            # 只在非Linux平台上设置圆角和阴影
+            self.content_widget.setStyleSheet("""
+                QWidget#content_widget {
+                    background-color: #252525;
+                    border-radius: 10px;
+                }
+            """)
+            
+            # 为窗口设置阴影效果
+            shadow = QGraphicsDropShadowEffect(self)
+            shadow.setBlurRadius(20)
+            shadow.setColor(QColor(0, 0, 0, 180))
+            shadow.setOffset(0, 0)
+            self.content_widget.setGraphicsEffect(shadow)
+        else:
+            # Linux上使用简单的背景色
+            self.content_widget.setStyleSheet("""
+                QWidget#content_widget {
+                    background-color: #252525;
+                }
+            """)
+
+    def setup_content_area_internal(self):
+        """设置内部内容区域"""
+        # 创建堆叠窗口部件用于页面切换
         self.content_area = QStackedWidget()
         self.content_area.setObjectName("content_area")
+        
+        # 创建各个页面组件
+        self.dashboard_widget = DashboardWidget()
+        self.system_cleaner_widget = SystemCleanerWidget()
+        self.disk_check_widget = DiskCheckWidget()
+        self.boot_tools_widget = BootToolsWidget()
+        self.virus_scan_widget = VirusScanWidget()
+        self.system_repair_widget = SystemRepairWidget()
+        self.dism_tool_widget = DismToolWidget()
+        self.network_reset_widget = NetworkResetWidget()
+        self.system_info_widget = SystemInfoWidget()
+        self.settings_widget = SettingsWidget(self.settings)
+        
+        # 添加页面到堆叠窗口部件
+        self.content_area.addWidget(self.dashboard_widget)
+        self.content_area.addWidget(self.system_cleaner_widget)
+        self.content_area.addWidget(self.disk_check_widget)
+        self.content_area.addWidget(self.boot_tools_widget)
+        self.content_area.addWidget(self.virus_scan_widget)
+        self.content_area.addWidget(self.system_repair_widget)
+        self.content_area.addWidget(self.dism_tool_widget)
+        self.content_area.addWidget(self.network_reset_widget)
+        self.content_area.addWidget(self.system_info_widget)
+        self.content_area.addWidget(self.settings_widget)
+        
+        # 设置内容区域样式
         self.content_area.setStyleSheet("""
-            QStackedWidget {
+            QStackedWidget#content_area {
                 background-color: transparent;
-                border-top-right-radius: 10px;
-                border-bottom-right-radius: 10px;
+                border: none;
             }
         """)
-        
-        # 创建页面实例
-        self.dashboard_page = DashboardWidget(self)
-        self.dashboard_page.setObjectName("Dashboard")
-        
-        self.system_cleaner_page = SystemCleanerWidget(self)
-        self.system_cleaner_page.setObjectName("System Cleaner")
-        
-        self.registry_page = SystemRepairWidget(self)
-        self.registry_page.setObjectName("System Tools")
-        
-        self.disk_tools_page = DiskCheckWidget(self)
-        self.disk_tools_page.setObjectName("Disk Tools")
-        
-        self.startup_page = BootToolsWidget(self)
-        self.startup_page.setObjectName("Boot Tools")
-        
-        self.uninstaller_page = VirusScanWidget(self)
-        self.uninstaller_page.setObjectName("Security Tools")
-        
-        self.privacy_page = NetworkResetWidget(self)
-        self.privacy_page.setObjectName("Network Tools")
-        
-        self.driver_page = DismToolWidget(self)
-        self.driver_page.setObjectName("DISM Tool")
-        
-        self.optimizer_page = SystemInfoWidget(self)
-        self.optimizer_page.setObjectName("System Information")
-        
-        self.settings_page = SettingsWidget(self.settings, self)
-        self.settings_page.setObjectName("Settings")
-        
-        # 将页面添加到内容区域
-        self.content_area.addWidget(self.dashboard_page)
-        self.content_area.addWidget(self.system_cleaner_page)
-        self.content_area.addWidget(self.registry_page)
-        self.content_area.addWidget(self.disk_tools_page)
-        self.content_area.addWidget(self.startup_page)
-        self.content_area.addWidget(self.uninstaller_page)
-        self.content_area.addWidget(self.privacy_page)
-        self.content_area.addWidget(self.driver_page)
-        self.content_area.addWidget(self.optimizer_page)
-        self.content_area.addWidget(self.settings_page)
-        
-        # 创建页面索引字典
-        self.page_indices = {
-            "Dashboard": 0,
-            "System Cleaner": 1,
-            "System Tools": 2,
-            "Disk Tools": 3,
-            "Boot Tools": 4,
-            "Security Tools": 5,
-            "Network Tools": 6,
-            "DISM Tool": 7,
-            "System Information": 8,
-            "Settings": 9
-        }
-        
-        # 页面初始化后，将所有页面的边距设为0
-        for i in range(self.content_area.count()):
-            page = self.content_area.widget(i)
-            if isinstance(page, QWidget):
-                page.setContentsMargins(0, 0, 0, 0)
     
     def apply_theme(self):
         """应用当前主题"""
@@ -833,131 +833,38 @@ class MainWindow(QMainWindow):
         """设置活动页面
         
         Args:
-            page_name: 页面名称
+            page_name (str): 页面名称
         """
-        # 如果页面名称无效，使用默认值
-        if not page_name:
-            page_name = "Dashboard"
-            
-        # 如果是相同页面，不执行任何操作
-        if self.current_page == page_name:
-            return
-            
-        # 检查页面是否存在于索引字典中
-        if page_name not in self.page_indices:
-            self.logger.error(f"错误: 找不到页面 '{page_name}'")
-            return
-            
-        # 获取页面索引
-        page_index = self.page_indices[page_name]
+        # 页面名称到索引的映射
+        page_indices = {
+            "Dashboard": 0,
+            "System Cleaner": 1,
+            "Disk Tools": 2,
+            "Boot Tools": 3,
+            "Security Tools": 4,
+            "System Tools": 5,
+            "Network Tools": 6,
+            "DISM Tool": 7,
+            "System Information": 8,
+            "Settings": 9
+        }
         
-        # 获取当前页面和新页面
-        old_page = self.content_area.currentWidget()
-        new_page = self.content_area.widget(page_index)
-        
-        # 更新当前页面
-        old_page_name = self.current_page
-        self.current_page = page_name
-        
-        # 检查是否启用动画
-        enable_animations = self.settings.get_setting("enable_animations", True)
-        if isinstance(enable_animations, str):
-            enable_animations = enable_animations.lower() in ('true', 'yes', '1', 'on')
-        elif isinstance(enable_animations, int):
-            enable_animations = enable_animations != 0
-        else:
-            enable_animations = bool(enable_animations)
+        if page_name in page_indices:
+            index = page_indices[page_name]
+            self.content_area.setCurrentIndex(index)
+            self.current_page = page_name
             
-        # 如果动画被禁用，直接切换
-        if not enable_animations:
-            self.content_area.setCurrentIndex(page_index)
+            # 更新活动按钮状态
             self._update_active_button(page_name)
-            self.page_changed.emit(page_name)
-            return
-        
-        # 设置页面过渡方向（根据页面名称确定方向）
-        page_order = list(self.page_indices.keys())
-        
-        try:
-            old_index = page_order.index(old_page_name)
-            new_index = page_order.index(page_name)
-            direction = "left" if new_index > old_index else "right"
-        except (ValueError, IndexError):
-            # 如果页面不在列表中，默认向左滑动
-            direction = "left"
             
-        # 获取页面宽度
-        width = self.content_area.width()
-        
-        # 首先确保两个页面都可见（但只显示当前页面）
-        new_page.show()
-        old_page.show()
-        
-        # 设置初始位置 - 新页面位于边界之外
-        old_page_pos = old_page.pos()
-        if direction == "left":
-            new_page.move(old_page_pos.x() + width, old_page_pos.y())
-        else:
-            new_page.move(old_page_pos.x() - width, old_page_pos.y())
-            
-        # 如果已有动画正在运行，停止它
-        if hasattr(self, '_page_animation') and self._page_animation is not None:
-            try:
-                self._page_animation.stop()
-            except RuntimeError:
-                # 动画可能已被删除或处于无效状态
-                pass
-        
-        # 创建动画组
-        self._page_animation = QParallelAnimationGroup()
-        
-        # 旧页面动画
-        old_anim = QPropertyAnimation(old_page, b"pos")
-        old_anim.setDuration(300) # 略微加快过渡
-        old_anim.setStartValue(old_page_pos)
-        if direction == "left":
-            old_anim.setEndValue(QPoint(old_page_pos.x() - width, old_page_pos.y()))
-        else:
-            old_anim.setEndValue(QPoint(old_page_pos.x() + width, old_page_pos.y()))
-        old_anim.setEasingCurve(QEasingCurve.OutCubic)
-        
-        # 新页面动画
-        new_anim = QPropertyAnimation(new_page, b"pos")
-        new_anim.setDuration(300) # 和旧页面动画相同的时长
-        if direction == "left":
-            new_anim.setStartValue(QPoint(old_page_pos.x() + width, old_page_pos.y()))
-        else:
-            new_anim.setStartValue(QPoint(old_page_pos.x() - width, old_page_pos.y()))
-        new_anim.setEndValue(old_page_pos)
-        new_anim.setEasingCurve(QEasingCurve.OutCubic)
-        
-        # 添加动画到组
-        self._page_animation.addAnimation(old_anim)
-        self._page_animation.addAnimation(new_anim)
-        
-        # 动画结束后的处理
-        self._page_animation.finished.connect(lambda: animation_finished())
-        
-        # 启动动画
-        self._page_animation.start(QAbstractAnimation.DeleteWhenStopped)
-        
-        # 在动画开始时更新活动按钮
-        self._update_active_button(page_name)
-        
-        # 触发页面更改信号
-        self.page_changed.emit(page_name)
-        
-        def animation_finished():
-            # 隐藏旧页面，将新页面设置为当前页面
-            old_page.hide()
-            self.content_area.setCurrentWidget(new_page)
-            
-            # 标记动画已完成
-            self._page_animation = None
-            
-            # 确保设置窗口标题和焦点等
+            # 更新窗口标题
             self.setWindowTitle(f"Glary Utilities - {page_name}")
-        
+            
+            # 记录页面切换
+            self.logger.debug(f"切换到页面: {page_name}")
+        else:
+            self.logger.warning(f"未知页面: {page_name}")
+    
     def _update_page_content(self, page_name):
         """根据页面名称更新内容区域"""
         self.logger.info(f"切换到页面: {page_name}")
@@ -1027,8 +934,8 @@ class MainWindow(QMainWindow):
                 if dialog.objectName() == "HelpDialog":
                     dialog.reject()
                     
-            # Save language setting
-            self.settings.set_setting("language", language)
+            # Update language setting and refresh translation cache
+            self.settings.set_language(language)
             self.settings.sync()
             
             # 直接更新UI文本，而不是触发信号
@@ -1438,7 +1345,7 @@ class MainWindow(QMainWindow):
             content_layout.addWidget(dev_label)
             
             # 添加网站链接
-            website_label = QLabel("<a href='https://www.chenrunsen.com' style='color: #5b9bd5;'>www.glarysoft.com</a>")
+            website_label = QLabel("<a href='https://www.chenrunsen.com' style='color: #5b9bd5;'>www.chenrunsen.com</a>")
             website_label.setOpenExternalLinks(True)
             website_label.setStyleSheet("font-size: 14px; color: #5b9bd5;")
             content_layout.addWidget(website_label)
@@ -1741,4 +1648,28 @@ class MainWindow(QMainWindow):
         # Settings
         if hasattr(self, 'settings_btn'):
             self.settings_btn.setToolTip(self.get_translation("settings_tooltip", "Configure application settings and preferences"))
+
+    def closeEvent(self, event):
+        """确保关闭窗口时终止所有后台线程/定时器，防止进程挂起"""
+        try:
+            # 停止所有 QTimer
+            for timer in self.findChildren(QTimer):
+                try:
+                    timer.stop()
+                except Exception:
+                    pass
+
+            # 终止所有 QThread
+            for thread in self.findChildren(QThread):
+                try:
+                    thread.requestInterruption()
+                    thread.quit()
+                    thread.wait(1000)
+                except Exception:
+                    pass
+        except Exception as e:
+            self.logger.error(f"Error while shutting down threads: {e}")
+
+        # 继续默认处理，最终退出应用
+        super().closeEvent(event)
  

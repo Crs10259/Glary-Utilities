@@ -57,12 +57,16 @@ To build the application and create an installer:
    pip install -r requirements.txt
    ```
 
-2. Run the build script:
+2. Use PyInstaller to create a standalone executable:
    ```
-   python build.py
+   pip install pyinstaller
+   pyinstaller --onefile --windowed --name "Glary-Utilities" src/main.py
    ```
 
-This will create a distributable package in the `dist` directory and an installer if you have NSIS installed (Windows) or pkgbuild (macOS).
+This will create a standalone executable in the `dist` directory. For creating installers, you can use tools like:
+- **Windows**: NSIS (Nullsoft Scriptable Install System)
+- **macOS**: pkgbuild or create-dmg
+- **Linux**: AppImage or snapcraft
 
 ## Translations
 

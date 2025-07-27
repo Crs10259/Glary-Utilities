@@ -33,41 +33,29 @@ class VirusScanWidget(BaseComponent):
             self.setup_ui()
         
     def get_translation(self, key, default=None):
-        """获取当前组件的翻译
-        
-        Args:
-            key: 翻译键
-            default: 如果翻译不存在时的默认值
-            
-        Returns:
-            翻译文本
-        """
-        try:
-            # 使用BaseComponent中定义的get_translation方法
-            return super().get_translation(key, default)
-        except (KeyError, AttributeError) as e:
-            self.logger.error(f"Translation missing in VirusScanWidget: {key}")
-            
-            # 返回默认值或键名
-            return default if default is not None else key
+        """Return translated text from the correct section (virus_scan)."""
+        return self.settings.get_translation("virus_scan", key, default)
 
     def setup_ui(self):
         """设置UI元素"""
         # 主布局
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(10, 10, 10, 10)
-        self.main_layout.setSpacing(10)
+        # 与其他页面一致的边距和间距
+        self.main_layout.setContentsMargins(20, 20, 20, 20)
+        self.main_layout.setSpacing(20)
         
         # 添加标题
-        title_label = QLabel(self.get_translation("title", "Virus Scan"))
-        title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0; background-color: transparent;")
-        self.main_layout.addWidget(title_label)
+        self.title_label = QLabel(self.get_translation("title"))
+        self.title_label.setObjectName("title_label")
+        self.title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0; background-color: transparent;")
+        self.main_layout.addWidget(self.title_label)
         
         # 描述
-        description = QLabel(self.get_translation("scan_description", "Scan your system for malware and viruses"))
-        description.setStyleSheet("font-size: 14px;")
-        description.setWordWrap(True)
-        self.main_layout.addWidget(description)
+        self.desc_label = QLabel(self.get_translation("scan_description"))
+        self.desc_label.setObjectName("desc_label")
+        self.desc_label.setStyleSheet("font-size: 14px;")
+        self.desc_label.setWordWrap(True)
+        self.main_layout.addWidget(self.desc_label)
 
         # 创建选项卡部件
         self.tabs = QTabWidget()
@@ -397,7 +385,7 @@ class VirusScanWidget(BaseComponent):
             
         desc_label = self.findChild(QLabel, "desc_label")
         if desc_label:
-            desc_label.setText(self.get_translation("description"))
+            desc_label.setText(self.get_translation("scan_description"))
         
         # 更新扫描选项
         scan_options_group = self.findChild(QGroupBox, "scan_options_group")

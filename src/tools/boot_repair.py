@@ -1,11 +1,20 @@
 
 import os
 import sys
-import winreg
 import logging
 from typing import List, Dict, Tuple
-import win32com.client
-from win32com.shell import shell, shellcon
+
+# 平台适配导入
+if sys.platform.startswith("win"):
+    import winreg
+    import win32com.client
+    from win32com.shell import shell, shellcon
+else:
+    winreg = None
+    win32com = None
+    shell = None
+    shellcon = None
+
 from .base_tools import BaseThread
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 
@@ -13,12 +22,15 @@ class StartupManager:
     """管理Windows启动项的工具类"""
     logger = logging.getLogger(__name__)
 
-    STARTUP_LOCATIONS = {
-        "HKCU_RUN": (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run"),
-        "HKLM_RUN": (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run"),
-        "STARTUP_FOLDER": shell.SHGetFolderPath(0, shellcon.CSIDL_STARTUP, 0, 0),
-        "COMMON_STARTUP": shell.SHGetFolderPath(0, shellcon.CSIDL_COMMON_STARTUP, 0, 0)
-    }
+    if sys.platform.startswith("win"):
+        STARTUP_LOCATIONS = {
+            "HKCU_RUN": (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run"),
+            "HKLM_RUN": (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Run"),
+            "STARTUP_FOLDER": shell.SHGetFolderPath(0, shellcon.CSIDL_STARTUP, 0, 0),
+            "COMMON_STARTUP": shell.SHGetFolderPath(0, shellcon.CSIDL_COMMON_STARTUP, 0, 0)
+        }
+    else:
+        STARTUP_LOCATIONS = {}
     
     @staticmethod
     def get_startup_items() -> List[Dict]:
@@ -29,6 +41,10 @@ class StartupManager:
         """
         items = []
         
+        if not sys.platform.startswith("win"):
+            StartupManager.logger.info("Startup items only available on Windows.")
+            return []
+
         try:
             # 获取注册表启动项
             items.extend(StartupManager._get_registry_items())
@@ -49,6 +65,9 @@ class StartupManager:
         """获取注册表中的启动项"""
         items = []
         
+        if not sys.platform.startswith("win"):
+            return []
+
         for location_name, location_value in StartupManager.STARTUP_LOCATIONS.items():
             # 只处理元组类型的注册表位置，跳过字符串路径
             if not isinstance(location_value, tuple) or len(location_value) != 2:
@@ -71,7 +90,7 @@ class StartupManager:
                                 "type": "注册表"
                             })
                             i += 1
-                        except WindowsError:
+                        except OSError:
                             break
             except Exception as e:
                 StartupManager.logger.error(f"读取注册表启动项出错 ({location_name}): {e}")
@@ -83,6 +102,9 @@ class StartupManager:
         """获取启动文件夹中的启动项"""
         items = []
         
+        if not sys.platform.startswith("win"):
+            return []
+
         for location_name, location_value in StartupManager.STARTUP_LOCATIONS.items():
             # 只处理字符串类型的路径，跳过注册表键值对
             if not isinstance(location_value, str):
@@ -95,8 +117,8 @@ class StartupManager:
                         file_path = os.path.join(folder_path, filename)
                         if os.path.isfile(file_path) and (filename.endswith('.lnk') or filename.endswith('.url')):
                             # 获取快捷方式目标
-                            shell = win32com.client.Dispatch("WScript.Shell")
-                            shortcut = shell.CreateShortCut(file_path)
+                            shell_obj = win32com.client.Dispatch("WScript.Shell")
+                            shortcut = shell_obj.CreateShortCut(file_path)
                             target_path = shortcut.Targetpath
                             
                             items.append({
@@ -115,6 +137,9 @@ class StartupManager:
         """获取计划任务中的启动项"""
         items = []
         
+        if not sys.platform.startswith("win"):
+            return []
+
         try:
             scheduler = win32com.client.Dispatch('Schedule.Service')
             scheduler.Connect()
@@ -141,6 +166,8 @@ class StartupManager:
     @staticmethod
     def _is_registry_item_disabled(name: str) -> bool:
         """检查注册表启动项是否被禁用"""
+        if not sys.platform.startswith("win"):
+            return False
         try:
             disabled_key = winreg.OpenKey(
                 winreg.HKEY_CURRENT_USER,
@@ -153,11 +180,11 @@ class StartupManager:
                 value, _ = winreg.QueryValueEx(disabled_key, name)
                 # 第一个字节为02表示禁用
                 return value[0] == 0x02
-            except WindowsError:
+            except OSError:
                 return False
             finally:
                 winreg.CloseKey(disabled_key)
-        except WindowsError:
+        except OSError:
             return False
     
     @staticmethod
@@ -171,6 +198,8 @@ class StartupManager:
         Returns:
             bool: 是否成功
         """
+        if not sys.platform.startswith("win"):
+            return False
         try:
             if item_type == "注册表":
                 return StartupManager._enable_registry_item(name)
@@ -194,6 +223,8 @@ class StartupManager:
         Returns:
             bool: 是否成功
         """
+        if not sys.platform.startswith("win"):
+            return False
         try:
             if item_type == "注册表":
                 return StartupManager._disable_registry_item(name)
@@ -218,6 +249,8 @@ class StartupManager:
         Returns:
             bool: 是否成功
         """
+        if not sys.platform.startswith("win"):
+            return False
         try:
             if item_type == "注册表":
                 return StartupManager._delete_registry_item(name)
@@ -229,7 +262,7 @@ class StartupManager:
                 StartupManager.logger.warning(f"不支持删除类型为 {item_type} 的启动项")
                 return False
         except Exception as e:
-            StartupManager.loggerr.error(f"删除启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"删除启动项 {name} 时出错: {e}")
             return False
     
     @staticmethod
@@ -244,21 +277,25 @@ class StartupManager:
         Returns:
             bool: 是否成功
         """
+        if not sys.platform.startswith("win"):
+            return False
         try:
             if item_type == "注册表":
                 return StartupManager._add_registry_item(name, path)
             elif item_type == "启动文件夹":
                 return StartupManager._add_folder_item(name, path)
             else:
-                StartupManager.loggerr.warning(f"不支持添加类型为 {item_type} 的启动项")
+                StartupManager.logger.warning(f"不支持添加类型为 {item_type} 的启动项")
                 return False
         except Exception as e:
-            StartupManager.loggerr.error(f"添加启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"添加启动项 {name} 时出错: {e}")
             return False
     
     @staticmethod
     def _enable_registry_item(name: str) -> bool:
         """启用注册表启动项"""
+        if not sys.platform.startswith("win"):
+            return False
         try:
             key = winreg.OpenKey(
                 winreg.HKEY_CURRENT_USER,
@@ -273,12 +310,14 @@ class StartupManager:
             winreg.CloseKey(key)
             return True
         except Exception as e:
-            StartupManager.loggerr.error(f"启用注册表启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"启用注册表启动项 {name} 时出错: {e}")
             return False
     
     @staticmethod
     def _disable_registry_item(name: str) -> bool:
         """禁用注册表启动项"""
+        if not sys.platform.startswith("win"):
+            return False
         try:
             key = winreg.OpenKey(
                 winreg.HKEY_CURRENT_USER,
@@ -293,12 +332,14 @@ class StartupManager:
             winreg.CloseKey(key)
             return True
         except Exception as e:
-            StartupManager.loggerr.error(f"禁用注册表启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"禁用注册表启动项 {name} 时出错: {e}")
             return False
     
     @staticmethod
     def _enable_scheduled_task(name: str) -> bool:
         """启用计划任务"""
+        if not sys.platform.startswith("win"):
+            return False
         try:
             scheduler = win32com.client.Dispatch('Schedule.Service')
             scheduler.Connect()
@@ -306,12 +347,14 @@ class StartupManager:
             task.Enabled = True
             return True
         except Exception as e:
-            StartupManager.loggerr.error(f"启用计划任务 {name} 时出错: {e}")
+            StartupManager.logger.error(f"启用计划任务 {name} 时出错: {e}")
             return False
     
     @staticmethod
     def _disable_scheduled_task(name: str) -> bool:
         """禁用计划任务"""
+        if not sys.platform.startswith("win"):
+            return False
         try:
             scheduler = win32com.client.Dispatch('Schedule.Service')
             scheduler.Connect()
@@ -319,12 +362,14 @@ class StartupManager:
             task.Enabled = False
             return True
         except Exception as e:
-            StartupManager.loggerr.error(f"禁用计划任务 {name} 时出错: {e}")
+            StartupManager.logger.error(f"禁用计划任务 {name} 时出错: {e}")
             return False
     
     @staticmethod
     def _delete_registry_item(name: str) -> bool:
         """删除注册表启动项"""
+        if not sys.platform.startswith("win"):
+            return False
         try:
             # 尝试从HKCU删除
             try:
@@ -337,7 +382,7 @@ class StartupManager:
                 winreg.DeleteValue(key, name)
                 winreg.CloseKey(key)
                 return True
-            except WindowsError:
+            except OSError:
                 pass
             
             # 尝试从HKLM删除
@@ -351,29 +396,33 @@ class StartupManager:
                 winreg.DeleteValue(key, name)
                 winreg.CloseKey(key)
                 return True
-            except WindowsError:
+            except OSError:
                 pass
             
             return False
         except Exception as e:
-            StartupManager.loggerr.error(f"删除注册表启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"删除注册表启动项 {name} 时出错: {e}")
             return False
     
     @staticmethod
     def _delete_folder_item(path: str) -> bool:
         """删除启动文件夹项"""
+        if not sys.platform.startswith("win"):
+            return False
         try:
             if os.path.exists(path):
                 os.remove(path)
                 return True
             return False
         except Exception as e:
-            StartupManager.loggerr.error(f"删除启动文件夹项 {path} 时出错: {e}")
+            StartupManager.logger.error(f"删除启动文件夹项 {path} 时出错: {e}")
             return False
     
     @staticmethod
     def _delete_scheduled_task(name: str) -> bool:
         """删除计划任务"""
+        if not sys.platform.startswith("win"):
+            return False
         try:
             scheduler = win32com.client.Dispatch('Schedule.Service')
             scheduler.Connect()
@@ -381,12 +430,14 @@ class StartupManager:
             root_folder.DeleteTask(name, 0)
             return True
         except Exception as e:
-            StartupManager.loggerr.error(f"删除计划任务 {name} 时出错: {e}")
+            StartupManager.logger.error(f"删除计划任务 {name} 时出错: {e}")
             return False
     
     @staticmethod
     def _add_registry_item(name: str, path: str) -> bool:
         """添加注册表启动项"""
+        if not sys.platform.startswith("win"):
+            return False
         try:
             key = winreg.OpenKey(
                 winreg.HKEY_CURRENT_USER,
@@ -398,23 +449,25 @@ class StartupManager:
             winreg.CloseKey(key)
             return True
         except Exception as e:
-            StartupManager.loggerr.error(f"添加注册表启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"添加注册表启动项 {name} 时出错: {e}")
             return False
     
     @staticmethod
     def _add_folder_item(name: str, path: str) -> bool:
         """添加启动文件夹项"""
+        if not sys.platform.startswith("win"):
+            return False
         try:
             startup_folder = shell.SHGetFolderPath(0, shellcon.CSIDL_STARTUP, 0, 0)
             shortcut_path = os.path.join(startup_folder, f"{name}.lnk")
             
-            shell = win32com.client.Dispatch("WScript.Shell")
-            shortcut = shell.CreateShortCut(shortcut_path)
+            shell_obj = win32com.client.Dispatch("WScript.Shell")
+            shortcut = shell_obj.CreateShortCut(shortcut_path)
             shortcut.Targetpath = path
             shortcut.save()
             return True
         except Exception as e:
-            StartupManager.loggerr.error(f"添加启动文件夹项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"添加启动文件夹项 {name} 时出错: {e}")
             return False 
         
 class BootRepairThread(BaseThread):
@@ -456,7 +509,7 @@ class BootRepairThread(BaseThread):
         self.update_progress.emit(10)
         
         # For safety, this is a simulation
-        if self.is_windows:
+        if sys.platform.startswith("win"):
             self.update_log.emit("Checking disk status...")
             self.update_progress.emit(30)
             
@@ -482,7 +535,7 @@ class BootRepairThread(BaseThread):
         self.update_progress.emit(10)
         
         # For safety, this is a simulation
-        if self.platform_utils.is_windows():
+        if sys.platform.startswith("win"):
             self.update_log.emit("Backing up existing BCD...")
             self.update_progress.emit(20)
             
@@ -508,7 +561,7 @@ class BootRepairThread(BaseThread):
         self.update_progress.emit(10)
         
         # For safety, this is a simulation
-        if self.platform_utils.is_windows():
+        if sys.platform.startswith("win"):
             self.update_log.emit("Checking Boot Manager...")
             self.update_progress.emit(30)
             
@@ -534,7 +587,7 @@ class BootRepairThread(BaseThread):
         self.update_progress.emit(10)
         
         # For safety, this is a simulation
-        if self.platform_utils.is_windows():
+        if sys.platform.startswith("win"):
             self.update_log.emit("Checking Windows boot files...")
             self.update_progress.emit(20)
             
@@ -560,7 +613,7 @@ class BootRepairThread(BaseThread):
         self.update_progress.emit(5)
         
         # For safety, this is a simulation
-        if self.platform_utils.is_windows():
+        if sys.platform.startswith("win"):
             # Simulate full repair
             self.update_log.emit("Step 1: Fixing MBR...")
             self.update_progress.emit(10)

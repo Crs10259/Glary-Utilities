@@ -152,81 +152,8 @@ class ThemeManager(QObject):
                     }
                 }
             },
-            "blue": {
-                "name": "blue",
-                "display_name": {
-                    "en": "Blue",
-                    "zh": "蓝色"
-                },
-                "colors": {
-                    "bg_color": "#0d1117",
-                    "text_color": "#e6edf3",
-                    "accent_color": "#58a6ff",
-                    "bg_lighter": "#161b22",
-                    "bg_darker": "#0a0d12"
-                },
-                "component_specific": {
-                    "button": {
-                        "primary_bg": "#58a6ff",
-                        "primary_text": "#ffffff",
-                        "primary_hover": "#6cb6ff",
-                        "primary_pressed": "#4896ef"
-                    },
-                    "progressbar": {
-                        "chunk_color": "#58a6ff"
-                    }
-                }
-            },
-            "green": {
-                "name": "green",
-                "display_name": {
-                    "en": "Green",
-                    "zh": "绿色"
-                },
-                "colors": {
-                    "bg_color": "#0f1610",
-                    "text_color": "#e6edf3",
-                    "accent_color": "#4caf50",
-                    "bg_lighter": "#151c16",
-                    "bg_darker": "#0a0f0b"
-                },
-                "component_specific": {
-                    "button": {
-                        "primary_bg": "#4caf50",
-                        "primary_text": "#ffffff",
-                        "primary_hover": "#5cbf60",
-                        "primary_pressed": "#3d9f40"
-                    },
-                    "progressbar": {
-                        "chunk_color": "#4caf50"
-                    }
-                }
-            },
-            "purple": {
-                "name": "purple",
-                "display_name": {
-                    "en": "Purple",
-                    "zh": "紫色"
-                },
-                "colors": {
-                    "bg_color": "#13111d",
-                    "text_color": "#e6edf3",
-                    "accent_color": "#9c27b0",
-                    "bg_lighter": "#1b1825",
-                    "bg_darker": "#0f0d18"
-                },
-                "component_specific": {
-                    "button": {
-                        "primary_bg": "#9c27b0",
-                        "primary_text": "#ffffff",
-                        "primary_hover": "#ac37c0",
-                        "primary_pressed": "#8c17a0"
-                    },
-                    "progressbar": {
-                        "chunk_color": "#9c27b0"
-                    }
-                }
-            },
+
+
             "custom": {
                 "name": "custom",
                 "display_name": {

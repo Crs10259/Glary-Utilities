@@ -88,6 +88,8 @@ class GlaryUtilitiesApp:
         """显示启动画面"""
         self.splash = SplashScreen()
         self.splash.show()
+        # 立即处理一次事件循环，确保启动画面和渐变动画立刻显示
+        self.app.processEvents()
         
     def handle_translations(self, args: Dict[str, bool]) -> bool:
         """Handle translation checking
@@ -141,8 +143,17 @@ class GlaryUtilitiesApp:
             else:
                 # 等待启动画面完成后，再显示主窗口
                 self.app.processEvents()  # 处理事件以确保启动画面显示
-                # 当启动画面结束后，显示主窗口
-                self.splash.loading_thread.finished.connect(lambda: self.window.show())
+                # 当启动画面结束后显示主窗口；若线程早已结束则立即显示
+                def _show_main_window():
+                    if self.window is not None and not self.window.isVisible():
+                        self.window.show()
+
+                # 连接线程结束信号
+                self.splash.loading_thread.finished.connect(_show_main_window)
+
+                # 如果线程已经提前结束（极端情况下），立即调用一次
+                if not self.splash.loading_thread.isRunning():
+                    _show_main_window()
                 
             self.logger.info("Application started successfully")
             

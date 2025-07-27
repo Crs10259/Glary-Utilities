@@ -40,7 +40,7 @@ class DiskCheckWidget(BaseComponent):
         
         # Warning for non-Windows systems
         if not self.platform_manager.is_windows():
-            warning_label = QLabel("⚠️ " + self.get_translation("windows_only", "磁盘检查功能仅在Windows系统上可用"))
+            warning_label = QLabel("⚠️ " + self.get_translation("windows_only", "disk check features are only available on Windows"))
             warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
             self.main_layout.addWidget(warning_label)
         
@@ -226,6 +226,9 @@ class DiskCheckWidget(BaseComponent):
         # 在初始化完所有UI元素后再填充驱动器列表
         if self.platform_manager.is_windows():
             self.populate_drives()
+
+        # Apply theme after UI is fully built
+        self.apply_theme()
     
     def populate_drives(self):
         """填充驱动器下拉列表"""
@@ -362,7 +365,26 @@ class DiskCheckWidget(BaseComponent):
     
     def update_log(self, message):
         """Update the log output"""
-        self.log_output.append(message)
+        # Translate Chinese log messages if current UI language is not Chinese
+        current_lang = self.settings.get_setting("language", "en")
+        lang_code = ("zh" if str(current_lang).lower() in ["zh", "中文", "chinese"] else "en")
+
+        translated = message
+        if lang_code != "zh":
+            mapping = {
+                "开始对驱动器": self.get_translation("starting_check", "Starting disk check for"),
+                "开始对驱动器": self.get_translation("starting_repair", "Starting disk repair for"),
+                "未找到可用驱动器": self.get_translation("no_drives", "No available drives found"),
+                "跳过不可访问的驱动器": self.get_translation("skip_inaccessible", "Skip inaccessible drive"),
+                "发现驱动器": self.get_translation("found_drive", "Found drive"),
+                "开始操作": self.get_translation("starting_operation", "Starting operation"),
+            }
+            for cn, en in mapping.items():
+                if message.startswith(cn):
+                    translated = message.replace(cn, en)
+                    break
+
+        self.log_output.append(translated)
         # Scroll to bottom
         scrollbar = self.log_output.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
@@ -432,3 +454,79 @@ class DiskCheckWidget(BaseComponent):
             self.read_only_cb.setChecked(checked)
         else:
             self.logger.warning(f"未知复选框: {checkbox_name}") 
+
+    def apply_theme(self):
+        """Apply theme colors dynamically."""
+        try:
+            # Skip if UI not ready (called from BaseComponent before setup_ui)
+            if not hasattr(self, "drive_group") or not hasattr(self, "drive_combo"):
+                return
+
+            super().apply_theme()
+
+            colors = self.theme_manager.get_theme_colors()
+            bg_color = colors.get("bg_color", "#1e1e1e")
+            text_color = colors.get("text_color", "#e0e0e0")
+            accent_color = colors.get("accent_color", "#00a8ff")
+            bg_lighter = colors.get("bg_lighter", self.theme_manager.lighten_color(bg_color, 10))
+            bg_darker = colors.get("bg_darker", self.theme_manager.lighten_color(bg_color, -10))
+
+            # Group box style
+            groupbox_style = f"""
+                QGroupBox {{
+                    color: {text_color};
+                    font-weight: bold;
+                    border: 1px solid {accent_color};
+                    border-radius: 4px;
+                    margin-top: 1em;
+                    padding-top: 10px;
+                    background-color: {bg_color};
+                }}
+                QGroupBox::title {{
+                    subcontrol-origin: margin;
+                    left: 10px;
+                    padding: 0 5px;
+                    background-color: {bg_color};
+                }}
+            """
+            self.drive_group.setStyleSheet(groupbox_style)
+            self.check_group.setStyleSheet(groupbox_style)
+
+            # Combo style
+            self.drive_combo.setStyleSheet(f"""
+                QComboBox {{
+                    background-color: {bg_lighter};
+                    color: {text_color};
+                    border: 1px solid {accent_color};
+                    border-radius: 4px;
+                    padding: 5px;
+                    min-height: 25px;
+                }}
+                QComboBox::drop-down {{
+                    subcontrol-origin: padding;
+                    subcontrol-position: top right;
+                    width: 25px;
+                    border-left: none;
+                }}
+                QComboBox QAbstractItemView {{
+                    background-color: {bg_lighter};
+                    color: {text_color};
+                    border: none;
+                    selection-background-color: {self.theme_manager.lighten_color(bg_lighter, 10)};
+                }}
+            """)
+
+            # TextEdit log
+            self.log_output.setStyleSheet(f"""
+                QTextEdit {{
+                    background-color: {bg_darker};
+                    color: {text_color};
+                    border: 1px solid {accent_color};
+                    border-radius: 4px;
+                    padding: 5px;
+                }}
+            """)
+
+            # Progress bar style etc handled by base stylesheet
+        except Exception as e:
+            self.logger.error(f"Error applying theme in DiskCheckWidget: {e}") 
