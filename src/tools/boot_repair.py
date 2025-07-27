@@ -509,7 +509,7 @@ class BootRepairThread(BaseThread):
         self.update_progress.emit(10)
         
         # For safety, this is a simulation
-        if sys.platform.startswith("win"):
+        if self.platform_manager.is_windows():
             self.update_log.emit("Checking disk status...")
             self.update_progress.emit(30)
             
@@ -535,7 +535,7 @@ class BootRepairThread(BaseThread):
         self.update_progress.emit(10)
         
         # For safety, this is a simulation
-        if sys.platform.startswith("win"):
+        if self.platform_manager.is_windows():
             self.update_log.emit("Backing up existing BCD...")
             self.update_progress.emit(20)
             
@@ -561,7 +561,7 @@ class BootRepairThread(BaseThread):
         self.update_progress.emit(10)
         
         # For safety, this is a simulation
-        if sys.platform.startswith("win"):
+        if self.platform_manager.is_windows():
             self.update_log.emit("Checking Boot Manager...")
             self.update_progress.emit(30)
             
@@ -587,7 +587,7 @@ class BootRepairThread(BaseThread):
         self.update_progress.emit(10)
         
         # For safety, this is a simulation
-        if sys.platform.startswith("win"):
+        if self.platform_manager.is_windows():
             self.update_log.emit("Checking Windows boot files...")
             self.update_progress.emit(20)
             
@@ -613,7 +613,7 @@ class BootRepairThread(BaseThread):
         self.update_progress.emit(5)
         
         # For safety, this is a simulation
-        if sys.platform.startswith("win"):
+        if self.platform_manager.is_windows():
             # Simulate full repair
             self.update_log.emit("Step 1: Fixing MBR...")
             self.update_progress.emit(10)
