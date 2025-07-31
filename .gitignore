@@ -28,6 +28,9 @@ wheels/
 *.manifest
 *.spec
 
+# UV
+*.lock
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
