@@ -28,3 +28,6 @@ src/translations/* linguist-documentation
 # Exclude from Git archive
 .gitattributes export-ignore
 .gitignore export-ignore 
+
+# UV
+*.lock

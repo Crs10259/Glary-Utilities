@@ -28,9 +28,6 @@ wheels/
 *.manifest
 *.spec
 
-# UV
-*.lock
-
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
@@ -132,6 +129,3 @@ dmypy.json
 *.sln
 *.sw?
 *.pyx
-
-# Project specific
-src/assets/images/*.png 
