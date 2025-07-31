@@ -10,7 +10,7 @@ from config import Icon
 import os
 
 class SystemInfoWidget(BaseComponent):
-    """系统信息小部件，显示硬件、操作系统和网络详细信息"""
+    """System info widget, display hardware, operating system and network detailed information"""
     
     def __init__(self, parent=None):
         # Call parent class constructor
@@ -35,36 +35,36 @@ class SystemInfoWidget(BaseComponent):
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(20)
         
-        # 标题区域
+        # Title area
         title_container = QWidget()
         title_layout = QHBoxLayout(title_container)
         title_layout.setContentsMargins(0, 0, 0, 0)
         title_layout.setSpacing(10)
         
-        # 标题
+        # Title
         self.title = QLabel(self.get_translation("title", "System Information"))
         self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
         title_layout.addWidget(self.title)
         
-        # 添加标题区域到主布局
+        # Add title area to main layout
         self.main_layout.addWidget(title_container)
         
-        # 描述
+        # Description
         self.description = QLabel(self.get_translation("description", "View system hardware and software information"))
         self.description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
         self.main_layout.addWidget(self.description)
         
-        # 创建或清除选项卡小部件
+        # Create or clear tab widgets
         if hasattr(self, 'tab_widget'):
-            # 如果已存在，则保留选项卡小部件但清除其内容
+            # If it exists, keep tab widgets but clear their content
             current_index = self.tab_widget.currentIndex()
             self.tab_widget.clear()
         else:
-            # 创建新选项卡小部件
+            # Create new tab widgets
             self.tab_widget = QTabWidget()
             current_index = 0
         
-        # 设置选项卡样式
+        # Set tab styles
         self.tab_widget.setObjectName("SystemInfoTabWidget")
         self.tab_widget.setStyleSheet("""
             QTabWidget::pane {
@@ -91,7 +91,7 @@ class SystemInfoWidget(BaseComponent):
             }
         """)
         
-        # 创建选项卡内容容器
+        # Create tab content containers
         self.hardware_tab = QWidget()
         self.hardware_tab.setObjectName("HardwareTab")
         self.os_tab = QWidget()
@@ -99,32 +99,32 @@ class SystemInfoWidget(BaseComponent):
         self.network_tab = QWidget()
         self.network_tab.setObjectName("NetworkTab")
         
-        # 设置选项卡内容
+        # Set tab content
         self.setup_hardware_tab()
         self.setup_os_tab()
         self.setup_network_tab()
         
-        # 添加选项卡，确保只添加一次，不会重叠
+        # Add tabs, ensure only added once, no overlap
         self.tab_widget.addTab(self.hardware_tab, self.get_translation("hardware_tab", "Hardware"))
         self.tab_widget.addTab(self.os_tab, self.get_translation("os_tab", "OS"))
         self.tab_widget.addTab(self.network_tab, self.get_translation("network_tab", "Network"))
         
-        # 恢复之前的选项卡索引（如果有）
+        # Restore previous tab index (if any)
         if current_index < self.tab_widget.count():
             self.tab_widget.setCurrentIndex(current_index)
         
         self.main_layout.addWidget(self.tab_widget)
         
-        # 添加底部按钮区域
+        # Add bottom button area
         bottom_container = QWidget()
         bottom_layout = QHBoxLayout(bottom_container)
         bottom_layout.setContentsMargins(0, 0, 0, 0)
         bottom_layout.setSpacing(10)
         
-        # 添加空间占位符，将刷新按钮推到右侧
+        # Add space placeholder, push refresh button to the right
         bottom_layout.addStretch()
         
-        # 刷新按钮
+        # Refresh button
         self.refresh_button = QPushButton(self.get_translation("refresh", "Refresh"))
         self.refresh_button.setStyleSheet("""
             QPushButton {
@@ -146,21 +146,21 @@ class SystemInfoWidget(BaseComponent):
         self.refresh_button.setCursor(Qt.PointingHandCursor)
         bottom_layout.addWidget(self.refresh_button)
         
-        # 添加底部区域到主布局
+        # Add bottom area to main layout
         self.main_layout.addWidget(bottom_container)
         
-        # 设置布局
+        # Set layout
         self.setLayout(self.main_layout)
         
-        # 确保样式正确应用
+        # Ensure styles are applied correctly
         self.setAttribute(Qt.WA_StyledBackground, True)
         
-        # 记录日志
+        # Log
         self.logger.info("系统信息UI初始化完成")
     
     def setup_hardware_tab(self):
-        """设置硬件信息选项卡"""
-        # 创建一个主滚动区域，确保在小窗口时可以滚动查看所有内容
+        """Setup hardware information tab"""
+        # Create a main scroll area, ensure scrollable in small window
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setStyleSheet("""
@@ -170,7 +170,7 @@ class SystemInfoWidget(BaseComponent):
             }
         """)
         
-        # 创建内容区域
+        # Create content area
         content_widget = QWidget()
         layout = QVBoxLayout(content_widget)
         layout.setContentsMargins(15, 15, 15, 15)
@@ -204,31 +204,31 @@ class SystemInfoWidget(BaseComponent):
         cpu_info = self.system_information.get_cpu_info()
         row = 0
         for key, value in cpu_info.items():
-            # 将 CPU 键名转换为翻译键名
-            # 例如 cpu_brand -> cpu_brand, cpu_cores_physical -> cpu_cores_physical
+            # Convert CPU key name to translation key name
+            # For example, cpu_brand -> cpu_brand, cpu_cores_physical -> cpu_cores_physical
             cpu_key = key
             if key.startswith("cpu_"):
-                cpu_key = key[4:]  # 去掉前缀 "cpu_"
+                cpu_key = key[4:]  # Remove prefix "cpu_"
             
-            # 获取翻译，如果没有特定翻译则使用原始键名的可读形式
+            # Get translation, if no specific translation use readable form of original key name
             readable_key = cpu_key.replace('_', ' ').title()
             translation_key = f"cpu_{cpu_key.lower()}"
             translated_text = self.get_translation(translation_key, readable_key)
             
             key_label = QLabel(translated_text + ":")
             key_label.setStyleSheet("color: #a0a0a0;")
-            key_label.setWordWrap(True)  # 允许文本换行
-            key_label.setMinimumWidth(120)  # 设置最小宽度以确保可读性
+            key_label.setWordWrap(True)  # Allow text wrapping
+            key_label.setMinimumWidth(120)  # Set minimum width to ensure readability
             
             value_label = QLabel(str(value))
             value_label.setStyleSheet("color: #e0e0e0;")
-            value_label.setWordWrap(True)  # 允许文本换行
-            value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # 允许选择文本
+            value_label.setWordWrap(True)  # Allow text wrapping
+            value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # Allow text selection
 
-            # 保存引用以便刷新
+            # Save reference for refresh
             self._cpu_value_labels[key] = value_label
             
-            # 使用单列布局，确保在小窗口时也能清晰显示
+            # Use single column layout, ensure clear display in small window
             cpu_layout.addWidget(key_label, row, 0)
             cpu_layout.addWidget(value_label, row, 1)
             row += 1
@@ -271,18 +271,18 @@ class SystemInfoWidget(BaseComponent):
             
             key_label = QLabel(translated_text + ":")
             key_label.setStyleSheet("color: #a0a0a0;")
-            key_label.setWordWrap(True)  # 允许文本换行
-            key_label.setMinimumWidth(120)  # 设置最小宽度以确保可读性
+            key_label.setWordWrap(True)  # Allow text wrapping
+            key_label.setMinimumWidth(120)  # Set minimum width to ensure readability
             
             value_label = QLabel(str(value))
             value_label.setStyleSheet("color: #e0e0e0;")
-            value_label.setWordWrap(True)  # 允许文本换行
-            value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # 允许选择文本
+            value_label.setWordWrap(True)  # Allow text wrapping
+            value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # Allow text selection
 
-            # 保存引用
+            # Save reference for refresh
             self._memory_value_labels[key] = value_label
             
-            # 使用单列布局，确保在小窗口时也能清晰显示
+            # Use single column layout, ensure clear display in small window
             memory_layout.addWidget(key_label, row, 0)
             memory_layout.addWidget(value_label, row, 1)
             row += 1
@@ -311,7 +311,7 @@ class SystemInfoWidget(BaseComponent):
             }
         """)
         
-        # 创建一个滚动区域来显示GPU信息
+        # Create a scroll area to display GPU information
         gpu_scroll = QScrollArea()
         gpu_scroll.setWidgetResizable(True)
         gpu_scroll.setStyleSheet("""
@@ -328,11 +328,11 @@ class SystemInfoWidget(BaseComponent):
         
         gpu_scroll.setWidget(gpu_content)
         
-        # 布局 GPU 区域
+        # Layout GPU area
         gpu_layout = QVBoxLayout(gpu_group)
         gpu_layout.addWidget(gpu_scroll)
         
-        # 填充 GPU 信息
+        # Fill GPU information
         self.update_gpu_info()
         layout.addWidget(gpu_group)
         
@@ -394,23 +394,23 @@ class SystemInfoWidget(BaseComponent):
         
         layout.addWidget(disk_group)
         
-        # 设置最小高度，确保表格有足够空间显示
+        # Set minimum height, ensure table has enough space to display
         self.disk_table.setMinimumHeight(120)
         
-        # 添加伸展因子，确保布局在垂直方向上有弹性
+        # Add stretch factor, ensure layout has elasticity in vertical direction
         layout.addStretch()
         
-        # 设置主滚动区域的内容
+        # Set main scroll area content
         scroll_area.setWidget(content_widget)
         
-        # 创建主要硬件标签页的布局
+        # Create main hardware tab layout
         main_layout = QVBoxLayout(self.hardware_tab)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(scroll_area)
     
     def setup_os_tab(self):
         """Set up the operating system information tab"""
-        # 创建一个主滚动区域，确保在小窗口时可以滚动查看所有内容
+        # Create a main scroll area, ensure scrollable in small window
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setStyleSheet("""
@@ -420,7 +420,7 @@ class SystemInfoWidget(BaseComponent):
             }
         """)
         
-        # 创建内容区域
+        # Create content area
         content_widget = QWidget()
         layout = QVBoxLayout(content_widget)
         layout.setContentsMargins(15, 15, 15, 15)
@@ -459,13 +459,13 @@ class SystemInfoWidget(BaseComponent):
             
             key_label = QLabel(translated_text + ":")
             key_label.setStyleSheet("color: #a0a0a0;")
-            key_label.setWordWrap(True)  # 允许文本换行
-            key_label.setMinimumWidth(150)  # 设置最小宽度以确保可读性
+            key_label.setWordWrap(True)  # Allow text wrapping
+            key_label.setMinimumWidth(150)  # Set minimum width to ensure readability
             
             value_label = QLabel(str(value))
             value_label.setStyleSheet("color: #e0e0e0;")
-            value_label.setWordWrap(True)  # 允许文本换行
-            value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # 允许选择文本
+            value_label.setWordWrap(True)  # Allow text wrapping
+            value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # Allow text selection
             
             os_layout.addWidget(key_label, row, 0)
             os_layout.addWidget(value_label, row, 1)
@@ -508,13 +508,13 @@ class SystemInfoWidget(BaseComponent):
             
             key_label = QLabel(translated_text + ":")
             key_label.setStyleSheet("color: #a0a0a0;")
-            key_label.setWordWrap(True)  # 允许文本换行
-            key_label.setMinimumWidth(150)  # 设置最小宽度以确保可读性
+            key_label.setWordWrap(True)  # Allow text wrapping
+            key_label.setMinimumWidth(150)  # Set minimum width to ensure readability
             
             value_label = QLabel(str(value))
             value_label.setStyleSheet("color: #e0e0e0;")
-            value_label.setWordWrap(True)  # 允许文本换行
-            value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # 允许选择文本
+            value_label.setWordWrap(True)  # Allow text wrapping
+            value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)  # Allow text selection
             
             python_layout.addWidget(key_label, row, 0)
             python_layout.addWidget(value_label, row, 1)
@@ -524,13 +524,13 @@ class SystemInfoWidget(BaseComponent):
         
         layout.addWidget(python_group)
         
-        # 添加伸展因子，确保布局在垂直方向上有弹性
+        # Add stretch factor, ensure layout has elasticity in vertical direction
         layout.addStretch()
         
-        # 设置主滚动区域的内容
+        # Set main scroll area content
         scroll_area.setWidget(content_widget)
         
-        # 创建主要OS标签页的布局
+        # Create main OS tab layout
         main_layout = QVBoxLayout(self.os_tab)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(scroll_area)
@@ -633,7 +633,7 @@ class SystemInfoWidget(BaseComponent):
         layout.addStretch()
     
     def populate_disk_table(self):
-        """填充磁盘表格"""
+        """Populate disk table"""
         try:
             self.disk_table.setRowCount(0)
             disk_data = self.system_information.get_disk_table_data()
@@ -642,7 +642,7 @@ class SystemInfoWidget(BaseComponent):
                 row_position = self.disk_table.rowCount()
                 self.disk_table.insertRow(row_position)
                 
-                # 设置表格项
+                # Set table items
                 self.disk_table.setItem(row_position, 0, QTableWidgetItem(disk_info['device']))
                 self.disk_table.setItem(row_position, 1, QTableWidgetItem(disk_info['mountpoint']))
                 self.disk_table.setItem(row_position, 2, QTableWidgetItem(disk_info['fstype']))
@@ -678,7 +678,7 @@ class SystemInfoWidget(BaseComponent):
             self.logger.error(f"Error populating network interfaces table: {e}")
     
     def refresh_info(self):
-        """刷新所有系统信息"""
+        """Refresh all system information"""
         try:
             # Update CPU info labels
             if hasattr(self, '_cpu_value_labels'):
@@ -709,18 +709,18 @@ class SystemInfoWidget(BaseComponent):
             
             self.logger.info("System information refreshed")
             
-            # 显示成功消息（带应用程序图标）
+            # Show success message (with application icon)
             msg_box = QMessageBox(self)
             msg_box.setWindowTitle(self.get_translation("refresh_success", "Refresh Successful"))
             msg_box.setText(self.get_translation("refresh_success_message", "System information has been refreshed successfully"))
             msg_box.setIcon(QMessageBox.Information)
             
-            # 设置应用程序图标
+            # Set application icon
             app_icon_path = Icon.Icon.Path
             if app_icon_path and os.path.exists(app_icon_path):
                 msg_box.setWindowIcon(QIcon(app_icon_path))
             
-            # 设置消息框样式
+            # Set message box style
             msg_box.setStyleSheet("""
                 QMessageBox {
                     background-color: #2d2d2d;
@@ -748,18 +748,18 @@ class SystemInfoWidget(BaseComponent):
             msg_box.exec_()
         except Exception as e:
             self.logger.error(f"Error refreshing system information: {e}")
-            # 显示错误消息（带应用程序图标）
+            # Show error message (with application icon)
             msg_box = QMessageBox(self)
             msg_box.setWindowTitle(self.get_translation("error", "Error"))
             msg_box.setText(self.get_translation("refresh_error", "Error refreshing system information"))
             msg_box.setIcon(QMessageBox.Warning)
             
-            # 设置应用程序图标
+            # Set application icon
             app_icon_path = Icon.Icon.Path
             if app_icon_path and os.path.exists(app_icon_path):
                 msg_box.setWindowIcon(QIcon(app_icon_path))
             
-            # 设置消息框样式
+            # Set message box style
             msg_box.setStyleSheet("""
                 QMessageBox {
                     background-color: #2d2d2d;
@@ -834,14 +834,14 @@ class SystemInfoWidget(BaseComponent):
         return missing
 
     def update_gpu_info(self):
-        """更新GPU信息显示"""
-        # 清除现有内容
+        """Update GPU information display"""
+        # Clear existing content
         while self.gpu_info_layout.count():
             item = self.gpu_info_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
         
-        # 获取翻译文本，防止硬编码的中文信息显示
+        # Get translation text, prevent hardcoded Chinese information display
         no_gpu_message = self.get_translation("gpu_not_detected", "No GPU device detected")
         gpu_util_message = self.get_translation("gpu_install_message", "Please install GPUtil library to get GPU information:\npip install GPUtil")
         error_message = self.get_translation("gpu_info_error", "Error getting GPU information")
@@ -955,38 +955,38 @@ class SystemInfoWidget(BaseComponent):
                 
                 gpu_layout = QFormLayout(gpu_group)
                 
-                # 处理每个GPU的详细信息
+                # Process each GPU's detailed information
                 lines = gpu_block.split("\n")
                 for line in lines:
                     if ":" in line:
-                        # 分离键值对
+                        # Separate key-value pairs
                         key, value = line.split(":", 1)
                         original_key = key.strip()
                         original_value = value.strip()
                         
-                        # 如果是中文键名且当前语言为英文，则进行映射
+                        # If it's a Chinese key name and current language is English, map it
                         if current_language.lower() == "en" and original_key in key_mapping:
                             key = key_mapping[original_key]
                         
-                        # 将键名规范化为小写以便查找翻译
+                        # Normalize key name to lowercase for translation lookup
                         key_lower = key.lower()
                         
-                        # 查找翻译键
+                        # Find translation key
                         translation_key = None
                         for prop_key, trans_key in gpu_property_map.items():
                             if prop_key in key_lower:
                                 translation_key = trans_key
                                 break
                         
-                        # 使用找到的翻译键或创建一个合理的后备
+                        # Use found translation key or create a reasonable fallback
                         if translation_key:
                             display_key = self.get_translation(translation_key, key)
                         else:
-                            # 创建可能的翻译键
+                            # Create possible translation key
                             fallback_key = "gpu_" + key_lower.replace(" ", "_")
                             display_key = self.get_translation(fallback_key, key)
                         
-                        # 添加到布局
+                        # Add to layout
                         key_label = QLabel(display_key + ":")
                         key_label.setStyleSheet("color: #a0a0a0;")
                         value_label = QLabel(original_value)
@@ -996,31 +996,31 @@ class SystemInfoWidget(BaseComponent):
                 self.gpu_info_layout.addWidget(gpu_group)
                 
         except Exception as e:
-            # 处理任何异常
-            self.logger.error(f"更新GPU信息时出错: {str(e)}")
+            # Handle any exceptions
+            self.logger.error(f"Error updating GPU information: {str(e)}")
             label = QLabel(f"{error_message}: {str(e)}")
             label.setStyleSheet("color: #a0a0a0; font-size: 14px; padding: 20px;")
             label.setAlignment(Qt.AlignCenter)
             self.gpu_info_layout.addWidget(label)
     
     def refresh_language(self):
-        """刷新界面语言"""
-        # 更新标题和描述
+        """Refresh interface language"""
+        # Update title and description
         self.title.setText(self.get_translation("title", "System Information"))
         self.description.setText(self.get_translation("description", "View system hardware and software information"))
         
-        # 保存当前选项卡索引
+        # Save current tab index
         current_index = self.tab_widget.currentIndex()
         
-        # 更新选项卡标题
+        # Update tab titles
         self.tab_widget.setTabText(0, self.get_translation("hardware_tab", "Hardware"))
         self.tab_widget.setTabText(1, self.get_translation("os_tab", "OS"))
         self.tab_widget.setTabText(2, self.get_translation("network_tab", "Network"))
         
-        # 更新刷新按钮
+        # Update refresh button
         self.refresh_button.setText(self.get_translation("refresh", "Refresh"))
         
-        # 更新表格标题
+        # Update table titles
         if hasattr(self, 'disk_table'):
             self.disk_table.setHorizontalHeaderLabels([
                 self.get_translation("device", "Device"),
@@ -1038,14 +1038,14 @@ class SystemInfoWidget(BaseComponent):
                 self.get_translation("interface_status", "Status")
             ])
         
-        # 重新加载所有区域的内容，以确保使用最新的翻译
+        # Reload all areas' content, ensure using latest translations
         self.setup_hardware_tab()
         self.setup_os_tab()
         self.setup_network_tab()
         
-        # 恢复之前的选项卡索引
+        # Restore previous tab index
         if current_index < self.tab_widget.count():
             self.tab_widget.setCurrentIndex(current_index)
         
-        # 添加动画以突出显示更改
+        # Add animation to highlight changes
         super().refresh_language() 

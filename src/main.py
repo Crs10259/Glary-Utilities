@@ -166,7 +166,7 @@ class GlaryUtilitiesApp:
             return 1
             
 
-def main() -> int:
+def main():
     """Application entry point"""
     app = GlaryUtilitiesApp(sys.argv)
     return app.run()

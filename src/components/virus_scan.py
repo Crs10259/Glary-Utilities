@@ -194,9 +194,9 @@ class VirusScanWidget(BaseComponent):
                 pass
         
     def apply_current_theme(self):
-        """应用当前主题的颜色 - 此方法由MainWindow的refresh_component_theme调用"""
+        """Apply current theme colors - this method is called by MainWindow's refresh_component_theme"""
         try:
-            # 调用具体的主题应用方法
+            # Call specific theme application method
             self.apply_theme()
         except Exception as e:
             self.logger.error(f"Error applying current theme in VirusScanWidget: {str(e)}")
@@ -204,14 +204,14 @@ class VirusScanWidget(BaseComponent):
             self.logger.error(traceback.format_exc())
             
     def lighten_color(self, color, amount=0):
-        """使颜色变亮或变暗
+        """Lighten or darken color
         
         Args:
-            color: 十六进制颜色代码
-            amount: 变化量，正数变亮，负数变暗
+            color: Hex color code
+            amount: Change amount, positive number lightens, negative number darkens
             
         Returns:
-            新的十六进制颜色代码
+            New hex color code
         """
         try:
             c = color.lstrip('#')
@@ -225,42 +225,42 @@ class VirusScanWidget(BaseComponent):
             
             return '#{:02x}{:02x}{:02x}'.format(int(r), int(g), int(b))
         except Exception as e:
-            self.logger.error(f"计算颜色变化出错: {str(e)}")
+            self.logger.error(f"Error calculating color change: {str(e)}")
             return color
         
     def setup_scan_tab(self, tab):
-        """设置扫描选项卡的UI"""
+        """Setup scan tab UI"""
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(10)
         
-        # 扫描选项组
+        # Scan options group
         scan_options_group = QGroupBox(self.get_translation("scan_options", "Scan Options"))
         options_layout = QVBoxLayout(scan_options_group)
         
-        # 创建扫描类型按钮组
-        # 不使用QButtonGroup，让复选框独立工作
+        # Create scan type button group
+        # Do not use QButtonGroup, let checkboxes work independently
         
-        # 快速扫描选项
+        # Quick scan option
         self.quick_scan_rb = QCheckBox(self.get_translation("quick_scan", "Quick Scan"))
         self.quick_scan_rb.setChecked(True)
         self.quick_scan_rb.setObjectName("virus_scan_quick")
         self.quick_scan_rb.clicked.connect(lambda: self.on_scan_option_clicked(self.quick_scan_rb))
         options_layout.addWidget(self.quick_scan_rb)
         
-        # 完整扫描选项
+        # Full scan option
         self.full_scan_rb = QCheckBox(self.get_translation("full_scan", "Full Scan"))
         self.full_scan_rb.setObjectName("virus_scan_full")
         self.full_scan_rb.clicked.connect(lambda: self.on_scan_option_clicked(self.full_scan_rb))
         options_layout.addWidget(self.full_scan_rb)
         
-        # 自定义扫描选项
+        # Custom scan option
         self.custom_scan_rb = QCheckBox(self.get_translation("custom_scan", "Custom Scan"))
         self.custom_scan_rb.setObjectName("virus_scan_custom")
         self.custom_scan_rb.clicked.connect(lambda: self.on_scan_option_clicked(self.custom_scan_rb))
         options_layout.addWidget(self.custom_scan_rb)
         
-        # 自定义扫描路径选择
+        # Custom scan path selection
         custom_scan_layout = QHBoxLayout()
         self.custom_path_edit = QLineEdit()
         self.custom_path_edit.setPlaceholderText(self.get_translation("select_path", "Select directory or file to scan"))
@@ -275,7 +275,7 @@ class VirusScanWidget(BaseComponent):
         options_layout.addLayout(custom_scan_layout)
         layout.addWidget(scan_options_group)
         
-        # 扫描按钮和停止按钮
+        # Scan and stop buttons
         button_layout = QHBoxLayout()
         
         self.scan_button = QPushButton(self.get_translation("start_scan", "Start Scan"))
@@ -289,13 +289,13 @@ class VirusScanWidget(BaseComponent):
         
         layout.addLayout(button_layout)
         
-        # 进度条
+        # Progress bar
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
         self.progress.setValue(0)
         layout.addWidget(self.progress)
         
-        # 结果列表
+        # Result list
         result_group = QGroupBox(self.get_translation("scan_results", "Scan Results"))
         result_layout = QVBoxLayout(result_group)
         
@@ -313,7 +313,7 @@ class VirusScanWidget(BaseComponent):
         self.result_table.setAlternatingRowColors(True)
         result_layout.addWidget(self.result_table)
         
-        # 操作按钮
+        # Action buttons
         action_layout = QHBoxLayout()
         
         self.clean_button = QPushButton(self.get_translation("clean_all", "Clean All"))
@@ -329,24 +329,24 @@ class VirusScanWidget(BaseComponent):
         result_layout.addLayout(action_layout)
         layout.addWidget(result_group)
         
-        # 统计信息
+        # Statistics
         self.stats_label = QLabel(self.get_translation("scan_stats", "Scan Statistics: Scanned 0 files, Found 0 threats"))
         layout.addWidget(self.stats_label)
         
     def setup_quarantine_tab(self, tab):
-        """设置隔离区选项卡"""
+        """Setup quarantine tab"""
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
         
-        # 隔离区说明
+        # Quarantine description
         description = QLabel(self.get_translation("quarantine_description", 
             "Files in quarantine have been detected as potential threats and isolated. You can delete these files or choose to restore them."))
         description.setWordWrap(True)
         description.setStyleSheet("color: #a0a0a0;")
         layout.addWidget(description)
         
-        # 隔离文件列表
+        # Quarantine file list
         self.quarantined_list = QTableWidget()
         self.quarantined_list.setColumnCount(3)
         self.quarantined_list.setHorizontalHeaderLabels([
@@ -359,18 +359,18 @@ class VirusScanWidget(BaseComponent):
         self.quarantined_list.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
         layout.addWidget(self.quarantined_list)
         
-        # 按钮容器
+        # Button container
         button_container = QWidget()
         button_layout = QHBoxLayout(button_container)
         button_layout.setContentsMargins(0, 0, 0, 0)
         
-        # 恢复按钮
-        self.restore_button = QPushButton(self.get_translation("restore", "恢复"))
+        # Restore button
+        self.restore_button = QPushButton(self.get_translation("restore", "Restore"))
         self.restore_button.setEnabled(False)
         button_layout.addWidget(self.restore_button)
         
-        # 删除按钮
-        self.delete_button = QPushButton(self.get_translation("delete", "删除"))
+        # Delete button
+        self.delete_button = QPushButton(self.get_translation("delete", "Delete"))
         self.delete_button.setEnabled(False)
         button_layout.addWidget(self.delete_button)
         
@@ -378,7 +378,7 @@ class VirusScanWidget(BaseComponent):
 
     def refresh_language(self):
         """Refresh all UI elements with current language translations"""
-        # 查找标题和描述标签
+        # Find title and description labels
         title_label = self.findChild(QLabel, "title_label")
         if title_label:
             title_label.setText(self.get_translation("title"))
@@ -387,62 +387,30 @@ class VirusScanWidget(BaseComponent):
         if desc_label:
             desc_label.setText(self.get_translation("scan_description"))
         
-        # 更新扫描选项
+        # Update scan options
         scan_options_group = self.findChild(QGroupBox, "scan_options_group")
         if scan_options_group:
             scan_options_group.setTitle(self.get_translation("scan_types"))
         
-        # 更新进度组
+        # Update progress group
         progress_group = self.findChild(QGroupBox, "progress_group")
         if progress_group:
             progress_group.setTitle(self.get_translation("progress", "Scan Progress"))
         
-        # # 更新单选按钮
-        # if hasattr(self, "radio_quick"):
-        #     self.radio_quick.setText(self.get_translation("quick_scan"))
-        # if hasattr(self, "radio_full"):
-        #     self.radio_full.setText(self.get_translation("full_scan"))
-        # if hasattr(self, "radio_custom"):
-        #     self.radio_custom.setText(self.get_translation("custom_scan"))
-        
-        # # 更新自定义扫描控件
-        # if hasattr(self, "add_target_button"):
-        #     self.add_target_button.setText(self.get_translation("select_folder"))
-        # if hasattr(self, "remove_target_button"):
-        #     self.remove_target_button.setText(self.get_translation("remove", "Remove Selected"))
-        
-        # 更新扫描选项复选框
-        # if hasattr(self, "option_archive"):
-        #     self.option_archive.setText(self.get_translation("scan_archives", "Scan inside archives (zip, rar, etc.)"))
-        # if hasattr(self, "option_rootkits"):
-        #     self.option_rootkits.setText(self.get_translation("scan_rootkits", "Scan for rootkits and bootkits"))
-        # if hasattr(self, "option_autofix"):
-        #     self.option_autofix.setText(self.get_translation("autofix", "Automatically attempt to fix detected issues"))
-        
-        # 更新威胁组
+        # Update threats group
         threats_group = self.findChild(QGroupBox, "threats_group")
         if threats_group:
             threats_group.setTitle(self.get_translation("threats_found", "Detected Threats"))
         
-        # 更新日志组
+        # Update log group
         log_group = self.findChild(QGroupBox, "log_group")
         if log_group:
             log_group.setTitle(self.get_translation("log_output", "Scan Log"))
-        
-        # # 更新按钮
-        # if hasattr(self, "start_button"):
-        #     self.start_button.setText(self.get_translation("scan_button"))
-        # if hasattr(self, "stop_button"):
-        #     self.stop_button.setText(self.get_translation("stop_button"))
-        # if hasattr(self, "fix_button"):
-        #     self.fix_button.setText(self.get_translation("clean_threats"))
-        # if hasattr(self, "clear_log_button"):
-        #     self.clear_log_button.setText(self.get_translation("clear_log", "Clear Log"))
 
     def clear_log(self):
-        """清除日志输出"""
+        """Clear log output"""
         self.log_text.clear()
-        self.log_text.append(self.get_translation("ready_message", "病毒扫描就绪。选择扫描类型并点击'开始扫描'。"))
+        self.log_text.append(self.get_translation("ready_message", "Virus scan ready. Select scan type and click 'Start Scan'."))
         
     def start_scan(self):
         """Start the virus scan process"""
@@ -453,8 +421,8 @@ class VirusScanWidget(BaseComponent):
             scan_type = "custom"
             if not self.custom_scan_targets:
                 QMessageBox.warning(self, 
-                                  self.get_translation("no_targets", "未选择目标"), 
-                                  self.get_translation("select_targets_msg", "请至少选择一个要扫描的文件或文件夹。"))
+                                  self.get_translation("no_targets", "No targets selected"), 
+                                  self.get_translation("select_targets_msg", "Please select at least one file or folder to scan."))
                 return
         elif self.full_scan_rb.isChecked():
             scan_type = "full"
@@ -492,13 +460,13 @@ class VirusScanWidget(BaseComponent):
             # Reset progress bar
             self.progress.setValue(0)
             
-            # 检查是否启用动画
+            # Check if animations are enabled
             if self.settings.get_setting("enable_animations", True):
-                # 添加扫描动画效果
+                # Add scan animation effect
                 self.progress.setStyleSheet("QProgressBar {border: 1px solid grey; border-radius: 2px; text-align: center;} "
                                           "QProgressBar::chunk {background-color: #4CAF50; width: 20px;}")
             else:
-                # 不使用动画特效，使用简单样式
+                # Do not use animation effect, use simple style
                 self.progress.setStyleSheet("QProgressBar {border: 1px solid grey; border-radius: 2px; text-align: center;} "
                                           "QProgressBar::chunk {background-color: #4CAF50;}")
             
@@ -530,76 +498,76 @@ class VirusScanWidget(BaseComponent):
         self.progress.setValue(value)
         
     def update_log(self, message):
-        """更新日志输出"""
-        # 格式化日志消息，添加时间戳
+        """Update log output"""
+        # Format log message, add timestamp
         timestamp = QDateTime.currentDateTime().toString('hh:mm:ss')
         formatted_message = f"[{timestamp}] {message}"
         
-        # 根据消息类型设置不同的颜色
+        # Set different colors based on message type
         if "完成" in message or "成功" in message or "✓" in message:
-            # 成功消息使用绿色
+            # Success message uses green
             formatted_message = f"<span style='color:#4CAF50;'>{formatted_message}</span>"
         elif "警告" in message or "注意" in message:
-            # 警告消息使用黄色
+            # Warning message uses yellow
             formatted_message = f"<span style='color:#FFC107;'>{formatted_message}</span>"
         elif "错误" in message or "失败" in message or "✗" in message or "威胁" in message:
-            # 错误或威胁消息使用红色
+            # Error or threat message uses red
             formatted_message = f"<span style='color:#F44336;'>{formatted_message}</span>"
         elif "扫描" in message and "文件" in message:
-            # 扫描文件消息使用灰色，减少视觉干扰
+            # Scan file message uses gray, reduce visual interference
             formatted_message = f"<span style='color:#9E9E9E;'>{formatted_message}</span>"
         
         self.log_text.append(formatted_message)
         
-        # 滚动到底部
+        # Scroll to bottom
         self.log_text.verticalScrollBar().setValue(
             self.log_text.verticalScrollBar().maximum()
         )
         
-        # 即时更新UI，避免在长时间操作中界面冻结
+        # Update UI immediately, avoid freezing during long operations
         QApplication.processEvents() 
     
     def add_log(self, message):
-        """添加日志消息"""
-        # 临时的实现，将消息显示在状态标签上
+        """Add log message"""
+        # Temporary implementation, display message on status label
         self.stats_label.setText(message)
         self.logger.info(f"[Virus Scan] {message}")
 
     def add_threat(self, file_path: str, threat_type: str) -> None:
-        """将检测到的威胁添加到结果表格"""
+        """Add detected threat to result table"""
         row = self.result_table.rowCount()
         self.result_table.insertRow(row)
         
-        # 文件名
+        # File name
         filename = os.path.basename(file_path)
         self.result_table.setItem(row, 0, QTableWidgetItem(filename))
         
-        # 文件位置（目录）
+        # File location (directory)
         location = os.path.dirname(file_path)
         self.result_table.setItem(row, 1, QTableWidgetItem(location))
         
-        # 威胁类型
+        # Threat type
         self.result_table.setItem(row, 2, QTableWidgetItem(threat_type))
         
-        # 状态
+        # Status
         self.result_table.setItem(row, 3, QTableWidgetItem(self.get_translation("detected", "已检测")))
         
-        # 存储完整的威胁信息
+        # Store complete threat information
         self.detected_threats.append({
             'path': file_path,
             'type': threat_type
         })
         
-        # 启用清除和隔离按钮
+        # Enable clean and quarantine buttons
         self.clean_button.setEnabled(True)
         self.quarantine_button.setEnabled(True)
         
-        # 更新统计信息
+        # Update statistics
         self.update_stats()
     
     def update_stats(self):
-        """更新扫描统计信息"""
-        files_scanned = random.randint(100, 1000)  # 模拟文件扫描数量
+        """Update scan statistics"""
+        files_scanned = random.randint(100, 1000)  # Simulate file scan count
         threats_found = len(self.detected_threats)
         
         stats_text = self.get_translation(
@@ -610,15 +578,15 @@ class VirusScanWidget(BaseComponent):
         self.stats_label.setText(stats_text)
     
     def scan_finished(self, success, message, threats_found):
-        """处理扫描完成事件"""
-        # 重新启用扫描按钮
+        """Handle scan completion event"""
+        # Re-enable scan button
         self.scan_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         
-        # 设置进度为100%
+        # Set progress to 100%
         self.progress.setValue(100)
         
-        # 显示完成消息
+        # Display completion message
         if success:
             if threats_found > 0:
                 QMessageBox.warning(
@@ -639,17 +607,17 @@ class VirusScanWidget(BaseComponent):
                 message
             )
         
-        # 添加最终日志消息
-        result = self.get_translation("success", "成功") if success else self.get_translation("incomplete", "未完成")
-        self.add_log(f"{self.get_translation('scan_completed', '扫描过程已完成')}. {self.get_translation('result', '结果')}: {result}")
-        self.add_log(f"{self.get_translation('total_threats', '发现威胁总数')}: {threats_found}")
+        # Add final log message
+        result = self.get_translation("success", "Success") if success else self.get_translation("incomplete", "Incomplete")
+        self.add_log(f"{self.get_translation('scan_completed', 'Scan completed')}. {self.get_translation('result', 'Result')}: {result}")
+        self.add_log(f"{self.get_translation('total_threats', 'Total threats found')}: {threats_found}")
         
-        # 如果发现威胁，启用清除按钮
+        # If threats found, enable clean button
         self.clean_button.setEnabled(threats_found > 0)
         self.quarantine_button.setEnabled(threats_found > 0)
 
     def browse_path(self):
-        """浏览并选择要扫描的文件或目录"""
+        """Browse and select file or directory to scan"""
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.Directory)
         file_dialog.setOption(QFileDialog.ShowDirsOnly, True)
@@ -657,53 +625,53 @@ class VirusScanWidget(BaseComponent):
         if file_dialog.exec_():
             selected_paths = file_dialog.selectedFiles()
             if selected_paths:
-                # 设置自定义路径到编辑框
+                # Set custom path to edit box
                 self.custom_path_edit.setText(selected_paths[0])
-                # 添加到扫描目标列表
+                # Add to scan target list
                 if selected_paths[0] not in self.custom_scan_targets:
                     self.custom_scan_targets.append(selected_paths[0])
 
     def toggle_custom_scan(self, checked):
-        """根据自定义扫描选项的选中状态切换相关控件的可用性"""
+        """Toggle availability of related controls based on custom scan option selection state"""
         self.custom_path_edit.setEnabled(checked)
         self.browse_button.setEnabled(checked)
         
-        # 如果取消选中，清空自定义扫描目标
+        # If unchecked, clear custom scan targets
         if not checked:
             self.custom_scan_targets = []
             self.custom_path_edit.clear()
 
     def clean_threats(self):
-        """清除检测到的威胁"""
+        """Clear detected threats"""
         reply = QMessageBox.question(self, 
-                                    self.get_translation("confirm_clean", "确认清除"), 
-                                    self.get_translation("confirm_clean_msg", "确定要清除所有检测到的威胁吗？"), 
+                                    self.get_translation("confirm_clean", "Confirm Clean"), 
+                                    self.get_translation("confirm_clean_msg", "Are you sure you want to clear all detected threats?"), 
                                     QMessageBox.Yes | QMessageBox.No, 
                                     QMessageBox.No)
         
         if reply == QMessageBox.Yes:
             row_count = self.result_table.rowCount()
             for row in range(row_count):
-                self.result_table.item(row, 2).setText(self.get_translation("cleaned", "已清除"))
+                self.result_table.item(row, 2).setText(self.get_translation("cleaned", "Cleaned"))
             
             QMessageBox.information(self, 
-                                   self.get_translation("clean_complete", "清除完成"), 
-                                   self.get_translation("clean_success", "所有威胁已成功清除！"))
+                                   self.get_translation("clean_complete", "Clean Complete"), 
+                                   self.get_translation("clean_success", "All threats have been successfully cleared!"))
             
             self.clean_button.setEnabled(False)
             self.quarantine_button.setEnabled(False)
 
     def quarantine_selected(self):
-        """隔离选中的威胁"""
-        # 获取选中的行
+        """Quarantine selected threats"""
+        # Get selected rows
         selected_items = self.result_table.selectedItems()
         if not selected_items:
             QMessageBox.warning(self, 
-                              self.get_translation("no_selection", "未选择"), 
-                              self.get_translation("select_threats", "请选择要隔离的威胁。"))
+                              self.get_translation("no_selection", "No selection"), 
+                              self.get_translation("select_threats", "Please select threats to quarantine."))
             return
         
-        # 获取不重复的行索引
+        # Get unique row indices
         rows = set()
         for item in selected_items:
             rows.add(item.row())
@@ -712,27 +680,27 @@ class VirusScanWidget(BaseComponent):
             return
         
         reply = QMessageBox.question(self, 
-                                    self.get_translation("confirm_quarantine", "确认隔离"), 
-                                    self.get_translation("confirm_quarantine_msg", "确定要隔离选中的威胁吗？"), 
+                                    self.get_translation("confirm_quarantine", "Confirm Quarantine"), 
+                                    self.get_translation("confirm_quarantine_msg", "Are you sure you want to quarantine selected threats?"), 
                                     QMessageBox.Yes | QMessageBox.No, 
                                     QMessageBox.No)
         
         if reply == QMessageBox.Yes:
             for row in rows:
-                self.result_table.item(row, 2).setText(self.get_translation("quarantined", "已隔离"))
+                self.result_table.item(row, 2).setText(self.get_translation("quarantined", "Quarantined"))
             
             QMessageBox.information(self, 
-                                   self.get_translation("quarantine_complete", "隔离完成"), 
-                                   self.get_translation("quarantine_success", "选中的威胁已成功隔离！")) 
+                                   self.get_translation("quarantine_complete", "Quarantine Complete"), 
+                                   self.get_translation("quarantine_success", "Selected threats have been successfully quarantined!")) 
 
     def apply_settings(self, settings=None):
-        """应用设置更改到此组件
+        """Apply settings to this component
         
         Args:
-            settings: 可选的设置对象。如果为None，则使用父对象的设置。
+            settings: Optional settings object. If None, use parent object's settings.
         """
         try:
-            # 获取设置对象
+            # Get settings object
             if settings is None:
                 if hasattr(self, 'settings'):
                     settings = self.settings
@@ -740,27 +708,27 @@ class VirusScanWidget(BaseComponent):
                     settings = self.main_window.settings
             
             if settings:
-                # 应用主题
+                # Apply theme
                 self.apply_theme()
                 
-                # 刷新语言
+                # Refresh language
                 self.refresh_language()
                 
-                # 更新单选按钮大小和样式
+                # Update radio button size and style
                 self.update_radio_buttons_size()
                 
-                # 应用任何组件特定设置
+                # Apply any component-specific settings
                 if hasattr(settings, 'get_setting'):
-                    # 动画设置
+                    # Animation settings
                     enable_animations = settings.get_setting('enable_animations', True)
-                    # 应用动画设置（如果需要）
+                    # Apply animation settings (if needed)
                     
-                    # 应用扫描特定设置
+                    # Apply scan-specific settings
                     auto_quarantine = settings.get_setting('auto_quarantine', False)
                     if hasattr(self, 'auto_quarantine_check') and self.auto_quarantine_check:
                         self.auto_quarantine_check.setChecked(auto_quarantine)
                     
-                    # 应用保存的扫描类型
+                    # Apply saved scan type
                     scan_type = settings.get_setting('virus_scan_type', 'virus_scan_quick')
                     self._apply_saved_scan_type(scan_type)
 

@@ -14,14 +14,14 @@ from PyQt5.QtGui import (
 from PyQt5.QtChart import QChart, QChartView, QLineSeries, QValueAxis
 
 from .base_component import BaseComponent
-from config import Icon
+from config import App, Icon
 from collections import deque
 
-# 最大数据点数量
-MAX_DATA_POINTS = 60  # 60个数据点 = 2分钟，每2秒一个数据点
+# Maximum data points
+MAX_DATA_POINTS = App.MAX_DATA_POINTS  
 
 class ChartTile(QFrame):
-    """自定义图表小部件，用于系统指标"""
+    """Custom chart widget for system metrics"""
     def __init__(self, title, icon_path=None, chart_color="#00a8ff", parent=None):
         super().__init__(parent)
         self.setObjectName("chartTile")
@@ -34,27 +34,27 @@ class ChartTile(QFrame):
         self.setMinimumHeight(200)
         self.chart_color = chart_color
         
-        # 添加阴影效果
+        # Add shadow effect
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(15)
         shadow.setColor(QColor(0, 0, 0, 80))
         shadow.setOffset(0, 2)
         self.setGraphicsEffect(shadow)
         
-        # 设置尺寸策略，确保在窗口调整大小时正常伸展
+        # Set size policy to ensure proper stretching when window is resized
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
-        # 数据存储（使用deque以提高append/pop效率）
+        # Data storage (using deque for efficient append/pop operations)
         self.data_points = deque(maxlen=MAX_DATA_POINTS)
         
-        # 创建布局
+        # Create layout
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(15, 15, 15, 15)
         
-        # 标题容器
+        # Title container
         title_container = QHBoxLayout()
         
-        # 如果提供了图标路径且存在，则添加图标
+        # If icon path is provided and exists, add icon
         if icon_path and os.path.exists(icon_path):
             icon = QIcon(icon_path)
             if not icon.isNull():
@@ -62,224 +62,224 @@ class ChartTile(QFrame):
                 self.icon_label.setPixmap(icon.pixmap(QSize(24, 24)))
                 title_container.addWidget(self.icon_label)
         
-        # 标题标签
+        # Title label
         self.title_label = QLabel(title)
         self.title_label.setStyleSheet(f"color: {chart_color}; font-size: 16px; font-weight: bold; background-color: transparent;")
         title_container.addWidget(self.title_label)
         
-        # 当前值标签（右对齐）
+        # Current value label (right aligned)
         self.value_label = QLabel("0%")
-        # 初始字体大小与其他页面保持一致（18px）
+        # Initial font size consistent with other pages (18px)
         self.value_label.setStyleSheet(f"color: {chart_color}; font-size: 18px; font-weight: bold; background-color: transparent;")
         self.value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         title_container.addWidget(self.value_label)
         
-        # 将标题容器添加到主布局
+        # Add title container to main layout
         self.layout.addLayout(title_container)
         
-        # 创建图表
+        # Create chart
         self.chart = QChart()
         self.chart.setBackgroundVisible(False)
         self.chart.setMargins(QMargins(0, 0, 0, 0))
         self.chart.legend().hide()
         
-        # 创建图表系列
+        # Create chart series
         self.series = QLineSeries()
         pen = QPen(QColor(chart_color))
-        pen.setWidth(3)  # 增加线宽
+        pen.setWidth(3)  # Increase line width
         self.series.setPen(pen)
         self.chart.addSeries(self.series)
         
-        # 添加渐变填充
+        # Add gradient fill
         gradient = QLinearGradient(0, 0, 0, 400)
         gradient.setColorAt(0, QColor(chart_color).lighter(150))
         gradient.setColorAt(1, QColor(chart_color).darker(150))
         self.series.setBrush(QBrush(gradient))
         
-        # 创建X轴（时间）
+        # Create X axis (time)
         self.axis_x = QValueAxis()
         self.axis_x.setRange(0, MAX_DATA_POINTS - 1)
         self.axis_x.setVisible(True)
-        self.axis_x.setLabelsVisible(False)  # 隐藏标签但显示网格线
+        self.axis_x.setLabelsVisible(False)  # Hide labels but show grid lines
         self.axis_x.setGridLineVisible(True)
-        self.axis_x.setGridLineColor(QColor(60, 60, 60))  # 暗色网格线
-        self.axis_x.setMinorGridLineVisible(False)  # 不显示次网格线
+        self.axis_x.setGridLineColor(QColor(60, 60, 60))  # Dark grid lines
+        self.axis_x.setMinorGridLineVisible(False)  # Do not show minor grid lines
         
-        # 创建Y轴（值）
+        # Create Y axis (value)
         self.axis_y = QValueAxis()
         self.axis_y.setRange(0, 100)
         self.axis_y.setVisible(True)
-        self.axis_y.setLabelsVisible(False)  # 隐藏标签但显示网格线
+        self.axis_y.setLabelsVisible(False)  # Hide labels but show grid lines
         self.axis_y.setGridLineVisible(True)
-        self.axis_y.setGridLineColor(QColor(60, 60, 60))  # 暗色网格线
-        self.axis_y.setMinorGridLineVisible(False)  # 不显示次网格线
+        self.axis_y.setGridLineColor(QColor(60, 60, 60))  # Dark grid lines
+        self.axis_y.setMinorGridLineVisible(False)  # Do not show minor grid lines
         
-        # 将轴附加到图表
+        # Attach axes to chart
         self.chart.addAxis(self.axis_x, Qt.AlignBottom)
         self.chart.addAxis(self.axis_y, Qt.AlignLeft)
         self.series.attachAxis(self.axis_x)
         self.series.attachAxis(self.axis_y)
         
-        # 创建图表视图
+        # Create chart view
         self.chart_view = QChartView(self.chart)
         self.chart_view.setRenderHint(QPainter.Antialiasing)
         self.chart_view.setStyleSheet("background-color: transparent;")
         self.chart_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
-        # 将图表视图添加到布局
-        self.layout.addWidget(self.chart_view, 1)  # 设置伸展因子
+        # Add chart view to layout
+        self.layout.addWidget(self.chart_view, 1)  # Set stretch factor
         
-        # 初始化为零数据
+        # Initialize to zero data
         for i in range(MAX_DATA_POINTS):
             self.data_points.append(0)
             self.series.append(i, 0)
     
     def update_value(self, value):
-        """更新图表的数值，处理多种输入格式和错误状态"""
+        """Update chart value, handle multiple input formats and error states"""
         if isinstance(value, (int, float)):
-            # 是数字，显示为百分比
+            # Is a number, display as percentage
             percent_text = f"{value:.1f}%"
             self._update_percent_display(value, percent_text)
         elif isinstance(value, str):
             if value.endswith("°C"):
-                # 温度值，特殊处理（先移除°C）
+                # Temperature value, special handling (remove °C first)
                 try:
                     temp = float(value.replace("°C", ""))
                     self._update_temp_display(temp, value)
                 except ValueError:
-                    # 显示原始字符串
+                    # Display original string
                     self.value_label.setText(value)
                     self._update_history_with_error()
             elif value.startswith("Retry in"):
-                # 显示重试倒计时，使用特殊样式
+                # Display retry countdown, use special style
                 self.value_label.setText(value)
                 self.value_label.setStyleSheet("color: #FFA500; font-size: 15px; font-weight: bold;")
            
                 self._update_history_with_error()
             elif value == "N/A":
-                # 显示N/A
+                # Display N/A
                 self.value_label.setText("N/A")
                 self.value_label.setStyleSheet("color: #a0a0a0; font-size: 18px; font-weight: bold;")
-                # 保持无边框样式
+                # Keep no border style
                 self.setStyleSheet("QFrame { background-color: #2d2d2d; border-radius: 8px; }")
                 self._update_history_with_error()
             elif value == "Error":
-                # 显示错误状态
+                # Display error state
                 self.value_label.setText("Error")
                 self.value_label.setStyleSheet("color: #ff5555; font-size: 18px; font-weight: bold;")
-                # 文字使用红色，去除边框
+                # Text use red, remove border
                 self.setStyleSheet("QFrame { background-color: #2d2d2d; border-radius: 8px; }")
                 self._update_history_with_error()
             else:
-                # 尝试解析为数字
+                # Try to parse as number
                 try:
                     num_value = float(value.replace("%", ""))
                     self._update_percent_display(num_value, value)
                 except ValueError:
-                    # 显示原始字符串
+                    # Display original string
                     self.value_label.setText(value)
                     self._update_history_with_error()
         else:
-            # 未知类型，显示为字符串
+            # Unknown type, display as string
             self.value_label.setText(str(value))
             self._update_history_with_error()
     
     def _smooth_data(self, data_points, window_size=3):
-        """简单的移动平均平滑算法
+        """Simple moving average smoothing algorithm
         
         Args:
-            data_points: 要平滑的数据点列表
-            window_size: 移动窗口大小
+            data_points: List of data points to smooth
+            window_size: Moving window size
             
         Returns:
-            平滑后的数据点列表
+            Smoothed data points list
         """
         if window_size < 2:
             return data_points
             
         result = []
         for i in range(len(data_points)):
-            # 计算窗口的起始和结束位置
+            # Calculate window start and end positions
             start = max(0, i - window_size // 2)
             end = min(len(data_points), i + window_size // 2 + 1)
-            # 计算窗口内的平均值
+            # Calculate average value in window
             window = data_points[start:end]
             result.append(sum(window) / len(window))
             
         return result
         
     def _update_percent_display(self, value_num, text):
-        """更新百分比类型数据的显示"""
+        """Update percentage type data display"""
         self.value_label.setText(text)
         self.value_label.setStyleSheet("color: #e0e0e0; font-size: 18px; font-weight: bold;")
         
-        # 保持无边框样式
+        # Keep no border style
         self.setStyleSheet("QFrame { background-color: #2d2d2d; border-radius: 8px; }")
         
-        # 更新图表数据
+        # Update chart data
         self._update_chart_data(value_num)
         
     def _update_temp_display(self, temp_value, text):
-        """更新温度类型数据的显示"""
+        """Update temperature type data display"""
         self.value_label.setText(text)
-        # 根据温度值设置颜色
-        border_color = "#10893E"  # 默认绿色
+        # Set color based on temperature value
+        border_color = "#10893E"  # Default green
         if temp_value >= 80:
-            border_color = "#ff5555"  # 高温为红色
+            border_color = "#ff5555"  # High temperature is red
         elif temp_value >= 60:
-            border_color = "#ffaa00"  # 中等温度为黄色
+            border_color = "#ffaa00"  # Medium temperature is yellow
         
         self.value_label.setStyleSheet(f"color: {border_color}; font-size: 18px; font-weight: bold;")
         
-        # 更新图表数据
+        # Update chart data
         self._update_chart_data(temp_value)
         
     def _update_history_with_error(self):
-        """处理图表历史记录，当出现错误或特殊状态时"""
-        # 保持当前的图表状态不变，只添加一个零值点
-        # 这样可以在图表上显示出有问题的时间段
+        """Handle chart history, when there is an error or special state"""
+        # Keep current chart state, only add a zero value point
+        # This can show the problematic time period on the chart
         self.data_points.append(0)
         
-        # 只保留最近的MAX_DATA_POINTS个数据点
-        while len(self.data_points) > 60:  # 假设MAX_DATA_POINTS是60
+        # Only keep the most recent MAX_DATA_POINTS data points
+        while len(self.data_points) > 60:  # Assume MAX_DATA_POINTS is 60
             self.data_points.pop(0)
         
-        # 更新图表
+        # Update chart
         self.series.clear()
         
-        # 平滑数据点（简单平均）以使图表看起来更平滑
+        # Smooth data points (simple average) to make the chart look smoother
         smoothed_points = self._smooth_data(list(self.data_points), 3)
         
         for i, point in enumerate(smoothed_points):
             self.series.append(i, point)
             
     def _update_chart_data(self, value):
-        """更新图表数据"""
-        # 添加新数据点
+        """Update chart data"""
+        # Add new data point
         self.data_points.append(value)
         
-        # 只保留最近的MAX_DATA_POINTS个数据点
-        while len(self.data_points) > 60:  # 假设MAX_DATA_POINTS是60
+        # Only keep the most recent MAX_DATA_POINTS data points
+        while len(self.data_points) > 60: 
             self.data_points.pop(0)
             
-        # 更新图表数据
+        # Update chart data
         self.series.clear()
         
-        # 平滑数据点（简单平均）以使图表看起来更平滑
+        # Smooth data points (simple average) to make the chart look smoother
         smoothed_points = self._smooth_data(list(self.data_points), 3)
         
         for i, point in enumerate(smoothed_points):
             self.series.append(i, point)
             
-        # 如果需要，调整Y轴范围
+        # If needed, adjust Y axis range
         max_value = max(self.data_points) if self.data_points else 0
         if max_value > 0:
-            # 将上限设置为最大值的下一个25的倍数，并添加一点额外空间
+            # Set upper limit to the next multiple of 25 of the maximum value, and add a little extra space
             upper_limit = ((int(max_value) // 25) + 1) * 25
             self.axis_y.setRange(0, max(100, upper_limit))
 
 class ActionTile(QFrame):
-    """自定义样式的操作块小部件"""
+    """Custom style action block widget"""
     def __init__(self, title, description, icon_path=None, parent=None, color="#4285F4"):
         super().__init__(parent)
         self.setObjectName("actionTile")
@@ -308,11 +308,11 @@ class ActionTile(QFrame):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setCursor(Qt.PointingHandCursor)
         
-        # 创建布局
+        # Create layout
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(18, 18, 18, 18)
         
-        # 如果提供了图标路径且存在，则添加图标
+        # If icon path is provided and exists, add icon
         if icon_path and os.path.exists(icon_path):
             try:
                 icon = QIcon(icon_path)
@@ -323,16 +323,16 @@ class ActionTile(QFrame):
                         self.icon_label.setPixmap(pixmap)
                         self.layout.addWidget(self.icon_label)
                     else:
-                        self.logger.warning(f"Warning: Could not load pixmap for icon {icon_path}")  # 警告：无法加载图标像素图
+                        self.logger.warning(f"Warning: Could not load pixmap for icon {icon_path}") 
                 else:
-                    self.logger.error(f"Warning: Could not load icon {icon_path}")  # 警告：无法加载图标
+                    self.logger.error(f"Warning: Could not load icon {icon_path}") 
             except Exception as e:
-                self.logger.error(f"Error loading icon {icon_path}: {str(e)}")  # 加载图标时出错
+                self.logger.error(f"Error loading icon {icon_path}: {str(e)}")  
         
-        # 文本容器
+        # Text container
         self.text_container = QVBoxLayout()
         
-        # 标题标签
+        # Title label
         self.title_label = QLabel(title)
         self.title_label.setStyleSheet(f"color: {color}; font-size: 18px; font-weight: bold; background-color: transparent;")
         
@@ -343,7 +343,7 @@ class ActionTile(QFrame):
         self.text_container.addWidget(self.title_label)
         self.text_container.addWidget(self.desc_label)
         
-        self.layout.addLayout(self.text_container, 1)  # 添加伸展因子
+        self.layout.addLayout(self.text_container, 1)  # Add stretch factor
         
         # Fix arrow icon loading
         try:
@@ -462,12 +462,12 @@ class DashboardWidget(BaseComponent):
         self.main_layout.addWidget(self.stats_frame, 4)  # Chart section takes more space
     
     def create_quick_access_section(self):
-        # 快速访问标题
+        # Quick access title
         self.quick_title = QLabel(self.get_translation("quick_access"))
         self.quick_title.setStyleSheet("font-size: 18px; font-weight: bold; color: #e0e0e0; margin-top: 10px; background-color: transparent;")
         self.main_layout.addWidget(self.quick_title)
         
-        # 快速访问容器
+        # Quick access container
         self.quick_frame = QFrame()
         self.quick_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.quick_layout = QGridLayout(self.quick_frame)
@@ -523,31 +523,31 @@ class DashboardWidget(BaseComponent):
         self.main_layout.addWidget(self.quick_frame, 3)
     
     def update_system_info(self):
-        """更新系统统计信息"""
-        # CPU 使用情况
+        """Update system statistics"""
+        # CPU usage
         cpu_percent = psutil.cpu_percent()
         self.cpu_chart.update_value(cpu_percent)
         
-        # 内存使用情况
+        # Memory usage
         memory = psutil.virtual_memory()
         memory_percent = memory.percent
         self.memory_chart.update_value(memory_percent)
         
-        # 磁盘使用情况（系统驱动器）
+        # Disk usage (system drive)
         try:
             if self.platform_manager == 'Windows':
-                # 在Windows上，获取C:驱动器的使用情况
+                # On Windows, get C: drive usage
                 total, used, free = shutil.disk_usage('C:')
                 disk_percent = (used / total) * 100
             else:
-                # 在Unix/Linux/Mac上，获取根目录的使用情况
+                # On Unix/Linux/Mac, get root directory usage
                 total, used, free = shutil.disk_usage('/')
                 disk_percent = (used / total) * 100
             
             self.disk_chart.update_value(disk_percent)
         except Exception as e:
-            self.disk_chart.update_value("Error")  # Error
-            self.logger.error(f"Error getting disk usage: {e}")  # Error getting disk usage
+            self.disk_chart.update_value("Error")  
+            self.logger.error(f"Error getting disk usage: {e}")  
         
         # Temperature detection - enhanced version
         self._update_temperature()
@@ -650,6 +650,6 @@ class DashboardWidget(BaseComponent):
         ]
         
         for key in keys:
-            # 如果键不存在，将引发KeyError
+            # If key does not exist, raise KeyError
             self.get_translation(key, None) 
             

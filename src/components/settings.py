@@ -14,10 +14,10 @@ from utils.logger import Logger
 import logging
 
 class SettingsWidget(QWidget):
-    """应用程序设置的窗口小部件"""
+    """Widget for application settings"""
     
     def __init__(self, settings, parent=None) -> None:
-        """初始化设置组件"""
+        """Initialize settings component"""
         self.settings = settings
         self.logger = Logger().get_logger()
         self.main_window = parent
@@ -29,12 +29,12 @@ class SettingsWidget(QWidget):
         self.load_settings()
     
     def setup_ui(self) -> None:
-        """设置UI组件"""
-        # 创建整体布局
+        """Setup UI components"""
+        # Create overall layout
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(15, 15, 15, 15)
         
-        # 标题和说明
+        # Title and description
         title_label = QLabel(self.get_translation("title", "Settings"))
         title_label.setObjectName("title_label")
         title_label.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 5px;")
@@ -45,7 +45,7 @@ class SettingsWidget(QWidget):
         desc_label.setStyleSheet("font-size: 14px; color: #a0a0a0; margin-bottom: 15px;")
         main_layout.addWidget(desc_label)
         
-        # 创建标签页
+        # Create tabs
         self.settings_tabs = QTabWidget()
         self.settings_tabs.setObjectName("settings_tabs")
         self.settings_tabs.setStyleSheet("""
@@ -76,34 +76,34 @@ class SettingsWidget(QWidget):
             }
         """)
         
-        # 常规选项卡
+        # General tab
         general_tab = QWidget()
         self.setup_general_tab(general_tab)
-        self.settings_tabs.addTab(general_tab, "")  # 空标题，在语言更新时添加
+        self.settings_tabs.addTab(general_tab, "")  # Empty title, add when language is updated
         
-        # 扫描选项卡
+        # Scan tab
         scan_tab = QWidget()
         self.setup_scan_tab(scan_tab)
         self.settings_tabs.addTab(scan_tab, "")
         
-        # 高级选项卡
+        # Advanced tab
         advanced_tab = QWidget()
         self.setup_advanced_tab(advanced_tab)
         self.settings_tabs.addTab(advanced_tab, "")
         
-        # 外观选项卡
+        # Appearance tab
         appearance_tab = QWidget()
         self.setup_appearance_tab(appearance_tab)
         self.settings_tabs.addTab(appearance_tab, "")
         
-        # 添加标签页
+        # Add tabs
         main_layout.addWidget(self.settings_tabs)
         
-        # 按钮区域
+        # Button area
         button_layout = QHBoxLayout()
         button_layout.setContentsMargins(0, 10, 0, 0)
         
-        # 恢复默认按钮 - 左对齐
+        # Restore defaults button - left aligned
         self.restore_defaults_button = QPushButton(self.get_translation("restore_defaults", "Restore Defaults"))
         self.restore_defaults_button.setObjectName("restore_defaults_button")
         self.restore_defaults_button.clicked.connect(self.reset_settings)
@@ -124,10 +124,10 @@ class SettingsWidget(QWidget):
         """)
         button_layout.addWidget(self.restore_defaults_button)
         
-        # 弹性空间
+        # Elastic space
         button_layout.addStretch()
         
-        # 保存按钮 - 右对齐
+        # Save button - right aligned
         self.save_button = QPushButton(self.get_translation("save_settings", "Save Settings"))
         self.save_button.setObjectName("save_button")
         self.save_button.clicked.connect(self._on_save_settings_clicked)
@@ -149,7 +149,7 @@ class SettingsWidget(QWidget):
         """)
         button_layout.addWidget(self.save_button)
         
-        # 应用按钮
+        # Apply button
         self.apply_button = QPushButton(self.get_translation("apply_settings", "Apply"))
         self.apply_button.setObjectName("apply_button")
         self.apply_button.clicked.connect(self.apply_settings)
@@ -170,7 +170,7 @@ class SettingsWidget(QWidget):
         """)
         button_layout.addWidget(self.apply_button)
 
-        # Restart button – prompt and relaunch application
+        # Restart button - prompt and relaunch application
         self.restart_button = QPushButton(self.get_translation("restart_now", "Restart Now"))
         self.restart_button.setObjectName("restart_button")
         self.restart_button.clicked.connect(self._on_restart_clicked)
@@ -192,30 +192,30 @@ class SettingsWidget(QWidget):
         """)
         button_layout.addWidget(self.restart_button)
         
-        # 添加按钮布局
+        # Add button layout
         main_layout.addLayout(button_layout)
         
-        # 加载设置
+        # Load settings
         self.load_settings()
         
-        # 更新本地化
+        # Update localization
         self.refresh_language()
         
     
     def setup_general_tab(self, general_tab) -> None:
-        """设置常规选项卡"""
-        # 创建滚动区域
+        """Setup general tab"""
+        # Create scroll area
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QScrollArea.NoFrame)
         
-        # 内容容器
+        # Content container
         general_container = QWidget()
         
-        # 创建常规选项卡内容
+        # Create general tab content
         general_layout = QVBoxLayout(general_container)
         general_layout.setContentsMargins(15, 15, 15, 15)
-        general_layout.setSpacing(20)  # 增加间距
+        general_layout.setSpacing(20)  
         
         # General settings title
         title_label = QLabel(self.get_translation("general_title", "General Settings"))
@@ -296,14 +296,14 @@ class SettingsWidget(QWidget):
         self.enable_animations_check.setObjectName("enable_animations")
         self.enable_animations_check.stateChanged.connect(self.on_animations_changed)
         
-        # Linux性能优化选项
+        # Linux performance optimization option
         from tools.base_tools import PlatformManager
         platform_manager = PlatformManager()
         if platform_manager.is_linux():
             self.optimize_linux_performance_check = QCheckBox(self.get_translation("optimize_linux_performance", "优化Linux性能（禁用复杂动画）"))
             self.optimize_linux_performance_check.setStyleSheet("color: #e0e0e0; margin-top: 5px;")
             self.optimize_linux_performance_check.setObjectName("optimize_linux_performance")
-            self.optimize_linux_performance_check.setChecked(True)  # 默认启用
+            self.optimize_linux_performance_check.setChecked(True)  # Default enabled
             behavior_layout.addWidget(self.optimize_linux_performance_check)
         
         behavior_layout.addWidget(self.start_minimized_check)
@@ -316,41 +316,41 @@ class SettingsWidget(QWidget):
         # Add spacer at bottom
         general_layout.addStretch()
         
-        # 设置滚动区域的内容
+        # Set scroll area content
         scroll_area.setWidget(general_container)
         
-        # 设置标签页的布局
+        # Set tab layout
         tab_layout = QVBoxLayout(general_tab)
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.addWidget(scroll_area)
         
     def setup_appearance_tab(self, appearance_tab):
-        """设置外观选项卡"""
+        """Setup appearance tab"""
         layout = QVBoxLayout(appearance_tab)
         layout.setContentsMargins(15, 15, 15, 15)
         
-        # 添加标题
+        # Title
         title_label = QLabel(self.get_translation("appearance_title", "Appearance Settings"))
         title_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #e0e0e0; margin-bottom: 10px;")
         layout.addWidget(title_label)
         
-        # 主题设置框架
+        # Theme settings frame
         theme_frame = QFrame()
         theme_frame.setStyleSheet("background-color: rgba(40, 40, 40, 0.7); border-radius: 6px; padding: 10px;")
         theme_layout = QVBoxLayout(theme_frame)
         theme_layout.setContentsMargins(15, 15, 15, 15)
         
-        # 主题设置标题
+        # Theme settings title
         theme_title = QLabel(self.get_translation("theme_title", "Theme"))
         theme_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #e0e0e0;")
         theme_layout.addWidget(theme_title)
         
-        # 主题说明
+        # Theme description
         theme_desc = QLabel(self.get_translation("theme_desc", "Select your preferred theme."))
         theme_desc.setStyleSheet("color: #b0b0b0; margin-bottom: 10px;")
         theme_layout.addWidget(theme_desc)
         
-        # 主题选择
+        # Theme selection
         theme_select_layout = QHBoxLayout()
         theme_label = QLabel(self.get_translation("theme", "Theme:"))
         theme_label.setStyleSheet("color: #e0e0e0;")
@@ -376,7 +376,7 @@ class SettingsWidget(QWidget):
             }
         """)
         
-        # 加载可用主题并按预定义顺序插入，确保索引与语言刷新一致
+        # Load available themes and insert them in predefined order, ensure index matches language refresh
         available_names = self.theme_manager.get_theme_names()
         theme_display = self.theme_manager.get_theme_display_names()
 
@@ -389,7 +389,7 @@ class SettingsWidget(QWidget):
             display_name = theme_display.get(theme_name, theme_name.capitalize())
             self.theme_combo.addItem(display_name, theme_name)
         
-        # 连接信号
+        # Connect signal
         self.theme_combo.currentIndexChanged.connect(self.on_theme_changed)
         
         theme_select_layout.addWidget(theme_label)
@@ -397,35 +397,35 @@ class SettingsWidget(QWidget):
         theme_select_layout.addStretch()
         theme_layout.addLayout(theme_select_layout)
         
-        # 添加主题设置框架
+        # Add theme settings frame
         layout.addWidget(theme_frame)
         
-        # 界面设置框架
+        # UI settings frame
         ui_frame = QFrame()
         ui_frame.setStyleSheet("background-color: rgba(40, 40, 40, 0.7); border-radius: 6px; padding: 10px;")
         ui_layout = QVBoxLayout(ui_frame)
         ui_layout.setContentsMargins(15, 15, 15, 15)
         ui_layout.setSpacing(10)
         
-        # UI设置标题
+        # UI title
         ui_title = QLabel(self.get_translation("ui_title", "User Interface"))
         ui_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #e0e0e0;")
         ui_layout.addWidget(ui_title)
         
-        # 窗口透明度设置
+        # Window transparency settings
         transparency_layout = QVBoxLayout()
         transparency_title = QLabel(self.get_translation("transparency", "Window Transparency:"))
         transparency_title.setStyleSheet("color: #e0e0e0; margin-top: 5px;")
         
-        # 创建透明度滑块
+        # Create transparency slider
         self.transparency_slider = QSlider(Qt.Horizontal)
-        self.transparency_slider.setRange(70, 100)  # 70%-100%透明度范围
-        self.transparency_slider.setValue(100)  # 默认完全不透明
+        self.transparency_slider.setRange(70, 100)  # 70%-100% transparency range
+        self.transparency_slider.setValue(100)  # Default fully transparent
         self.transparency_slider.setTickPosition(QSlider.TicksBelow)
         self.transparency_slider.setTickInterval(5)
         self.transparency_slider.valueChanged.connect(self.on_transparency_changed)
         
-        # 添加标签显示当前透明度
+        # Add label to display current transparency
         transparency_value_layout = QHBoxLayout()
         transparency_value_layout.addWidget(QLabel("70%"))
         
@@ -439,31 +439,31 @@ class SettingsWidget(QWidget):
         
         ui_layout.addLayout(transparency_layout)
         
-        # 添加UI框架
+        # Add UI frame
         layout.addWidget(ui_frame)
         
-        # 添加伸缩空间
+        # Add stretch space
         layout.addStretch()
         
-        # 添加到选项卡
+        # Add to tabs
         self.settings_tabs.addTab(appearance_tab, self.get_translation("appearance", "Appearance"))
         
     def setup_scan_tab(self, scan_tab) -> None:
-        """设置扫描选项卡"""
-        # 创建滚动区域
+        """Setup scan tab"""
+        # Create scroll area
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QScrollArea.NoFrame)
         
-        # 内容容器
+        # Content container
         scan_container = QWidget()
         
-        # 创建扫描选项卡内容
+        # Create scan tab content
         scan_layout = QVBoxLayout(scan_container)
         scan_layout.setContentsMargins(15, 15, 15, 15)
         scan_layout.setSpacing(20)
         
-        # 扫描设置组
+        # Scan settings group
         scan_group = QGroupBox(self.get_translation("scan_settings"))
         scan_group.setStyleSheet(""" 
             QGroupBox {
@@ -483,7 +483,7 @@ class SettingsWidget(QWidget):
         scan_settings_layout = QVBoxLayout(scan_group)
         scan_settings_layout.setContentsMargins(15, 15, 15, 15)
         
-        # 自动扫描
+        # Auto scan
         auto_scan_layout = QHBoxLayout()
         auto_scan_label = QLabel(self.get_translation("auto_scan"))
         auto_scan_label.setMinimumWidth(120)
@@ -497,7 +497,7 @@ class SettingsWidget(QWidget):
         
         scan_settings_layout.addLayout(auto_scan_layout)
         
-        # 扫描频率
+        # Scan frequency
         scan_freq_layout = QHBoxLayout()
         scan_freq_label = QLabel(self.get_translation("scan_frequency"))
         scan_freq_label.setMinimumWidth(120)
@@ -513,10 +513,10 @@ class SettingsWidget(QWidget):
         
         scan_settings_layout.addLayout(scan_freq_layout)
         
-        # 添加到主布局
+        # Add to main layout
         scan_layout.addWidget(scan_group)
         
-        # 扫描选项组
+        # Scan options group
         scan_options_group = QGroupBox(self.get_translation("scan_options"))
         scan_options_group.setStyleSheet(""" 
             QGroupBox {
@@ -536,7 +536,7 @@ class SettingsWidget(QWidget):
         scan_options_layout = QVBoxLayout(scan_options_group)
         scan_options_layout.setContentsMargins(15, 15, 15, 15)
         
-        # 扫描项目选项
+        # Scan items options
         self.temp_files_checkbox = QCheckBox(self.get_translation("temp_files"))
         self.temp_files_checkbox.setObjectName("temp_files_checkbox")
         self.temp_files_checkbox.setChecked(True)
@@ -557,36 +557,36 @@ class SettingsWidget(QWidget):
         self.log_files_checkbox.setChecked(True)
         scan_options_layout.addWidget(self.log_files_checkbox)
         
-        # 添加到主布局
+        # Add to main layout
         scan_layout.addWidget(scan_options_group)
         
-        # 添加弹性空间
+        # Add stretch space
         scan_layout.addStretch(1)
         
-        # 设置滚动区域的内容
+        # Set scroll area content
         scroll_area.setWidget(scan_container)
         
-        # 设置标签页的布局
+        # Set tab layout
         tab_layout = QVBoxLayout(scan_tab)
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.addWidget(scroll_area)
         
     def setup_advanced_tab(self, advanced_tab):
-        """设置高级选项卡"""
-        # 创建滚动区域
+        """Setup advanced tab"""
+        # Create scroll area
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QScrollArea.NoFrame)
         
-        # 内容容器
+        # Content container
         advanced_container = QWidget()
         
-        # 创建高级选项卡内容
+        # Create advanced tab content
         advanced_layout = QVBoxLayout(advanced_container)
         advanced_layout.setContentsMargins(15, 15, 15, 15)
         advanced_layout.setSpacing(20)
         
-        # 备份设置组
+        # Backup settings group
         backup_group = QGroupBox(self.get_translation("backup_settings"))
         backup_group.setStyleSheet(""" 
             QGroupBox {
@@ -606,13 +606,13 @@ class SettingsWidget(QWidget):
         backup_layout = QVBoxLayout(backup_group)
         backup_layout.setContentsMargins(15, 15, 15, 15)
         
-        # 修复前创建备份
+        # Create backup before repair
         self.check_backup_before_repair = QCheckBox(self.get_translation("backup_before_repair", "修复前创建备份"))
         self.check_backup_before_repair.setObjectName("check_backup_before_repair")
         self.check_backup_before_repair.setChecked(True)
         backup_layout.addWidget(self.check_backup_before_repair)
         
-        # 备份位置
+        # Backup location
         backup_location_layout = QHBoxLayout()
         backup_location_label = QLabel(self.get_translation("backup_location"))
         backup_location_label.setMinimumWidth(120)
@@ -631,7 +631,7 @@ class SettingsWidget(QWidget):
         
         backup_layout.addLayout(backup_location_layout)
         
-        # 最大备份数量
+        # Maximum backups
         max_backups_layout = QHBoxLayout()
         max_backups_label = QLabel(self.get_translation("max_backups"))
         max_backups_label.setMinimumWidth(120)
@@ -647,10 +647,10 @@ class SettingsWidget(QWidget):
         
         backup_layout.addLayout(max_backups_layout)
         
-        # 添加到主布局
+        # Add to main layout
         advanced_layout.addWidget(backup_group)
         
-        # 日志设置组
+        # Logs settings group
         logs_group = QGroupBox(self.get_translation("logs"))
         logs_group.setStyleSheet(""" 
             QGroupBox {
@@ -670,13 +670,13 @@ class SettingsWidget(QWidget):
         logs_layout = QVBoxLayout(logs_group)
         logs_layout.setContentsMargins(15, 15, 15, 15)
         
-        # 启用日志记录
+        # Enable logging
         self.check_enable_logging = QCheckBox(self.get_translation("logs", "日志记录"))
         self.check_enable_logging.setObjectName("check_enable_logging")
         self.check_enable_logging.setChecked(True)
         logs_layout.addWidget(self.check_enable_logging)
         
-        # 保存日志时间
+        # Save logs time
         logs_retention_layout = QHBoxLayout()
         logs_retention_label = QLabel(self.get_translation("keep_logs"))
         logs_retention_label.setMinimumWidth(120)
@@ -695,21 +695,21 @@ class SettingsWidget(QWidget):
         
         logs_layout.addLayout(logs_retention_layout)
         
-        # 清除日志按钮
+        # Clear logs button
         clear_logs_button = QPushButton(self.get_translation("clear_logs"))
         clear_logs_button.setObjectName("clear_logs_button")
         logs_layout.addWidget(clear_logs_button)
         
-        # 添加到主布局
+        # Add to main layout
         advanced_layout.addWidget(logs_group)
         
-        # 添加弹性空间
+        # Add stretch space
         advanced_layout.addStretch(1)
         
-        # 设置滚动区域的内容
+        # Set scroll area content
         scroll_area.setWidget(advanced_container)
         
-        # 设置标签页的布局
+        # Set tab layout
         tab_layout = QVBoxLayout(advanced_tab)
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.addWidget(scroll_area)
@@ -749,14 +749,14 @@ class SettingsWidget(QWidget):
             pass
     
     def load_settings(self):
-        """从设置中加载界面选项"""
+        """Load settings from settings"""
         try:
-            # 应用设置到界面
+            # Apply settings to interface
             current_language = self.settings.get_setting("language", "en")
             
-            # 确保语言下拉框显示正确
+            # Ensure language dropdown shows correctly
             try:
-                language_index = 0  # 默认英语
+                language_index = 0  # Default English
                 if self.language_combo:
                     for i in range(self.language_combo.count()):
                         if self.language_combo.itemData(i) == current_language:
@@ -766,10 +766,10 @@ class SettingsWidget(QWidget):
             except AttributeError:
                 pass
             
-            # 设置主题选择器的值
+            # Set theme selector value
             current_theme = self.settings.get_setting("theme", "dark")
             try:
-                theme_index = 0  # 默认深色主题
+                theme_index = 0  # Default dark theme
                 for i in range(self.theme_combo.count()):
                     if self.theme_combo.itemData(i) == current_theme:
                         theme_index = i
@@ -778,27 +778,27 @@ class SettingsWidget(QWidget):
             except AttributeError:
                 pass
             
-            # 加载自定义颜色
+            # Load custom colors
             try:
                 self.update_color_buttons()
             except AttributeError:
                 pass
             
-            # 加载开机启动设置
+            # Load startup settings
             try:
                 if hasattr(self, 'startup_check'):
                     self.startup_check.setChecked(self.settings.get_setting("start_with_windows", False))
             except AttributeError:
                 pass
             
-            # 加载开机最小化设置
+            # Load startup minimization settings
             try:
                 if hasattr(self, 'start_minimized_check'):
                     self.start_minimized_check.setChecked(self.settings.get_setting("start_minimized", False))
             except AttributeError:
                 pass
             
-            # 加载动画启用设置
+            # Load animation enable settings
             try:
                 if hasattr(self, 'enable_animations_check'):
                     animation_enabled = self.settings.get_setting("enable_animations", True)
@@ -814,7 +814,7 @@ class SettingsWidget(QWidget):
             except AttributeError:
                 pass
             
-            # 加载透明度设置
+            # Load transparency settings
             try:
                 transparency = int(self.settings.get_setting("window_transparency", 100))
                 if hasattr(self, 'transparency_slider'):
@@ -824,13 +824,13 @@ class SettingsWidget(QWidget):
             except (AttributeError, ValueError):
                 pass
             
-            # 加载所有自定义复选框设置
+            # Load all custom checkbox settings
             for checkbox in self.findChildren(QCheckBox):
                 setting_key = checkbox.objectName()
                 if setting_key:
                     try:
                         value = self.settings.get_setting(setting_key, False)
-                        # 将值转换为布尔类型
+                        # Convert value to boolean type
                         if isinstance(value, str):
                             value = value.lower() in ('true', 'yes', '1', 'on')
                         checkbox.setChecked(bool(value))
@@ -842,8 +842,8 @@ class SettingsWidget(QWidget):
             self.logger.error(f"Error loading settings: {e}")
     
     def reset_settings(self):
-        """重置设置为默认值"""
-        # 重置常规设置
+        """Reset settings to default values"""
+        # Reset general settings
         try:
             self.language_combo.setCurrentText("English")
         except AttributeError:
@@ -864,9 +864,9 @@ class SettingsWidget(QWidget):
         except AttributeError:
             self.logger.error("Cannot reset animation settings")
         
-        # 重置主题设置
+        # Reset theme settings
         try:
-            # 找到 "dark" 主题的索引
+            # Find index of "dark" theme
             dark_index = -1
             for i in range(self.theme_combo.count()):
                 if self.theme_combo.itemData(i) == "dark":
@@ -934,30 +934,30 @@ class SettingsWidget(QWidget):
         try:
             self.log_files_checkbox.setChecked(True)
         except AttributeError:
-            self.logger.error("无法重置日志文件设置")
+            self.logger.error("Cannot reset log files settings")
         
-        # 重置扫描选项
+        # Reset scan options
         try:
             self.check_scan_archives.setChecked(True)
         except AttributeError:
-            self.logger.error("无法重置扫描归档设置")
+            self.logger.error("Cannot reset scan archives settings")
         
         try:
             self.check_scan_rootkits.setChecked(True)
         except AttributeError:
-            self.logger.error("无法重置扫描rootkits设置")
+            self.logger.error("Cannot reset scan rootkits settings")
         
         try:
             self.check_scan_autofix.setChecked(False)
         except AttributeError:
-            self.logger.error("无法重置扫描自动修复设置")
+            self.logger.error("Cannot reset scan autofix settings")
         
         try:
             self.slider_scan_level.setValue(2)
         except AttributeError:
-            self.logger.error("无法重置扫描级别设置")
+            self.logger.error("Cannot reset scan level settings")
             
-        # 重置其他设置
+        # Reset other settings
         for attr_name in ['deep_scan_check', 'auto_clean_check', 'auto_backup_check', 
                          'check_updates_check', 'auto_update_check', 'show_notifications_check',
                          'notification_sound_check', 'schedule_restarts_check', 
@@ -966,25 +966,25 @@ class SettingsWidget(QWidget):
             try:
                 getattr(self, attr_name).setChecked(False)
             except (AttributeError, TypeError):
-                self.logger.error(f"无法重置{attr_name}设置")
+                self.logger.error(f"Cannot reset {attr_name} settings")
                 
-        # 重置主窗口透明度
+        # Reset main window transparency
         try:
             self.transparency_slider.setValue(100)
             self.transparency_value_label.setText("100%")
         except AttributeError:
-            self.logger.error("无法重置主窗口透明度")
+            self.logger.error("Cannot reset main window transparency")
             
-        # 通知用户设置已重置
+        # Notify user that settings have been reset
         try:
-            # 显示状态消息
+            # Show status message
             if self.main_window is not None:
-                self.main_window.show_status_message("设置已重置为默认值", 3000)
+                self.main_window.show_status_message("Settings have been reset to default values", 3000)
         except AttributeError:
-            self.logger.error("无法显示状态消息 - main_window不可用")
+            self.logger.error("Cannot show status message - main_window is not available")
     
     def get_translation(self, key, default=None):
-        """获取键的翻译"""
+        """Get translation for key"""
         return self.settings.get_translation("settings", key, default)
         
     def on_language_changed(self, index):
@@ -1007,14 +1007,14 @@ class SettingsWidget(QWidget):
             pass
     
     def refresh_language(self):
-        """根据当前语言更新界面文本"""
-        # 更新标签页标题
+        """Update interface text based on current language"""
+        # Update tab titles
         self.settings_tabs.setTabText(0, self.get_translation("general_tab", "常规"))
         self.settings_tabs.setTabText(1, self.get_translation("scan_tab", "扫描"))
         self.settings_tabs.setTabText(2, self.get_translation("advanced_tab", "高级"))
         self.settings_tabs.setTabText(3, self.get_translation("appearance_tab", "外观"))
         
-        # 更新常规选项卡
+        # Update general tab
         general_group = self.findChild(QGroupBox, "general_group")
         if general_group:
             general_group.setTitle(self.get_translation("general_settings", "常规设置"))
@@ -1029,7 +1029,7 @@ class SettingsWidget(QWidget):
             
         self.start_minimized_check.setText(self.get_translation("start_minimized", "Start minimized"))
         
-        # 更新主题设置
+        # Update theme settings
         theme_group = self.findChild(QGroupBox, "theme_group")
         if theme_group:
             theme_group.setTitle(self.get_translation("theme_settings", "主题设置"))
@@ -1038,19 +1038,19 @@ class SettingsWidget(QWidget):
         if theme_label:
             theme_label.setText(self.get_translation("theme", "主题："))
             
-        # 更新主题选项
+        # Update theme options
         if self.theme_combo.count() >= 3:
             self.theme_combo.setItemText(0, self.get_translation("dark", "深色"))
             self.theme_combo.setItemText(1, self.get_translation("light", "浅色"))
             self.theme_combo.setItemText(2, self.get_translation("custom", "自定义"))
             
-        # 更新自定义颜色部分 - 考虑布局变更为QVBoxLayout
+        # Update custom colors - consider changing layout to QVBoxLayout
         try:
             bg_color_label = None
             text_color_label = None
             accent_color_label = None
             
-            # 遍历所有标签，查找自定义颜色的标签
+            # Iterate through all labels, find custom color labels
             for label in self.findChildren(QLabel):
                 if "背景颜色" in label.text():
                     label.setText(self.get_translation("background_color", "背景颜色："))
@@ -1059,21 +1059,21 @@ class SettingsWidget(QWidget):
                 elif "强调颜色" in label.text():
                     label.setText(self.get_translation("accent_color", "强调颜色："))
         except Exception as e:
-            self.logger.error(f"更新自定义颜色标签出错: {str(e)}")
+            self.logger.error(f"Error updating custom color labels: {str(e)}")
                 
-        # 更新颜色选择按钮
+        # Update color selection buttons
         for button in self.findChildren(QPushButton):
             if "选择颜色" in button.text():
                 button.setText(self.get_translation("choose_color", "选择颜色"))
         
-        # 更新通知组
+        # Update notifications group
         notifications_group = self.findChild(QGroupBox, "notifications_group")
         if notifications_group:
             notifications_group.setTitle(self.get_translation("notifications", "通知"))
             
         self.enable_animations_check.setText(self.get_translation("enable_animations", "启用动画效果"))
         
-        # 更新按钮
+        # Update buttons
         self.save_button.setText(self.get_translation("save_settings", "保存设置"))
         self.apply_button.setText(self.get_translation("apply_settings", "应用设置"))
         self.restore_defaults_button.setText(self.get_translation("restore_defaults", "恢复默认"))
@@ -1081,8 +1081,8 @@ class SettingsWidget(QWidget):
             self.restart_button.setText(self.get_translation("restart_now", "立即重启"))
     
     def check_all_translations(self):
-        """检查所有必需的翻译是否存在"""
-        # 常规选项卡翻译
+        """Check if all required translations exist"""
+        # General tab translations
         self.get_translation("general_tab")
         self.get_translation("general_settings")
         self.get_translation("language")
@@ -1093,31 +1093,31 @@ class SettingsWidget(QWidget):
         self.get_translation("show_tips")
         self.get_translation("maintenance_reminder")
         
-        # 扫描选项卡翻译
+        # Scan tab translations
         self.get_translation("scan_tab")
         
-        # 高级选项卡翻译
+        # Advanced tab translations
         self.get_translation("advanced_tab")
         
-        # 外观选项卡翻译
+        # Appearance tab translations
         self.get_translation("appearance_tab")
         
-        # 按钮翻译
+        # Button translations
         self.get_translation("save_settings")
         self.get_translation("restore_defaults")
 
     def on_transparency_changed(self, value):
-        """处理透明度滑块值变化"""
+        """Handle transparency slider value change"""
         self.transparency_value_label.setText(f"{value}%")
         self.settings.set_setting("window_transparency", value)
         
-        # 尝试应用透明度
+        # Try to apply transparency
         main_window = self.window()
         if main_window and hasattr(main_window, 'apply_transparency'):
             main_window.apply_transparency()
     
     def browse_backup_location(self):
-        """打开对话框选择备份文件夹"""
+        """Open dialog to select backup folder"""
         from PyQt5.QtWidgets import QFileDialog
         
         current_path = self.edit_backup_location.text()
@@ -1216,38 +1216,38 @@ class SettingsWidget(QWidget):
             return False
 
     def _finish_applying(self, loading_label=None, movie=None):
-        """完成应用设置过程"""
+        """Finish applying settings process"""
         try:
-            # 恢复按钮状态
+            # Restore button state
             self.apply_button.setEnabled(True)
             self.apply_button.setText(self.get_translation("apply_settings", "应用设置"))
             
-            # 移除加载动画
+            # Remove loading animation
             if loading_label:
                 if movie:
                     movie.stop()
                 loading_label.hide()
                 loading_label.deleteLater()
             
-            # 确保布局更新
+            # Ensure layout is updated
             self.updateGeometry()
             self.update()
         except Exception as e:
-            self.logger.error(f"清理应用设置界面出错: {str(e)}")
+            self.logger.error(f"Error cleaning up applying settings interface: {str(e)}")
 
     def save_custom_theme(self):
-        """保存当前自定义主题设置到主题文件"""
-        # 获取当前自定义颜色
+        """Save current custom theme settings to theme file"""
+        # Get current custom colors
         bg_color = self.settings.get_setting("custom_bg_color", "#1e1e1e")
         text_color = self.settings.get_setting("custom_text_color", "#e0e0e0")
         accent_color = self.settings.get_setting("custom_accent_color", "#555555")
         
-        # 创建主题数据结构
+        # Create theme data structure
         theme_data = {
             "name": "custom",
             "display_name": {
                 "en": "Custom",
-                "zh": "自定义"
+                "zh": "自定义"  
             },
             "colors": {
                 "bg_color": bg_color,
@@ -1269,7 +1269,7 @@ class SettingsWidget(QWidget):
             }
         }
         
-        # 保存主题到文件
+        # Save theme to file
         try:
             theme_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "themes")
             if not os.path.exists(theme_dir):
@@ -1279,27 +1279,27 @@ class SettingsWidget(QWidget):
             with open(theme_file, 'w', encoding='utf-8') as f:
                 json.dump(theme_data, f, indent=4, ensure_ascii=False)
             
-            # 显示成功消息
+            # Show success message
             self.status_bar = QStatusBar(self)
             self.status_bar.setStyleSheet("color: #4CAF50;")
             self.layout().addWidget(self.status_bar)
             self.status_bar.showMessage(self.get_translation("custom_theme_saved", "自定义主题已保存"), 3000)
         except Exception as e:
-            # 显示错误消息
+            # Show error message
             self.status_bar = QStatusBar(self)
             self.status_bar.setStyleSheet("color: #F44336;")
             self.layout().addWidget(self.status_bar)
             self.status_bar.showMessage(self.get_translation("custom_theme_save_error", f"保存自定义主题时出错: {str(e)}"), 3000)
 
     def lighten_color(self, color, amount=0):
-        """使颜色变亮或变暗
+        """Lighten or darken color
         
         Args:
-            color: 十六进制颜色代码
-            amount: 变化量，正数变亮，负数变暗
+            color: Hex color code
+            amount: Change amount, positive lightens, negative darkens
             
         Returns:
-            新的十六进制颜色代码
+            New hex color code
         """
         try:
             c = color.lstrip('#')
@@ -1313,11 +1313,11 @@ class SettingsWidget(QWidget):
             
             return '#{:02x}{:02x}{:02x}'.format(int(r), int(g), int(b))
         except Exception as e:
-            self.logger.error(f"计算颜色变化出错: {str(e)}")
+            self.logger.error(f"Error calculating color change: {str(e)}")
             return color
 
     def update_color_buttons(self):
-        """更新自定义颜色按钮的显示"""
+        """Update custom color buttons display"""
         bg_color = self.settings.get_setting("custom_bg_color", "#1e1e1e")
         text_color = self.settings.get_setting("custom_text_color", "#e0e0e0")
         accent_color = self.settings.get_setting("custom_accent_color", "#555555")
@@ -1327,7 +1327,7 @@ class SettingsWidget(QWidget):
         self.accent_color_button.setStyleSheet(f"background-color: {accent_color}; min-width: 80px; min-height: 24px;")
 
     def apply_theme(self):
-        """应用所选主题"""
+        """Apply selected theme"""
         index = self.theme_combo.currentIndex()
         if index >= 0:
             theme_name = self.theme_combo.itemData(index)
@@ -1381,7 +1381,7 @@ class SettingsWidget(QWidget):
             self.logger.error(f"Error saving settings: {str(e)}")
             return False
 
-    # 添加save_settings按钮的点击处理函数
+    # Add save_settings button click handler
     def _on_save_settings_clicked(self):
         """Save settings and close settings window"""
         # Save all settings
@@ -1416,14 +1416,14 @@ class SettingsWidget(QWidget):
             )
 
     def on_checkbox_changed(self, setting_key, state):
-        """处理复选框状态改变
+        """Handle checkbox state change
         
         Args:
-            setting_key: 设置键名
-            state: 复选框状态 (Qt.Checked 或 Qt.Unchecked)
+            setting_key: Setting key name
+            state: Checkbox state (Qt.Checked or Qt.Unchecked)
         """
         try:
-            # 将Qt.Checked/Qt.Unchecked转换为布尔值
+            # Convert Qt.Checked/Qt.Unchecked to boolean
             checked = (state == Qt.Checked)
             
             # 保存设置
@@ -1452,7 +1452,7 @@ class SettingsWidget(QWidget):
             
         except Exception as e:
             self.logger.error(f"Error changing setting: {str(e)}")
-            # 恢复复选框状态
+            # Restore checkbox state
             sender = self.sender()
             if sender:
                 sender.setChecked(not checked)

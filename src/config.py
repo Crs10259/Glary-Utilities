@@ -1,5 +1,4 @@
 import os
-import sys
 from pathlib import Path
 from functools import lru_cache
 import logging

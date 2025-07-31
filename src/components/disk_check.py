@@ -12,10 +12,7 @@ from tools.disk_check import DiskCheckThread
 
 class DiskCheckWidget(BaseComponent):
     def __init__(self, parent=None):
-        # 初始化属性
         self.disk_worker = None
-        
-        # 调用父类构造函数
         super().__init__(parent)
     
     def get_translation(self, key, default=None):

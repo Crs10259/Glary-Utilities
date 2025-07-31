@@ -43,7 +43,7 @@ class DismToolWidget(BaseComponent):
         self.description.setStyleSheet("font-size: 14px; color: #a0a0a0; background-color: transparent;")
         self.main_layout.addWidget(self.description)
         
-        # Warning label for non-Windows systems
+        # Warning label for non-Windows systems (only show on non-Windows systems)
         if platform.system() != "Windows":
             warning_label = QLabel("⚠️ DISM is only available on Windows systems")
             warning_label.setStyleSheet("color: #ff9900; font-weight: bold; background-color: transparent;")
@@ -70,7 +70,7 @@ class DismToolWidget(BaseComponent):
         """)
         operations_layout = QVBoxLayout(self.operations_group)
         
-        # 操作选择的复选框
+        # Checkboxes for operation selection
         self.operation_group = QButtonGroup(self)
         self.operation_group.setObjectName("dism_operation_group")
        
@@ -101,7 +101,7 @@ class DismToolWidget(BaseComponent):
         
         self.main_layout.addWidget(self.operations_group)
         
-        # 开始按钮
+        # Start button
         self.start_button = QPushButton(self.get_translation("start_button"))
         self.start_button.setStyleSheet(""" 
             QPushButton {
@@ -126,7 +126,7 @@ class DismToolWidget(BaseComponent):
         self.start_button.clicked.connect(self.start_operation)
         self.start_button.setEnabled(platform.system() == "Windows")
         
-        # 按钮容器（用于右对齐）
+        # Button container (for right alignment)
         button_container = QWidget()
         button_container.setStyleSheet("background-color: transparent;")
         button_layout = QHBoxLayout(button_container)
@@ -136,7 +136,7 @@ class DismToolWidget(BaseComponent):
         
         self.main_layout.addWidget(button_container)
         
-        # 日志输出
+        # Log output
         self.log_label = QLabel(self.get_translation("log_output"))
         self.log_label.setStyleSheet("color: #a0a0a0; margin-top: 10px; background-color: transparent;")
         self.main_layout.addWidget(self.log_label)
@@ -154,20 +154,20 @@ class DismToolWidget(BaseComponent):
         """)
         self.main_layout.addWidget(self.log_output)
         
-        # 设置日志的最小高度
+        # Set minimum height for log output
         self.log_output.setMinimumHeight(200)
         
-        # 设置布局
+        # Set layout
         self.setLayout(self.main_layout)
         
-        # 确保样式正确应用
+        # Ensure styles are applied correctly
         self.setAttribute(Qt.WA_StyledBackground, True)
         
-        # 应用主题样式到单选按钮
+        # Apply theme styles to radio buttons
         self.apply_theme()
     
     def start_operation(self):
-        """开始选定的DISM操作"""
+        """Start selected DISM operation"""
         operation = None
         
         if self.check_health_rb.isChecked():
@@ -182,10 +182,10 @@ class DismToolWidget(BaseComponent):
         if not operation:
             return
         
-        # 清除日志并禁用开始按钮
+        # Clear log and disable start button
         self.log_output.clear()
         self.start_button.setEnabled(False)
-        self.log_output.append(f"开始操作: {operation}")
+        self.log_output.append(f"Starting operation: {operation}")
         
         # 启动工作线程
         self.dism_worker = DismThread(operation)
@@ -194,20 +194,20 @@ class DismToolWidget(BaseComponent):
         self.dism_worker.start()
     
     def update_log(self, message):
-        """更新日志输出"""
+        """Update log output"""
         self.log_output.append(message)
-        # 滚动到底部
+        # Scroll to bottom
         scrollbar = self.log_output.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
     
     def operation_completed(self, success, message):
-        """处理操作完成"""
-        # 重新启用开始按钮
+        """Handle operation completion"""
+        # Re-enable start button
         self.start_button.setEnabled(True)
         
-        # 将完成消息添加到日志
+        # Add completion message to log
         if success:
-            self.log_output.append("✅ 操作成功完成")
+            self.log_output.append("✅ Operation completed successfully")
             self.log_output.append(message)
         else:
             self.log_output.append("❌ 操作失败")
@@ -225,14 +225,14 @@ class DismToolWidget(BaseComponent):
         self.start_button.setText(self.get_translation("start_button"))
         self.log_label.setText(self.get_translation("log_output"))
         
-        # 添加动画以突出显示更改
+        # Add animation to highlight changes
         super().refresh_language()
 
     def check_all_translations(self):
-        """检查此组件中使用的所有翻译键是否存在
+        """Check if all translation keys used in this component exist
         
-        引发:
-            KeyError: 如果缺少任何翻译键
+        Raises:
+            KeyError: If any translation key is missing
         """
         # 尝试获取此组件中使用的所有翻译
         keys = [
@@ -242,12 +242,12 @@ class DismToolWidget(BaseComponent):
         ]
         
         for key in keys:
-            # 如果键不存在，将引发KeyError
+            # If key does not exist, raise KeyError
             self.get_translation(key, None)
 
     def on_operation_changed(self, button):
-        """处理操作选择的单选按钮变化"""
-        # 获取当前选中的按钮
+        """Handle operation selection change"""
+        # Get current selected button
         selected_button = None
         
         if self.check_health_rb.isChecked():
@@ -260,7 +260,7 @@ class DismToolWidget(BaseComponent):
             selected_button = self.cleanup_image_rb
             
         if selected_button:
-            # 保存用户的选择到设置
+            # Save user's choice to settings
             operation_key = selected_button.objectName()
             self.settings.set_setting("dism_operation", operation_key)
-            self.settings.sync()  # 确保设置被保存
+            self.settings.sync()  # Ensure settings are saved

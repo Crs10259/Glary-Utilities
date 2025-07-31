@@ -13,10 +13,7 @@ from tools.boot_repair import StartupManager
 class BootToolsWidget(BaseComponent):
     """Widget for boot tools operations including repair and startup management"""
     def __init__(self, parent=None):
-        # Initialize attributes
         self.boot_worker = None
-        
-        # Call parent class constructor
         super().__init__(parent)
         
     def setup_ui(self):
@@ -152,14 +149,14 @@ class BootToolsWidget(BaseComponent):
             self.logger.error(f"Error applying theme in BootToolsWidget: {e}")
             
     def lighten_color(self, color, amount=0):
-        """使颜色变亮或变暗
+        """Lighten or darken color
         
         Args:
-            color: 十六进制颜色代码
-            amount: 变化量，正数变亮，负数变暗
+            color: Hex color code
+            amount: Change amount, positive number lightens, negative number darkens
             
         Returns:
-            新的十六进制颜色代码
+            New hex color code
         """
         try:
             c = color.lstrip('#')
@@ -173,20 +170,20 @@ class BootToolsWidget(BaseComponent):
             
             return '#{:02x}{:02x}{:02x}'.format(int(r), int(g), int(b))
         except Exception as e:
-            self.logger.error(f"计算颜色变化出错: {str(e)}")
+            self.logger.error(f"Error calculating color change: {str(e)}")
             return color
             
     def setup_repair_tab(self, tab):
-        """设置修复选项卡"""
-        # 创建标签页布局
+        """Setup repair tab"""
+        # Create tab layout
         tab_layout = QVBoxLayout(tab)
         tab_layout.setContentsMargins(10, 10, 10, 10)
         
-        # 选项组
+        # Options group
         options_group = QGroupBox(self.get_translation("repair_options", "Repair Options"))
         options_layout = QVBoxLayout(options_group)
         
-        # 修复选项
+        # Repair options
         self.repair_mbr_radio = QCheckBox(self.get_translation("fix_mbr", "Fix Boot Sector"))
         self.repair_mbr_radio.setObjectName("repair_mbr_radio")
         self.repair_mbr_radio.setChecked(True)
@@ -214,10 +211,10 @@ class BootToolsWidget(BaseComponent):
         options_layout.addWidget(self.repair_winload_radio)
         options_layout.addWidget(self.repair_full_radio)
         
-        # 添加选项组到标签页
+        # Add options group to tab
         tab_layout.addWidget(options_group)
         
-        # 日志输出区域
+        # Log output area
         log_group = QGroupBox(self.get_translation("operation_log", "Operation Log"))
         log_layout = QVBoxLayout(log_group)
         
@@ -227,16 +224,16 @@ class BootToolsWidget(BaseComponent):
         
         log_layout.addWidget(self.log_output)
         
-        # 添加日志组到标签页
+        # Add log group to tab
         tab_layout.addWidget(log_group)
         
-        # 进度条
+        # Progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         tab_layout.addWidget(self.progress_bar)
         
-        # 按钮区域
+        # Buttons area
         buttons_layout = QHBoxLayout()
         
         self.start_button = QPushButton(self.get_translation("repair_button", "Start Repair"))
@@ -250,22 +247,22 @@ class BootToolsWidget(BaseComponent):
         buttons_layout.addWidget(self.start_button)
         buttons_layout.addWidget(self.stop_button)
         
-        # 添加按钮区域到标签页
+        # Add buttons area to tab
         tab_layout.addLayout(buttons_layout)
     
     def setup_startup_manager_tab(self, tab):
-        """设置启动项管理选项卡"""
+        """Setup startup manager tab"""
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(10)
         
-        # 描述
+        # Description
         description = QLabel(self.get_translation("startup_desc", "Manage Windows startup items, enable or disable self-starting programs."))
         description.setStyleSheet("font-size: 14px;")
         description.setWordWrap(True)
         layout.addWidget(description)
         
-        # 启动项表格
+        # Startup table
         self.startup_table = QTableWidget()
         self.startup_table.setColumnCount(4)
         self.startup_table.setHorizontalHeaderLabels([
@@ -282,20 +279,20 @@ class BootToolsWidget(BaseComponent):
         self.startup_table.setAlternatingRowColors(True)
         layout.addWidget(self.startup_table)
         
-        # 按钮区域
+        # Buttons area
         button_layout = QHBoxLayout()
-        
-        # 添加按钮
+
+        # Add button
         self.add_button = QPushButton(self.get_translation("add_startup_item", "Add Startup Item"))
         self.add_button.clicked.connect(self.add_startup_item)
         button_layout.addWidget(self.add_button)
         
-        # 刷新按钮
+        # Refresh button
         self.refresh_button = QPushButton(self.get_translation("refresh", "Refresh"))
         self.refresh_button.clicked.connect(self.refresh_startup_items)
         button_layout.addWidget(self.refresh_button)
         
-        # 启用/禁用按钮
+        # Enable/disable buttons
         self.enable_button = QPushButton(self.get_translation("enable", "Enable Selected"))
         self.enable_button.clicked.connect(self.enable_startup_item)
         button_layout.addWidget(self.enable_button)
@@ -304,64 +301,64 @@ class BootToolsWidget(BaseComponent):
         self.disable_button.clicked.connect(self.disable_startup_item)
         button_layout.addWidget(self.disable_button)
         
-        # 删除按钮
+        # Delete button
         self.delete_button = QPushButton(self.get_translation("delete", "Delete Selected"))
         self.delete_button.clicked.connect(self.delete_startup_item)
         button_layout.addWidget(self.delete_button)
         
         layout.addLayout(button_layout)
         
-        # 加载示例数据
+        # Load example data
         self.load_startup_items()
         
-        # 连接选择信号
+        # Connect selection signal
         self.startup_table.itemSelectionChanged.connect(self.update_button_states)
         
-        # 初始化按钮状态
+        # Initialize button states
         self.update_button_states()
         
-        # 如果不是Windows系统，禁用所有按钮
+        # If not Windows system, disable all buttons
         if not self.platform_manager.is_windows():
             self.add_button.setEnabled(False)
             self.refresh_button.setEnabled(False)
             self.enable_button.setEnabled(False)
             self.disable_button.setEnabled(False)
             self.delete_button.setEnabled(False)
-            # 添加警告标签
+            # Add warning label
             warning_label = QLabel(self.get_translation("startup_warning", "⚠️ Startup management is only available on Windows systems"))
             warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
             layout.addWidget(warning_label)
 
     def load_startup_items(self):
-        """加载系统启动项数据"""
-        self.startup_table.setRowCount(0)  # 清除现有行
+        """Load system startup items data"""
+        self.startup_table.setRowCount(0)  # Clear existing rows
         
         try:
-            # 获取实际的启动项
+            # Get actual startup items
             startup_items = StartupManager.get_startup_items()
             
             for item in startup_items:
                 row = self.startup_table.rowCount()
                 self.startup_table.insertRow(row)
                 
-                # 添加各列数据
+                # Add data to each column
                 self.startup_table.setItem(row, 0, QTableWidgetItem(item["name"]))
                 self.startup_table.setItem(row, 1, QTableWidgetItem(item["path"]))
                 self.startup_table.setItem(row, 2, QTableWidgetItem(item["status"]))
                 self.startup_table.setItem(row, 3, QTableWidgetItem(item["type"]))
                 
-                # 为已禁用项设置灰色
+                # Set gray for disabled items
                 if item["status"] == "已禁用":
                     for col in range(4):
                         self.startup_table.item(row, col).setForeground(QBrush(QColor("#888888")))
                         
         except Exception as e:
-            self.log_output.append(f"加载启动项时出错: {str(e)}")
-            # 如果出错，加载演示数据
+            self.log_output.append(f"Error loading startup items: {str(e)}")
+            # If error, load demo data
             self.load_demo_items()
     
     def load_demo_items(self):
-        """加载演示用的启动项数据"""
+        """Load demo startup items data"""
         demo_items = [
             ["Microsoft Edge", "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe", "已启用", "注册表"],
             ["Spotify", "C:\\Users\\AppData\\Roaming\\Spotify\\Spotify.exe", "已启用", "启动文件夹"],
@@ -377,13 +374,13 @@ class BootToolsWidget(BaseComponent):
             for col, text in enumerate(item):
                 self.startup_table.setItem(row, col, QTableWidgetItem(text))
                 
-            # 为已禁用项设置不同的颜色
+            # Set different color for disabled items
             if item[2] == "已禁用":
                 for col in range(4):
                     self.startup_table.item(row, col).setForeground(QBrush(QColor("#888888")))
     
     def enable_startup_item(self):
-        """启用选中的启动项"""
+        """Enable selected startup items"""
         selected_rows = self.get_selected_rows()
         if not selected_rows:
             return
@@ -394,13 +391,13 @@ class BootToolsWidget(BaseComponent):
             
             self.log_output.append(self.get_translation("enabling", f"Enabling {name}..."))
             
-            # 尝试启用启动项
+            # Try to enable startup item
             if StartupManager.enable_startup_item(name, item_type):
-                # 更新状态
+                # Update status
                 status_item = self.startup_table.item(row, 2)
                 status_item.setText("Enabled")
                 
-                # 恢复正常颜色
+                # Restore normal color
                 for col in range(4):
                     self.startup_table.item(row, col).setForeground(QBrush(QColor("#000000")))
                     
@@ -411,7 +408,7 @@ class BootToolsWidget(BaseComponent):
         self.update_button_states()
     
     def disable_startup_item(self):
-        """禁用选中的启动项"""
+        """Disable selected startup items"""
         selected_rows = self.get_selected_rows()
         if not selected_rows:
             return
@@ -422,13 +419,13 @@ class BootToolsWidget(BaseComponent):
             
             self.log_output.append(self.get_translation("disabling", f"Disabling {name}..."))
             
-            # 尝试禁用启动项
+            # Try to disable startup item
             if StartupManager.disable_startup_item(name, item_type):
-                # 更新状态
+                # Update status
                 status_item = self.startup_table.item(row, 2)
                 status_item.setText("Disabled")
                 
-                # 设置灰色
+                # Set gray
                 for col in range(4):
                     self.startup_table.item(row, col).setForeground(QBrush(QColor("#888888")))
                     
@@ -439,12 +436,12 @@ class BootToolsWidget(BaseComponent):
         self.update_button_states()
     
     def delete_startup_item(self):
-        """删除选中的启动项"""
+        """Delete selected startup items"""
         selected_rows = self.get_selected_rows()
         if not selected_rows:
             return
         
-        # 确认对话框
+        # Confirm dialog
         reply = QMessageBox.question(
             self,
             self.get_translation("confirm_delete", "Confirm Delete"),
@@ -454,7 +451,7 @@ class BootToolsWidget(BaseComponent):
         )
         
         if reply == QMessageBox.Yes:
-            # 从底部开始删除，避免索引变化问题
+            # Delete from bottom to avoid index change problem
             for row in sorted(selected_rows, reverse=True):
                 name = self.startup_table.item(row, 0).text()
                 path = self.startup_table.item(row, 1).text()
@@ -462,7 +459,7 @@ class BootToolsWidget(BaseComponent):
                 
                 self.log_output.append(self.get_translation("deleting", f"Deleting {name}..."))
                 
-                # 尝试删除启动项
+                # Try to delete startup item
                 if StartupManager.delete_startup_item(name, path, item_type):
                     self.startup_table.removeRow(row)
                     self.log_output.append(f"✓ {name} deleted successfully")
@@ -472,8 +469,8 @@ class BootToolsWidget(BaseComponent):
             self.update_button_states()
     
     def add_startup_item(self):
-        """添加新的启动项"""
-        # 选择可执行文件
+        """Add new startup item"""
+        # Select executable file
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             self.get_translation("select_program", "Select Program"),
@@ -484,27 +481,27 @@ class BootToolsWidget(BaseComponent):
         if not file_path:
             return
             
-        # 获取程序名称（不带扩展名）
+        # Get program name (without extension)
         name = os.path.splitext(os.path.basename(file_path))[0]
         
-        # 选择添加方式
-        item_type = "注册表"  # 默认使用注册表
+        # Select add method
+        item_type = "注册表"  # Default use registry
         
-        # 尝试添加启动项
+        # Try to add startup item
         if StartupManager.add_startup_item(name, file_path, item_type):
             self.log_output.append(f"✓ {name} added to startup items successfully")
-            # 刷新列表
+            # Refresh list
             self.load_startup_items()
         else:
             self.log_output.append(f"✗ Failed to add {name} to startup items")
 
     def get_selected_rows(self):
-        """获取选中的行索引"""
+        """Get selected row index"""
         selected_indexes = self.startup_table.selectedIndexes()
         if not selected_indexes:
             return []
             
-        # 提取不重复的行索引
+        # Extract unique row indices
         rows = set()
         for index in selected_indexes:
             rows.add(index.row())
@@ -512,7 +509,7 @@ class BootToolsWidget(BaseComponent):
         return list(rows)
 
     def update_button_states(self):
-        """更新按钮的启用/禁用状态"""
+        """Update button enable/disable state"""
         has_selection = bool(self.get_selected_rows())
         self.enable_button.setEnabled(has_selection)
         self.disable_button.setEnabled(has_selection)
@@ -628,27 +625,27 @@ class BootToolsWidget(BaseComponent):
 
     def refresh_language(self):
         """Refresh all UI text elements with current language translations"""
-        # 标签页标题
+        # Tab titles
         self.tabs.setTabText(0, self.get_translation("repair_tab", "Boot Repair"))
         self.tabs.setTabText(1, self.get_translation("startup_tab", "Startup Manager"))
         
-        # 更新单选按钮
+        # Update radio buttons
         self.repair_mbr_radio.setText(self.get_translation("fix_mbr", "Fix Boot Sector"))
         self.repair_bcd_radio.setText(self.get_translation("rebuild_bcd", "Repair Boot Configuration Data (BCD)"))
         self.repair_bootmgr_radio.setText(self.get_translation("fix_boot", "Repair Boot Manager"))
         self.repair_winload_radio.setText(self.get_translation("repair_winload", "Repair Windows Loader"))
         self.repair_full_radio.setText(self.get_translation("full_repair", "Full Repair"))
         
-        # 更新按钮
+        # Update buttons
         self.start_button.setText(self.get_translation("repair_button", "Start Repair"))
         self.stop_button.setText(self.get_translation("stop_button", "Stop"))
         
-        # 更新日志组
+        # Update log group
         log_group = self.findChild(QGroupBox, "log_group")
         if log_group:
             log_group.setTitle(self.get_translation("log_output", "Log Output"))
         
-        # 更新启动管理器选项卡
+        # Update startup manager tab
         if hasattr(self, "enable_button"):
             self.enable_button.setText(self.get_translation("enable", "Enable Selected"))
         if hasattr(self, "disable_button"):
@@ -658,7 +655,7 @@ class BootToolsWidget(BaseComponent):
         if hasattr(self, "refresh_button"):
             self.refresh_button.setText(self.get_translation("refresh", "Refresh List"))
             
-        # 更新启动项表格
+        # Update startup table
         startup_list = self.findChild(QTableWidget, "startup_list")
         if startup_list:
             startup_list.setHorizontalHeaderLabels([
@@ -711,21 +708,21 @@ class BootToolsWidget(BaseComponent):
                 checkbox.setChecked(True)
 
     def toggle_startup_item(self, state):
-        """处理启动项复选框状态改变"""
+        """Handle startup item checkbox state change"""
         if state == Qt.Checked:
             self.enable_startup_cb.setText(self.get_translation("enable_startup_checked", "Enable Selected"))
         else:
             self.enable_startup_cb.setText(self.get_translation("enable_startup", "Enable Selected"))
         
     def toggle_service(self, state):
-        """处理服务复选框状态改变"""
+        """Handle service checkbox state change"""
         if state == Qt.Checked:
             self.disable_service_cb.setText(self.get_translation("disable_service_checked", "Disable Selected"))
         else:
             self.disable_service_cb.setText(self.get_translation("disable_service", "Disable Selected"))
             
     def refresh_startup_items(self):
-        """刷新启动项列表"""
+        """Refresh startup items list"""
         self.log_output.append(self.get_translation("refreshing", "Refreshing startup items..."))
         self.load_startup_items()
         self.log_output.append(self.get_translation("refresh_complete", "Refresh complete"))

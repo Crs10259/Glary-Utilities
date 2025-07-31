@@ -12,7 +12,7 @@ from components.base_component import BaseComponent
 from tools.system_repair import RepairThread
 
 class SystemRepairWidget(BaseComponent):
-    """系统修复小部件，显示系统修复选项"""
+    """System repair widget, display system repair options"""
     
     def __init__(self, parent=None):
         # Initialize properties
@@ -127,7 +127,7 @@ class SystemRepairWidget(BaseComponent):
         # Set layout
         self.setLayout(self.main_layout)
         
-        # 确保样式正确应用
+        # Ensure styles are applied correctly
         self.setAttribute(Qt.WA_StyledBackground, True)
     
     def setup_scan_tab(self):

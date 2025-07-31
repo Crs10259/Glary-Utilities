@@ -6,88 +6,88 @@ from .base_tools import BaseThread
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 
 class CleanerWorker(BaseThread):
-    """扫描和清理文件的工作线程"""
+    """Worker thread for scanning and cleaning files"""
     progress_updated = pyqtSignal(int, str)
     scan_completed = pyqtSignal(dict)
     clean_completed = pyqtSignal(dict)
     
     def __init__(self, options, exclusions, extensions, operation="scan"):
         super().__init__()
-        self.options = options  # 要扫描的选项字典
-        self.exclusions = exclusions  # 排除的目录/文件列表
-        self.extensions = extensions  # 要清理的文件扩展名列表
-        self.operation = operation  # "scan" 或 "clean"
+        self.options = options  # Dictionary of options to scan
+        self.exclusions = exclusions  # List of directories/files to exclude
+        self.extensions = extensions  # List of file extensions to clean
+        self.operation = operation  # "scan" or "clean"
         self.stop_requested = False
     
     def run(self):
-        """运行工作线程"""
+        """Run worker thread"""
         if self.operation == "scan":
             self.scan_files()
         elif self.operation == "clean":
             self.clean_files()
     
     def stop(self):
-        """请求工作线程停止"""
+        """Request worker thread to stop"""
         self.stop_requested = True
     
     def scan_files(self):
-        """扫描不必要的文件"""
+        """Scan unnecessary files"""
         results = {
             "files": [],
             "total_size": 0,
             "count": 0
         }
         
-        # 获取临时目录
+        # Get temporary directory
         temp_dir = tempfile.gettempdir()
         
-        # 获取用户主目录
+        # Get user home directory
         home_dir = os.path.expanduser("~")
         
         progress = 0
         self.progress_updated.emit(progress, "开始扫描...")
         
-        # 扫描临时文件
+        # Scan temporary files
         if self.options.get("temp_files", False):
-            self.progress_updated.emit(progress, "扫描临时文件...")
+            self.progress_updated.emit(progress, "Scanning temporary files...")
             temp_files = self.scan_directory(temp_dir)
             results["files"].extend(temp_files)
             progress += 20
-            self.progress_updated.emit(progress, f"找到 {len(temp_files)} 个临时文件")
+            self.progress_updated.emit(progress, f"Found {len(temp_files)} temporary files")
         
-        # 扫描回收站
+        # Scan recycle bin
         if self.options.get("recycle_bin", False):
-            self.progress_updated.emit(progress, "扫描回收站...")
+            self.progress_updated.emit(progress, "Scanning recycle bin...")
             recycle_files = self.scan_recycle_bin()
             results["files"].extend(recycle_files)
             progress += 20
-            self.progress_updated.emit(progress, f"找到 {len(recycle_files)} 个回收站文件")
+            self.progress_updated.emit(progress, f"Found {len(recycle_files)} recycle bin files")
         
-        # 扫描缓存文件（浏览器）
+        # Scan cache files (browser)
         if self.options.get("cache_files", False):
-            self.progress_updated.emit(progress, "扫描缓存文件...")
+            self.progress_updated.emit(progress, "Scanning cache files...")
             cache_files = self.scan_browser_caches(home_dir)
             results["files"].extend(cache_files)
             progress += 20
-            self.progress_updated.emit(progress, f"找到 {len(cache_files)} 个缓存文件")
+            self.progress_updated.emit(progress, f"Found {len(cache_files)} cache files")
         
-        # 扫描日志文件
+        # Scan log files
         if self.options.get("log_files", False):
-            self.progress_updated.emit(progress, "扫描日志文件...")
+            self.progress_updated.emit(progress, "Scanning log files...")
             log_files = self.scan_log_files()
             results["files"].extend(log_files)
             progress += 20
-            self.progress_updated.emit(progress, f"找到 {len(log_files)} 个日志文件")
+            self.progress_updated.emit(progress, f"Found {len(log_files)} log files")
         
-        # 计算总数
+        # Calculate total
         results["count"] = len(results["files"])
         results["total_size"] = sum(file["size"] for file in results["files"])
         
-        self.progress_updated.emit(100, f"扫描完成。找到 {results['count']} 个文件 ({self.format_size(results['total_size'])})")
+        self.progress_updated.emit(100, f"Scan completed. Found {results['count']} files ({self.format_size(results['total_size'])})")
         self.scan_completed.emit(results)
     
     def clean_files(self):
-        """清理选定的文件"""
+        """Clean selected files"""
         results = {
             "cleaned_count": 0,
             "cleaned_size": 0,
@@ -96,11 +96,11 @@ class CleanerWorker(BaseThread):
         
         total_files = len(self.options.get("files", []))
         if total_files == 0:
-            self.progress_updated.emit(100, "没有文件可清理")
+            self.progress_updated.emit(100, "No files to clean")
             self.clean_completed.emit(results)
             return
         
-        self.progress_updated.emit(0, f"清理 {total_files} 个文件...")
+        self.progress_updated.emit(0, f"Cleaning {total_files} files...")
         
         for i, file_info in enumerate(self.options.get("files", [])):
             if self.stop_requested:
@@ -118,18 +118,18 @@ class CleanerWorker(BaseThread):
                     results["cleaned_size"] += file_info["size"]
                     
                     progress = int((i + 1) / total_files * 100)
-                    self.progress_updated.emit(progress, f"清理了 {results['cleaned_count']} 个文件 ({self.format_size(results['cleaned_size'])})")
+                    self.progress_updated.emit(progress, f"Cleaned {results['cleaned_count']} files ({self.format_size(results['cleaned_size'])})")
                 else:
                     results["failed_count"] += 1
             except Exception as e:
                 self.logger.error(f"Error cleaning {file_path}: {e}")
                 results["failed_count"] += 1
         
-        self.progress_updated.emit(100, f"清理完成。清理了 {results['cleaned_count']} 个文件 ({self.format_size(results['cleaned_size'])})")
+        self.progress_updated.emit(100, f"Clean completed. Cleaned {results['cleaned_count']} files ({self.format_size(results['cleaned_size'])})")
         self.clean_completed.emit(results)
     
     def scan_directory(self, directory):
-        """扫描目录以查找要清理的文件"""
+        """Scan directory to find files to clean"""
         files = []
         
         try:
@@ -137,17 +137,17 @@ class CleanerWorker(BaseThread):
                 if self.stop_requested:
                     break
                     
-                # 跳过排除的目录
+                # Skip excluded directories
                 dirs[:] = [d for d in dirs if os.path.join(root, d) not in self.exclusions]
                 
                 for filename in filenames:
                     file_path = os.path.join(root, filename)
                     
-                    # 跳过排除的文件
+                    # Skip excluded files
                     if file_path in self.exclusions:
                         continue
                     
-                    # 仅包括具有指定扩展名的文件（如果提供了扩展名）
+                    # Only include files with specified extensions (if provided)
                     if self.extensions and not any(filename.endswith(ext) for ext in self.extensions):
                         continue
                     
@@ -166,22 +166,22 @@ class CleanerWorker(BaseThread):
         return files
     
     def scan_recycle_bin(self):
-        """扫描回收站中的文件"""
+        """Scan recycle bin for files"""
         files = []
         
         try:
             if self.platform_manager.is_windows():
-                # Windows回收站位于C:\\$Recycle.Bin
+                # Windows recycle bin located at C:\\$Recycle.Bin
                 recycle_bin = "C:\\$Recycle.Bin"
                 if os.path.exists(recycle_bin):
                     files = self.scan_directory(recycle_bin)
             elif self.platform_manager.is_mac():  # macOS
-                # macOS垃圾箱位于~/.Trash
+                # macOS trash located at ~/.Trash
                 trash_path = os.path.expanduser("~/.Trash")
                 if os.path.exists(trash_path):
                     files = self.scan_directory(trash_path)
             elif self.platform_manager.is_linux():
-                # Linux垃圾箱位于~/.local/share/Trash
+                # Linux trash located at ~/.local/share/Trash
                 trash_path = os.path.expanduser("~/.local/share/Trash")
                 if os.path.exists(trash_path):
                     files = self.scan_directory(trash_path)
@@ -191,13 +191,13 @@ class CleanerWorker(BaseThread):
         return files
     
     def scan_browser_caches(self, home_dir):
-        """扫描浏览器缓存目录"""
+        """Scan browser cache directory"""
         files = []
         
         try:
             system = self.platform_manager.current_system
             
-            # Chrome缓存
+            # Chrome cache
             chrome_cache = None
             if system == "Windows":
                 chrome_cache = os.path.join(home_dir, "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Cache")
@@ -209,7 +209,7 @@ class CleanerWorker(BaseThread):
             if chrome_cache and os.path.exists(chrome_cache):
                 files.extend(self.scan_directory(chrome_cache))
             
-            # Firefox缓存
+            # Firefox cache
             firefox_cache = None
             if system == "Windows":
                 firefox_cache = os.path.join(home_dir, "AppData", "Local", "Mozilla", "Firefox", "Profiles")
@@ -219,9 +219,9 @@ class CleanerWorker(BaseThread):
                 firefox_cache = os.path.join(home_dir, ".cache", "mozilla", "firefox")
             
             if firefox_cache and os.path.exists(firefox_cache):
-                # 对于Firefox，我们需要扫描每个配置文件
+                # For Firefox, we need to scan each profile
                 if system == "Windows":
-                    # 扫描每个配置文件目录
+                    # Scan each profile directory
                     for profile in os.listdir(firefox_cache):
                         profile_cache = os.path.join(firefox_cache, profile, "cache2")
                         if os.path.exists(profile_cache):
@@ -229,7 +229,7 @@ class CleanerWorker(BaseThread):
                 else:
                     files.extend(self.scan_directory(firefox_cache))
             
-            # Edge缓存（仅限Windows）
+            # Edge cache (only Windows)
             if system == "Windows":
                 edge_cache = os.path.join(home_dir, "AppData", "Local", "Microsoft", "Edge", "User Data", "Default", "Cache")
                 if os.path.exists(edge_cache):
@@ -241,14 +241,14 @@ class CleanerWorker(BaseThread):
         return files
     
     def scan_log_files(self):
-        """扫描日志文件"""
+        """Scan log files"""
         files = []
         
         try:
             system = self.platform_manager.current_system
             
             if system == "Windows":
-                # Windows日志
+                # Windows logs
                 log_paths = [
                     os.path.join(os.environ.get("SystemRoot", "C:\\Windows"), "Logs"),
                     os.path.join(os.environ.get("SystemRoot", "C:\\Windows"), "Temp")
@@ -273,7 +273,7 @@ class CleanerWorker(BaseThread):
                                     except Exception as e:
                                         self.logger.error(f"Error getting log file info: {e}")
             elif system == "Darwin" or system == "Linux":
-                # macOS/Linux日志
+                # macOS/Linux logs
                 log_paths = [
                     "/var/log",
                     os.path.expanduser("~/Library/Logs") if system == "Darwin" else None,
@@ -282,7 +282,7 @@ class CleanerWorker(BaseThread):
                 for log_path in log_paths:
                     if log_path and os.path.exists(log_path):
                         log_files = self.scan_directory(log_path)
-                        # 仅包括.log文件
+                        # Only include .log files
                         log_files = [f for f in log_files if f["name"].endswith(".log")]
                         files.extend(log_files)
         except Exception as e:
@@ -291,7 +291,7 @@ class CleanerWorker(BaseThread):
         return files
     
     def format_size(self, size_bytes):
-        """将字节格式化为人类可读的大小"""
+        """Format bytes to human readable size"""
         for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB']:
             if size_bytes < 1024:
                 return f"{size_bytes:.2f} {unit}"

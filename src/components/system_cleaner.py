@@ -15,17 +15,17 @@ from tools.system_cleaner import CleanerWorker
 
 class SystemCleanerWidget(BaseComponent):
     def __init__(self, parent=None):
-        # 在调用setup_ui之前初始化属性
+        # Initialize attributes before calling setup_ui
         self.scan_worker = None
         self.clean_worker = None
         self.scan_results = None
         self.exclusions = []
         self.extensions = []
         
-        # 调用父类构造函数
+        # Call parent class constructor
         super().__init__(parent)
         
-        # 加载排除项和扩展名
+        # Load exclusions and extensions
         self.load_exclusions()
         self.load_extensions()
 
@@ -33,16 +33,16 @@ class SystemCleanerWidget(BaseComponent):
         self.apply_theme()
     
     def get_translation(self, key, default=None):
-        """重写 get_translation 以使用正确的部分名称"""
+        """Override get_translation to use correct section name"""
         return self.settings.get_translation("system_cleaner", key, default)
     
     def setup_ui(self):
-        # 主布局
+        # Main layout
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(20)
         
-        # 标题和描述
+        # Title and description
         self.title = QLabel(self.get_translation("title"))
         self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
         self.main_layout.addWidget(self.title)
@@ -52,17 +52,17 @@ class SystemCleanerWidget(BaseComponent):
         self.description.setWordWrap(True)
         self.main_layout.addWidget(self.description)
         
-        # 创建水平分割的主布局区域
+        # Create horizontal split main layout area
         self.content_layout = QHBoxLayout()
-        self.main_layout.addLayout(self.content_layout, 1)  # 设置伸展因子
+        self.main_layout.addLayout(self.content_layout, 1)  # Set stretch factor
         
-        # 左侧面板 - 选项卡和按钮
+        # Left panel - tabs and buttons
         self.left_panel = QWidget()
         self.left_panel_layout = QVBoxLayout(self.left_panel)
         self.left_panel_layout.setContentsMargins(0, 0, 10, 0)
-        self.left_panel.setMaximumWidth(500)  # 限制左侧面板宽度
+        self.left_panel.setMaximumWidth(500)  # Limit left panel width
         
-        # 选项卡小部件
+        # Tab widgets
         self.tab_widget = QTabWidget()
         self.tab_widget.setStyleSheet("""
             QTabWidget::pane {
@@ -89,25 +89,25 @@ class SystemCleanerWidget(BaseComponent):
             }
         """)
         
-        # 创建选项卡
+        # Create tabs
         self.scan_tab = QWidget()
         self.results_tab = QWidget()
         self.settings_tab = QWidget()
         
-        # 设置选项卡内容
+        # Set tab content
         self.setup_scan_tab()
         self.setup_results_tab()
         self.setup_settings_tab()
         
-        # 添加选项卡到选项卡小部件
+        # Add tabs to tab widget
         self.tab_widget.addTab(self.scan_tab, self.get_translation("scan_tab"))
         self.tab_widget.addTab(self.results_tab, self.get_translation("results_tab"))
         self.tab_widget.addTab(self.settings_tab, self.get_translation("settings_tab"))
         
-        # 添加选项卡小部件到左面板
+        # Add tab widget to left panel
         self.left_panel_layout.addWidget(self.tab_widget)
         
-        # 添加按钮到左面板
+        # Add buttons to left panel
         buttons_layout = QHBoxLayout()
         
         self.start_scan_button = QPushButton(self.get_translation("start_scan"))
@@ -186,22 +186,22 @@ class SystemCleanerWidget(BaseComponent):
         
         self.left_panel_layout.addLayout(buttons_layout)
         
-        # 添加左面板到主内容布局
+        # Add left panel to main content layout
         self.content_layout.addWidget(self.left_panel)
         
-        # 右侧面板 - 日志和进度
+        # Right panel - log and progress
         self.right_panel = QWidget()
         self.right_panel_layout = QVBoxLayout(self.right_panel)
         self.right_panel_layout.setContentsMargins(10, 0, 0, 0)
         
-        # 日志标签和滚动区域
+        # Log label and scroll area
         log_label = QLabel(self.get_translation("log_output"))
         log_label.setStyleSheet("color: #e0e0e0; font-weight: bold;")
         self.right_panel_layout.addWidget(log_label)
         
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
-        self.log_text.setMinimumHeight(400)  # 增加日志区域高度
+        self.log_text.setMinimumHeight(400)  # Increase log area height
         self.log_text.setStyleSheet("""
             QTextEdit {
                 background-color: #1e1e1e;
@@ -213,9 +213,9 @@ class SystemCleanerWidget(BaseComponent):
                 line-height: 1.5;
             }
         """)
-        self.right_panel_layout.addWidget(self.log_text, 1)  # 设置伸展因子
+        self.right_panel_layout.addWidget(self.log_text, 1)  # Set stretch factor
         
-        # 进度条
+        # Progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
@@ -235,14 +235,14 @@ class SystemCleanerWidget(BaseComponent):
         """)
         self.right_panel_layout.addWidget(self.progress_bar)
         
-        # 添加右面板到主内容布局
-        self.content_layout.addWidget(self.right_panel, 1)  # 设置伸展因子，优先给右面板更多空间
+        # Add right panel to main content layout
+        self.content_layout.addWidget(self.right_panel, 1)  # Set stretch factor, give right panel more space
         
-        # 初始化默认内容
+        # Initialize default content
         self.log_text.append(self.get_translation("welcome_message", "The cleaning tool is ready. Please select the cleaning options and click 'Start Scan'。"))
     
     def setup_scan_tab(self):
-        """设置扫描选项卡"""
+        """Setup scan tab"""
         layout = QVBoxLayout(self.scan_tab)
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(15)
@@ -322,7 +322,7 @@ class SystemCleanerWidget(BaseComponent):
         layout.addWidget(button_container)
     
     def setup_results_tab(self):
-        """设置扫描结果选项卡"""
+        """Setup scan results tab"""
         layout = QVBoxLayout(self.results_tab)
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(15)
@@ -420,21 +420,21 @@ class SystemCleanerWidget(BaseComponent):
         layout.addWidget(button_container)
     
     def setup_settings_tab(self):
-        """设置设置选项卡"""
+        """Setup settings tab"""
         layout = QVBoxLayout()
         layout.setContentsMargins(10, 10, 10, 10)
         
-        # 创建排除组
+        # Create exclusions group
         self.exclusions_group = QGroupBox(self.get_translation("exclusions"))
         exclusions_layout = QVBoxLayout()
         
         self.exclusions_list = QListWidget()
         
-        # 从设置加载排除项
+        # Load exclusions from settings
         for item in self.exclusions:
             self.exclusions_list.addItem(item)
         
-        # 排除项按钮
+        # Exclusion buttons
         exclusion_buttons = QWidget()
         exclusion_buttons_layout = QHBoxLayout(exclusion_buttons)
         exclusion_buttons_layout.setContentsMargins(0, 0, 0, 0)
@@ -454,11 +454,11 @@ class SystemCleanerWidget(BaseComponent):
         self.exclusions_group.setLayout(exclusions_layout)
         layout.addWidget(self.exclusions_group)
         
-        # 创建扩展名组
+        # Create extensions group
         self.extensions_group = QGroupBox(self.get_translation("file_extensions"))
         extensions_layout = QVBoxLayout()
         
-        # 添加输入框用于输入扩展名
+        # Add input box for entering extensions
         input_layout = QHBoxLayout()
         self.extension_input = QLineEdit()
         self.extension_input.setPlaceholderText(self.get_translation("add_extension_placeholder", "输入文件扩展名 (例如 .tmp)"))
@@ -474,11 +474,11 @@ class SystemCleanerWidget(BaseComponent):
         
         self.extensions_list = QListWidget()
         
-        # 从设置加载扩展名列表
+        # Load extensions from settings
         for ext in self.extensions:
             self.extensions_list.addItem(ext)
         
-        # 扩展名按钮
+        # Extension buttons
         extension_buttons = QWidget()
         extension_buttons_layout = QHBoxLayout(extension_buttons)
         extension_buttons_layout.setContentsMargins(0, 0, 0, 0)
@@ -494,26 +494,26 @@ class SystemCleanerWidget(BaseComponent):
         self.extensions_group.setLayout(extensions_layout)
         layout.addWidget(self.extensions_group)
         
-        # 设置标签的布局
+        # Set layout for labels
         self.settings_tab.setLayout(layout)
         
-        # 检查是否有预设的扩展名，如果没有则添加默认扩展名
+        # Check if there are any preset extensions, if not add default extensions
         if not self.extensions or len(self.extensions) == 0:
-            # 添加一些默认扩展名
+            # Add some default extensions
             default_extensions = [".tmp", ".temp", ".log", ".old", ".bak", ".cache", ".dmp", ".dump", ".chk"]
             
-            # 遍历默认扩展名并添加到列表中
+            # Iterate through default extensions and add to list
             for ext in default_extensions:
                 if ext not in self.extensions:
                     self.extensions.append(ext)
                     self.extensions_list.addItem(ext)
             
-            # 保存默认扩展名到设置
+            # Save default extensions to settings
             self.save_extensions()
     
     def start_scan(self):
-        """开始扫描过程"""
-        # 获取扫描选项
+        """Start scanning process"""
+        # Get scanning options
         options = {
             "temp_files": self.temp_files_check.isChecked(),
             "recycle_bin": self.recycle_bin_check.isChecked(),
@@ -521,28 +521,28 @@ class SystemCleanerWidget(BaseComponent):
             "log_files": self.log_files_check.isChecked()
         }
         
-        # 清除之前的结果
+        # Clear previous results
         self.results_list.clear()
         self.items_found_value.setText("0")
         self.space_value.setText("0 B")
         self.scan_results = None
         self.clean_button.setEnabled(False)
         
-        # 扫描期间禁用扫描按钮
+        # Disable scan button during scanning
         self.start_scan_button.setEnabled(False)
         self.start_scan_button.setText(self.get_translation("scanning"))
         
-        # 启动工作线程
+        # Start worker thread
         self.scan_worker = CleanerWorker(options, self.exclusions, self.extensions, "scan")
         self.scan_worker.progress_updated.connect(self.update_progress)
         self.scan_worker.scan_completed.connect(self.scan_completed)
         self.scan_worker.start()
         
-        # 更新UI以显示扫描正在进行中
+        # Update UI to show scanning is in progress
         self.stop_button.setEnabled(True)
     
     def update_progress(self, progress, status):
-        """更新进度条和状态标签"""
+        """Update progress bar and status label"""
         self.progress_bar.setValue(progress)
 
         # If current language is not Chinese, translate known Chinese status strings
@@ -575,7 +575,7 @@ class SystemCleanerWidget(BaseComponent):
         self.log_text.append(translated_status)
     
     def scan_completed(self, results):
-        """处理扫描完成"""
+        """Handle scan completion"""
         self.scan_results = results
         
         # Re-enable scan button
@@ -602,7 +602,7 @@ class SystemCleanerWidget(BaseComponent):
         self.tab_widget.setCurrentIndex(1)
     
     def start_clean(self):
-        """开始清理过程"""
+        """Start cleaning process"""
         if not self.scan_results:
             return
         
@@ -617,17 +617,17 @@ class SystemCleanerWidget(BaseComponent):
         self.clean_worker.start()
     
     def clean_completed(self, results):
-        """处理清理完成"""
+        """Handle cleaning completion"""
         # Re-enable clean button
         self.clean_button.setEnabled(True)
         self.clean_button.setText(self.get_translation("clean_selected"))
         
         # Update status
         self.log_text.append(self.get_translation("clean_complete"))
-        self.log_text.append(f"清理了 {results['cleaned_count']} 个文件 ({self.format_size(results['cleaned_size'])})")
+        self.log_text.append(f"Cleaned {results['cleaned_count']} files ({self.format_size(results['cleaned_size'])})")
         
         if results['failed_count'] > 0:
-            self.log_text.append(f"清理失败: {results['failed_count']} 个文件")
+            self.log_text.append(f"Failed to clean: {results['failed_count']} files")
         
         # Clear results after cleaning
         self.results_list.clear()
@@ -636,29 +636,29 @@ class SystemCleanerWidget(BaseComponent):
         self.scan_results = None
     
     def add_exclusion(self):
-        """添加文件或目录到排除列表"""
-        # 使用文件对话框选择文件或目录
+        """Add file or directory to exclusion list"""
+        # Use file dialog to select file or directory
         dir_path = QFileDialog.getExistingDirectory(
             self,
             self.get_translation("select_directory", "选择要排除的目录"),
             os.path.expanduser("~")
         )
         
-        # 如果用户选择了目录
+        # If user selected directory
         if dir_path:
             if dir_path not in self.exclusions:
                 self.exclusions.append(dir_path)
                 self.exclusions_list.addItem(dir_path)
-                # 添加成功后显示确认消息
+                # Show confirmation message after successful addition
                 self.log_text.append(self.get_translation("exclusion_added", f"已添加排除项: {dir_path}"))
-                # 立即保存到设置
+                # Save immediately to settings
                 self.save_exclusions()
             else:
-                # 如果路径已存在，显示提示消息
+                # Show message if path already exists
                 self.log_text.append(self.get_translation("exclusion_exists", f"排除项 {dir_path} 已存在"))
     
     def remove_exclusion(self):
-        """从排除列表中删除文件或目录"""
+        """Remove file or directory from exclusion list"""
         selected_items = self.exclusions_list.selectedItems()
         if selected_items:
             for item in selected_items:
@@ -667,39 +667,39 @@ class SystemCleanerWidget(BaseComponent):
                 self.exclusions_list.takeItem(row)
                 if item_text in self.exclusions:
                     self.exclusions.remove(item_text)
-                    # 添加移除确认消息
+                    # Show confirmation message after successful removal
                     self.log_text.append(self.get_translation("exclusion_removed", f"已移除排除项: {item_text}"))
             
-            # 立即保存到设置
+            # Save immediately to settings
             self.save_exclusions()
     
     def add_extension(self):
-        """添加文件扩展名到过滤列表"""
-        # 获取目前选定的文本并去除前导点
+        """Add file extension to filter list"""
+        # Get currently selected text and remove leading dot
         text = self.extension_input.text().strip()
         if text:
-            # 确保扩展名格式正确
+            # Ensure extension format is correct
             extension = text if text.startswith('.') else '.' + text
             
-            # 避免重复添加
+            # Avoid adding duplicates
             if extension not in self.extensions:
                 self.extensions.append(extension)
                 self.extensions_list.addItem(extension)
-                # 添加成功后显示确认消息
+                # Show confirmation message after successful addition
                 self.log_text.append(f"已添加扩展名: {extension}")
-                # 切换到设置选项卡以显示新添加的扩展名
+                # Switch to settings tab to display new added extension
                 self.tab_widget.setCurrentIndex(2)
-                # 保存到设置
+                # Save to settings
                 self.save_extensions()
             else:
-                # 显示扩展名已存在的消息
+                # Show message if extension already exists
                 self.log_text.append(f"扩展名 {extension} 已存在")
             
-            # 清空输入框
+            # Clear input box
             self.extension_input.clear()
     
     def remove_extension(self):
-        """从列表中删除文件扩展名"""
+        """Remove file extension from list"""
         selected_items = self.extensions_list.selectedItems()
         if selected_items:
             for item in selected_items:
@@ -708,14 +708,14 @@ class SystemCleanerWidget(BaseComponent):
                 self.extensions_list.takeItem(row)
                 if item_text in self.extensions:
                     self.extensions.remove(item_text)
-                    # 添加移除确认消息
+                    # Show confirmation message after successful removal
                     self.log_text.append(self.get_translation("extension_removed", f"已移除扩展名: {item_text}"))
             
-            # 立即保存到设置
+            # Save immediately to settings
             self.save_extensions()
     
     def format_size(self, size_bytes):
-        """将字节格式化为人类可读的大小"""
+        """Format bytes to human readable size"""
         size_bytes = float(size_bytes)
         for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
             if size_bytes < 1024 or unit == 'TB':
@@ -723,7 +723,7 @@ class SystemCleanerWidget(BaseComponent):
             size_bytes /= 1024
 
     def refresh_language(self):
-        """使用新翻译更新UI元素"""
+        """Update UI elements with new translations"""
         self.title.setText(self.get_translation("title"))
         self.description.setText(self.get_translation("description"))
         self.tab_widget.setTabText(0, self.get_translation("scan_tab"))
@@ -756,7 +756,7 @@ class SystemCleanerWidget(BaseComponent):
         super().refresh_language()
     
     def stop_scan(self):
-        """停止正在进行的扫描过程"""
+        """Stop ongoing scanning process"""
         if self.scan_worker and hasattr(self.scan_worker, 'stop'):
             self.scan_worker.stop()
             self.log_text.append(self.get_translation("scan_stopped", "扫描已停止"))
@@ -767,11 +767,11 @@ class SystemCleanerWidget(BaseComponent):
             self.stop_button.setEnabled(False)
     
     def fix_threats(self):
-        """修复检测到的威胁（即清理检测到的文件）"""
+        """Fix detected threats (i.e. clean detected files)"""
         if not self.scan_results or self.scan_results["count"] == 0:
             return
         
-        # 确认操作
+        # Confirm action
         reply = QMessageBox.question(
             self, 
             self.get_translation("confirm_action", "确认操作"), 
@@ -781,16 +781,16 @@ class SystemCleanerWidget(BaseComponent):
         )
         
         if reply == QMessageBox.Yes:
-            # 开始清理过程
+            # Start cleaning process
             self.start_clean() 
 
     def load_exclusions(self):
-        """从设置加载排除项列表"""
+        """Load exclusion list from settings"""
         try:
             saved_exclusions = self.settings.get_setting("system_cleaner_exclusions", [])
             if saved_exclusions:
                 self.exclusions = saved_exclusions
-                # 更新UI列表
+                # Update UI list
                 self.exclusions_list.clear()
                 for excl in self.exclusions:
                     self.exclusions_list.addItem(excl)
@@ -799,7 +799,7 @@ class SystemCleanerWidget(BaseComponent):
             self.logger.error(f"Failed to load exclusions: {str(e)}")
     
     def save_exclusions(self):
-        """保存排除项列表到设置"""
+        """Save exclusion list to settings"""
         try:
             self.settings.set_setting("system_cleaner_exclusions", self.exclusions)
             self.logger.debug(f"Saved {len(self.exclusions)} exclusions")
@@ -807,12 +807,12 @@ class SystemCleanerWidget(BaseComponent):
             self.logger.error(f"Failed to save exclusions: {str(e)}")
 
     def load_extensions(self):
-        """从设置加载扩展名列表"""
+        """Load extension list from settings"""
         try:
             saved_extensions = self.settings.get_setting("system_cleaner_extensions", [])
             if saved_extensions:
                 self.extensions = saved_extensions
-                # 更新UI列表
+                # Update UI list
                 self.extensions_list.clear()
                 for ext in self.extensions:
                     self.extensions_list.addItem(ext)
@@ -821,7 +821,7 @@ class SystemCleanerWidget(BaseComponent):
             self.logger.error(f"Failed to load extensions: {str(e)}")
     
     def save_extensions(self):
-        """保存扩展名列表到设置"""
+        """Save extension list to settings"""
         try:
             self.settings.set_setting("system_cleaner_extensions", self.extensions)
             self.logger.debug(f"Saved {len(self.extensions)} extensions")

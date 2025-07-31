@@ -21,10 +21,7 @@ class BaseComponent(QWidget):
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.apply_theme()
         
-        # 确保组件填充整个可用空间
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        
-        # 初始化UI
         self.setup_ui()
 
     def setup_ui(self):
@@ -32,34 +29,27 @@ class BaseComponent(QWidget):
         raise NotImplementedError("Subclasses must implement setup_ui()")
     
     def apply_theme(self):
-        """应用主题样式到组件"""
-        # 确保组件背景透明
+        """Apply theme styles to component"""
         self.setAttribute(Qt.WA_StyledBackground, True)
-        
-        # 获取当前主题
         theme_name = self.settings.get_setting("theme", "dark")
-        
-        # 确保主题管理器使用同样的主题
         self.theme_manager.set_current_theme(theme_name)
-        
-        # 获取主题颜色
         colors = self.theme_manager.get_theme_colors()
         
-        # 获取基本颜色
+        # Get basic colors
         bg_color = colors.get("bg_color", "#1e1e1e")
         text_color = colors.get("text_color", "#e0e0e0")
         accent_color = colors.get("accent_color", "#555555")
         bg_lighter = colors.get("bg_lighter", self.theme_manager.lighten_color(bg_color, 10))
         bg_darker = colors.get("bg_darker", self.theme_manager.lighten_color(bg_color, -10))
         
-        # 获取组件特定颜色
+        # Get component specific colors
         button_colors = self.theme_manager.get_component_colors("button")
         button_bg = button_colors.get("primary_bg", accent_color)
         button_text = button_colors.get("primary_text", "#ffffff")
         button_hover = button_colors.get("primary_hover", self.theme_manager.lighten_color(accent_color, 10))
         button_pressed = button_colors.get("primary_pressed", self.theme_manager.lighten_color(accent_color, -10))
         
-        # 应用基本样式
+        # Apply basic styles
         self.setStyleSheet(f"""
             BaseComponent {{
                 background-color: transparent;
@@ -197,20 +187,20 @@ class BaseComponent(QWidget):
         """)
     
     def _lighten_color(self, color, amount=20):
-        """调亮或调暗十六进制颜色
+        """Lighten or darken hex color
         
         Args:
-            color: 十六进制颜色代码 (如 "#1e1e1e")
-            amount: 亮度调整量 (-100到100)
+            color: Hex color code (e.g. "#1e1e1e")
+            amount: Brightness adjustment (-100 to 100)
         
         Returns:
-            新的十六进制颜色代码
+            New hex color code
         """
         try:
             c = QColor(color)
             h, s, l, a = c.getHslF()
             
-            # 调整亮度
+            # Adjust brightness
             l = max(0, min(1, l + amount / 100.0))
             
             c.setHslF(h, s, l, a)
@@ -230,31 +220,31 @@ class BaseComponent(QWidget):
     
     def show_with_animation(self):
         """Show the component with animation"""
-        # 如果组件已经在淡入，则不执行任何操作
+        # If component is already animating in, do nothing
         if hasattr(self, "_animating_in") and self._animating_in:
             return
         
-        # 停止可能正在进行的淡出动画
+        # Stop any ongoing fade out animation
         if hasattr(self, "_animating_out") and self._animating_out:
             if hasattr(self, "_fade_out_anim") and self._fade_out_anim is not None:
                 self._fade_out_anim.stop()
                 self._fade_out_anim = None
             self._animating_out = False
         
-        # 确保组件可见，但透明
+        # Ensure component is visible but transparent
         self.setWindowOpacity(0.0)
         self.setVisible(True)
         
-        # 启动淡入动画
+        # Start fade in animation
         AnimationUtils.fade_in(self)
         
-        # 安全保障：确保组件最终会显示，即使动画失败
+        # Safety check: Ensure component is visible even if animation fails
         QTimer.singleShot(500, self._ensure_visibility)
 
     def _ensure_visibility(self):
-        """确保组件可见，防止动画问题导致组件不显示"""
+        """Ensure component is visible to prevent animation issues"""
         if self.isVisible() and self.windowOpacity() < 0.5:
-            # 如果组件应该可见但不透明度太低，强制设为完全不透明
+            # If component should be visible but opacity is too low, force to fully opaque
             self.setWindowOpacity(1.0)
             if hasattr(self, "_animating_in"):
                 self._animating_in = False
@@ -267,11 +257,11 @@ class BaseComponent(QWidget):
 
     def hide_with_animation(self, on_complete=None):
         """Hide the component with animation"""
-        # 如果组件已经在淡出，则不执行任何操作
+        # If component is already animating out, do nothing
         if hasattr(self, "_animating_out") and self._animating_out:
-            # 如果有新的回调，将其连接到现有动画
+            # If there's a new callback, connect it to the existing animation
             if on_complete and hasattr(self, "_fade_out_anim") and self._fade_out_anim is not None:
-                # 添加额外的回调
+                # Add additional callback
                 original_callback = getattr(self._fade_out_anim, "finished_callback", None)
                 def combined_callback():
                     if original_callback:
@@ -281,28 +271,28 @@ class BaseComponent(QWidget):
                 self._fade_out_anim.finished.connect(combined_callback)
             return
         
-        # 停止可能正在进行的淡入动画
+        # Stop any ongoing fade in animation
         if hasattr(self, "_animating_in") and self._animating_in:
             if hasattr(self, "_fade_in_anim") and self._fade_in_anim is not None:
                 self._fade_in_anim.stop()
                 self._fade_in_anim = None
             self._animating_in = False
         
-        # 启动淡出动画
+        # Start fade out animation
         AnimationUtils.fade_out(self, finished_callback=lambda: self._handle_hide_complete(on_complete))
 
     def _handle_hide_complete(self, callback=None):
-        """处理隐藏动画完成"""
-        # 确保组件透明且隐藏
+        """Handle hide animation completion"""
+        # Ensure component is transparent and hidden
         self.setWindowOpacity(0.0)
         self.setVisible(False)
         
-        # 清除动画状态
+        # Clear animation state
         self._animating_out = False
         if hasattr(self, "_fade_out_anim"):
             self._fade_out_anim = None
         
-        # 执行回调
+        # Execute callback
         if callback:
             callback()
     
@@ -376,16 +366,16 @@ class BaseComponent(QWidget):
     
     
     def update_checkbox_state(self, checkbox, state):
-        """更新复选框状态并应用相关设置
+        """Update checkbox state and apply related settings
         
         Args:
-            checkbox (QCheckBox): 复选框对象
-            state (Qt.CheckState): 复选框状态
+            checkbox (QCheckBox): Checkbox object
+            state (Qt.CheckState): Checkbox state
         """
-        # 获取复选框的对象名称，作为设置键
+        # Get checkbox object name as setting key
         setting_key = checkbox.objectName()
         
-        # 将 Qt.CheckState 转换为布尔值
+        # Convert Qt.CheckState to boolean
         is_checked = (state == Qt.Checked)
         
         # Debug output for troubleshooting
@@ -397,17 +387,17 @@ class BaseComponent(QWidget):
             setting_key = f"checkbox_{checkbox.text().lower().replace(' ', '_')}"
             
         if setting_key:
-            # 将状态保存到设置
+            # Save state to settings
             self.settings.set_setting(setting_key, is_checked)
-            self.settings.sync()  # 确保立即保存设置
+            self.settings.sync()  # Ensure settings are saved immediately
     
             
     def update_radiobutton_state(self, radio_button, checked):
-        """更新单选按钮状态并应用相关设置"""
+        """Update radio button state and apply related settings"""
         if not checked:
-            return  # 只处理选中状态，避免重复处理
+            return  # Only handle checked state to avoid duplicate processing
             
-        # 获取单选按钮的对象名称，作为设置键
+        # Get radio button object name as setting key
         setting_key = radio_button.objectName()
         
         # Debug output
@@ -419,24 +409,24 @@ class BaseComponent(QWidget):
             setting_key = f"radio_{radio_button.text().lower().replace(' ', '_')}"
             
         if setting_key:
-            # 将状态保存到设置 - 对于单选按钮，保存按钮文本作为值
+            # Save state to settings - for radio buttons, save button text as value
             self.settings.set_setting(setting_key, radio_button.text())
             
     def update_buttongroup_selection(self, button_group, selected_button):
-        """处理按钮组中的选择变化"""
-        # 获取按钮组的对象名称，作为设置键
+        """Handle selection changes in button group"""
+        # Get button group object name as setting key
         setting_key = button_group.objectName()
         
         # Debug output
         self.logger.info.info(f"Button group selection changed: {setting_key} -> {selected_button.text()}")
         
         if setting_key:
-            # 保存所选按钮的ID或文本
+            # Save selected button ID or text
             button_id = button_group.id(selected_button)
             button_text = selected_button.text()
             button_obj_name = selected_button.objectName()
             
-            # 保存按钮ID和文本
+            # Save button ID and text
             self.settings.set_setting(f"{setting_key}_id", button_id)
             self.settings.set_setting(f"{setting_key}_text", button_text)
             if button_obj_name:

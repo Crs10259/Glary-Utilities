@@ -91,16 +91,16 @@ class MainWindow(QMainWindow):
         # Set window icon
         self.apply_window_icon()
         
-        # 初始化页面到Dashboard
+        # Initialize page to Dashboard
         self.set_active_page("Dashboard")
         
-        # 全局事件过滤器
+        # Global event filter
         self.installEventFilter(self)
         
-        # 语言更改信号
+        # Language change signal
         self.language_changed.connect(self.change_language)
         
-        # 验证翻译 - 查找缺失的键
+        # Validate translations - find missing keys
         missing_translations = self.settings.validate_translations(raise_error=False)
         if missing_translations:
             self.logger.warning("Found missing translations!")
@@ -112,34 +112,34 @@ class MainWindow(QMainWindow):
                         self.logger.warning(f"    Missing: {key}")
 
     def initUI(self):
-        """初始化用户界面"""
-        # 创建中央部件
+        """Initialize user interface"""
+        # Create central widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
-        # 创建主布局
+        # Create main layout
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        # 只在非Linux平台上设置自定义标题栏
+        # Only set custom title bar on non-Linux platforms
         if not self.platform_manager.is_linux():
             self.setup_title_bar()
             main_layout.addWidget(self.title_bar)
         
-        # 创建内容区域
+        # Create content area
         self.setup_content_area()
         main_layout.addWidget(self.content_widget)
         
-        # 设置状态栏
+        # Set status bar
         self.setup_status_bar()
         
-        # 设置工具提示
+        # Set tooltips
         self.setup_tooltips()
         
     def setup_title_bar(self):
-        """设置自定义标题栏"""
-        # 创建标题栏
+        """Set custom title bar"""
+        # Create title bar
         self.title_bar = QFrame(self)
         self.title_bar.setObjectName("titleBar")
         self.title_bar.setFixedHeight(40)
@@ -147,7 +147,7 @@ class MainWindow(QMainWindow):
         title_layout.setContentsMargins(10, 0, 10, 0)
         title_layout.setSpacing(0)
         
-        # 设置标题栏样式
+        # Set title bar style
         self.title_bar.setStyleSheet("""
             #titleBar {
                 background-color: #2b2b2b;
@@ -182,7 +182,7 @@ class MainWindow(QMainWindow):
             }
         """)
         
-        # 添加应用图标
+        # Add application icon
         app_icon = QLabel()
         app_icon.setPixmap(QPixmap(Icon.Icon.Path).scaled(32, 32, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         app_icon.setStyleSheet("background-color: transparent;")
@@ -191,16 +191,16 @@ class MainWindow(QMainWindow):
         app_icon.mousePressEvent = lambda event: self.show_about_dialog()
         title_layout.addWidget(app_icon)
         
-        # 添加标题文本
+        # Add title text
         self.title_label = QLabel("Glary Utilities")
         self.title_label.setStyleSheet("font-size: 14px; font-weight: bold; color: white; background-color: transparent; margin-left: 5px;")
         title_layout.addWidget(self.title_label)
         
-        # 添加伸缩项以便将控制按钮推到右侧
+        # Add stretch item to push control buttons to the right
         title_layout.addStretch(1)
         
-        # 窗口控制按钮（最小化、最大化、关闭）
-        # 最小化按钮
+        # Window control buttons (minimize, maximize, close)
+        # Minimize button
         self.minimize_button = QPushButton()
         self.minimize_button.setIcon(QIcon(Icon.Minimize.Path))
         self.minimize_button.setIconSize(QSize(16, 16))
@@ -209,7 +209,7 @@ class MainWindow(QMainWindow):
         self.minimize_button.clicked.connect(self.showMinimized)
         title_layout.addWidget(self.minimize_button)
         
-        # 最大化/还原按钮
+        # Maximize/restore button
         self.maximize_button = QPushButton()
         self.maximize_button.setIcon(QIcon(Icon.Maximize.Path))
         self.maximize_button.setIconSize(QSize(16, 16))
@@ -218,96 +218,96 @@ class MainWindow(QMainWindow):
         self.maximize_button.clicked.connect(self.toggle_maximize)
         title_layout.addWidget(self.maximize_button)
         
-        # 关闭按钮
+        # Close button
         self.close_button = QPushButton()
         self.close_button.setObjectName("closeButton")
         self.close_button.setIcon(QIcon(Icon.Close.Path))
         self.close_button.setIconSize(QSize(16, 16))
         self.close_button.setFixedSize(34, 34)
-        self.close_button.setToolTip("关闭")
+        self.close_button.setToolTip("Close")
         self.close_button.clicked.connect(self.close)
         title_layout.addWidget(self.close_button)
         
-        # 允许通过标题栏拖动窗口
+        # Allow dragging window through title bar
         self.draggable = True
         
-        # 为标题栏设置鼠标事件处理
+        # Set mouse event handling for title bar
         self.title_bar.mousePressEvent = self.title_bar_mouse_press_event
         self.title_bar.mouseMoveEvent = self.title_bar_mouse_move_event
         self.title_bar.mouseReleaseEvent = self.title_bar_mouse_release_event
         
-        # Linux特定优化：确保标题栏可以接收鼠标事件
+        # Linux specific optimization: ensure title bar can receive mouse events
         if self.platform_manager.is_linux():
-            # 只在非Wayland环境下设置这些属性
+            # Only set these properties in non-Wayland environments
             if 'WAYLAND_DISPLAY' not in os.environ:
                 self.title_bar.setAttribute(Qt.WA_TransparentForMouseEvents, False)
                 self.title_bar.setFocusPolicy(Qt.NoFocus)
-                # 设置标题栏为可拖拽区域
+                # Set title bar as draggable area
                 self.title_bar.setProperty("draggable", True)
         
         return self.title_bar
 
     def toggle_maximize(self):
-        """切换窗口最大化/还原状态"""
+        """Toggle window maximize/restore state"""
         if self.isMaximized():
             self.showNormal()
-            self.maximize_button.setToolTip("最大化")
+            self.maximize_button.setToolTip("Maximize")
             self.maximize_button.setIcon(QIcon(Icon.Maximize.Path))
         else:
             self.showMaximized()
-            self.maximize_button.setToolTip("还原")
+            self.maximize_button.setToolTip("Restore")
             self.maximize_button.setIcon(QIcon(Icon.Restore.Path))
     
     def title_bar_mouse_press_event(self, event):
-        """标题栏鼠标按下事件"""
+        """Title bar mouse press event"""
         if event.button() == Qt.LeftButton:
             self.dragging = True
             self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
             event.accept()
-            # 只在非Wayland环境下激活窗口
+            # Only activate window in non-Wayland environments
             if 'WAYLAND_DISPLAY' not in os.environ:
                 self.activateWindow()
                 self.raise_()
     
     def title_bar_mouse_move_event(self, event):
-        """标题栏鼠标移动事件"""
+        """Title bar mouse move event"""
         if self.dragging and event.buttons() == Qt.LeftButton:
-            # 获取屏幕几何信息
+            # Get screen geometry information
             screen_geometry = self.screen().availableGeometry()
             new_pos = event.globalPos() - self.drag_position
             
-            # 限制窗口在屏幕范围内
+            # Limit window to screen range
             new_pos.setX(max(0, min(new_pos.x(), screen_geometry.width() - self.width())))
             new_pos.setY(max(0, min(new_pos.y(), screen_geometry.height() - self.height())))
             self.move(new_pos)
             event.accept()
         else:
-            # 如果不在拖拽状态，检查是否需要开始拖拽
+            # If not dragging, check if dragging should start
             if event.buttons() == Qt.LeftButton and not self.dragging:
                 self.dragging = True
                 self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
     
     def title_bar_mouse_release_event(self, event):
-        """标题栏鼠标释放事件"""
+        """Title bar mouse release event"""
         if event.button() == Qt.LeftButton:
             self.dragging = False
             event.accept()
     
-    # 事件处理用于窗口拖动与调整 - 优化Linux兼容性
+    # Event handling for window dragging and resizing - optimize Linux compatibility
     def mousePressEvent(self, event):
-        """处理鼠标按下事件 - 只在非Linux平台上处理窗口拖拽"""
+        """Handle mouse press event - only handle window dragging on non-Linux platforms"""
         if not self.platform_manager.is_linux():
             if event.button() == Qt.LeftButton:
-                # 检查是否点击在标题栏上
+                # Check if clicked on title bar
                 if hasattr(self, 'title_bar') and self.title_bar.geometry().contains(event.pos()):
                     self.dragging = True
                     self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
-                    # 只在非Wayland环境下激活窗口
+                    # Only activate window in non-Wayland environments
                     if 'WAYLAND_DISPLAY' not in os.environ:
                         self.activateWindow()
                         self.raise_()
                     event.accept()
-                # 允许通过窗口边缘拖动（适用于所有平台）
+                # Allow dragging through window edges (works on all platforms)
                 else:
                     edge_margin = 5
                     if (event.pos().x() <= edge_margin or
@@ -316,7 +316,7 @@ class MainWindow(QMainWindow):
                         event.pos().y() >= self.height() - edge_margin):
                         self.dragging = True
                         self.drag_position = event.globalPos() - self.frameGeometry().topLeft()
-                        # 只在非Wayland环境下激活窗口
+                        # Only activate window in non-Wayland environments
                         if 'WAYLAND_DISPLAY' not in os.environ:
                             self.activateWindow()
                             self.raise_()
@@ -326,11 +326,11 @@ class MainWindow(QMainWindow):
             else:
                 super().mousePressEvent(event)
         else:
-            # Linux上使用系统标题栏，不需要自定义拖拽处理
+            # Use system title bar on Linux, no custom drag handling needed
             super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """处理鼠标移动事件 - 只在非Linux平台上处理窗口拖拽"""
+        """Handle mouse move event - only handle window dragging on non-Linux platforms"""
         if not self.platform_manager.is_linux():
             if self.dragging and event.buttons() == Qt.LeftButton:
                 new_pos = event.globalPos() - self.drag_position
@@ -339,11 +339,11 @@ class MainWindow(QMainWindow):
             else:
                 super().mouseMoveEvent(event)
         else:
-            # Linux上使用系统标题栏，不需要自定义拖拽处理
+            # Use system title bar on Linux, no custom drag handling needed
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        """处理鼠标释放事件 - 只在非Linux平台上处理窗口拖拽"""
+        """Handle mouse release event - only handle window dragging on non-Linux platforms"""
         if not self.platform_manager.is_linux():
             if event.button() == Qt.LeftButton:
                 self.dragging = False
@@ -351,11 +351,11 @@ class MainWindow(QMainWindow):
             else:
                 super().mouseReleaseEvent(event)
         else:
-            # Linux上使用系统标题栏，不需要自定义拖拽处理
+            # Use system title bar on Linux, no custom drag handling needed
             super().mouseReleaseEvent(event)
 
     def mouseDoubleClickEvent(self, event):
-        """处理鼠标双击事件 - 只在非Linux平台上处理最大化"""
+        """Handle mouse double click event - only handle maximize on non-Linux platforms"""
         if not self.platform_manager.is_linux():
             if hasattr(self, 'title_bar') and self.title_bar.geometry().contains(event.pos()):
                 self.toggle_maximize()
@@ -363,25 +363,25 @@ class MainWindow(QMainWindow):
             else:
                 super().mouseDoubleClickEvent(event)
         else:
-            # Linux上使用系统标题栏，不需要自定义双击处理
+            # Use system title bar on Linux, no custom double click handling needed
             super().mouseDoubleClickEvent(event)
     
     def create_animated_action(self, icon, text, callback):
-        """创建带有动画效果的工具栏操作"""
+        """Create toolbar action with animation effect"""
         action = QAction(icon, text, self)
         action.triggered.connect(callback)
         
-        # 获取该操作对应的QToolButton
+        # Get the QToolButton corresponding to this action
         action.button = None
         
-        # 在下一个事件循环中查找按钮
+        # Find the button in the next event loop
         QTimer.singleShot(0, lambda: self.find_action_button(action))
         
         return action
     
     def setup_sidebar(self):
-        """设置侧边栏"""
-        # 创建侧边栏容器
+        """Set sidebar"""
+        # Create sidebar container
         sidebar_container = QWidget()
         sidebar_container.setObjectName("sidebar_container")
         sidebar_container.setMaximumWidth(220)
@@ -395,24 +395,24 @@ class MainWindow(QMainWindow):
             }
         """)
         
-        # 创建侧边栏垂直布局
+        # Create sidebar vertical layout
         sidebar_layout = QVBoxLayout(sidebar_container)
         sidebar_layout.setContentsMargins(12, 20, 12, 15)
         sidebar_layout.setSpacing(8)
         
-        # 添加应用标志和标题
+        # Add application logo and title
         logo_layout = QHBoxLayout()
         logo_layout.setContentsMargins(5, 0, 0, 15)
         
-        # 将logo布局添加到侧边栏
+        # Add logo layout to sidebar
         sidebar_layout.addLayout(logo_layout)
 
-        # 添加分类标题：常用
+        # Add category title: Common
         common_title = QLabel(self.get_translation("common_section", "Common"))
         common_title.setStyleSheet("color: #999999; font-size: 13px; margin-top: 5px; background-color: transparent; font-weight: bold; padding-left: 2px;")
         sidebar_layout.addWidget(common_title)
 
-        # 添加主要功能按钮
+        # Add main function buttons
         self.dashboard_btn = self.create_sidebar_button(self.get_translation("dashboard", "Dashboard"), Icon.Dashboard.Path, "Dashboard", self.get_translation("dashboard_tooltip", "仪表盘"))
         sidebar_layout.addWidget(self.dashboard_btn)
         self.page_buttons["Dashboard"] = self.dashboard_btn
@@ -441,7 +441,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(self.uninstaller_btn)
         self.page_buttons["Security Tools"] = self.uninstaller_btn
         
-        # 添加分类标题：安全
+        # Add category title: Security
         security_title = QLabel(self.get_translation("security_section", "Security"))
         security_title.setStyleSheet("color: #999999; font-size: 13px; margin-top: 15px; background-color: transparent; font-weight: bold; padding-left: 12px;")
         sidebar_layout.addWidget(security_title)
@@ -451,7 +451,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(self.privacy_btn)
         self.page_buttons["Network Tools"] = self.privacy_btn
         
-        # 添加分类标题：高级
+        # Add category title: Advanced
         advanced_title = QLabel(self.get_translation("advanced_section", "Advanced"))
         advanced_title.setStyleSheet("color: #999999; font-size: 13px; margin-top: 15px; background-color: transparent; font-weight: bold; padding-left: 12px;")
         sidebar_layout.addWidget(advanced_title)
@@ -466,55 +466,55 @@ class MainWindow(QMainWindow):
         sidebar_layout.addWidget(self.optimizer_btn)
         self.page_buttons["System Information"] = self.optimizer_btn
         
-        # 添加分割线
+        # Add separator
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
         separator.setStyleSheet("background-color: #333333; max-height: 1px;")
         sidebar_layout.addWidget(separator)
         sidebar_layout.addSpacing(8)
 
-        # 添加设置按钮
+        # Add settings button
         self.settings_btn = self.create_sidebar_button(self.get_translation("settings", "Settings"), Icon.Settings.Path, "Settings", self.get_translation("settings_tooltip", "设置"))
         sidebar_layout.addWidget(self.settings_btn)
         self.page_buttons["Settings"] = self.settings_btn
 
-        # 添加弹性空间
+        # Add stretch space
         sidebar_layout.addStretch()
 
-        # 添加版本信息
+        # Add version information
         version_label = QLabel(f"{self.get_translation('version', 'Version')} {App.version}")
         version_label.setStyleSheet("color: #666666; font-size: 11px; margin-top: 8px; background-color: transparent; text-align: center;")
         version_label.setAlignment(Qt.AlignCenter)
         sidebar_layout.addWidget(version_label)
         
-        # 返回侧边栏容器
+        # Return sidebar container
         return sidebar_container
 
     def create_sidebar_button(self, name, icon, page_name, tooltip=None):
-        """创建侧边栏按钮"""
+        """Create sidebar button"""
         try:
-            # 获取主题颜色
+            # Get theme color
             accent_color = self.settings.get_setting("accent_color", "#3498db")
         
-            # 创建按钮
+            # Create button
             button = QPushButton(name)
             button.setCheckable(True)
             button.setObjectName(f"sidebar_btn_{page_name}")
-            button.setProperty("page", page_name)  # 使用自定义属性标记关联的页面
+            button.setProperty("page", page_name)  # Use custom property to mark associated page
         
-            # 设置图标
+            # Set icon
             if icon:
                 button.setIcon(QIcon(icon))
         
-            # 设置工具提示
+            # Set tooltip
             if tooltip:
                 button.setToolTip(tooltip)
             
-            # 设置图标大小 - 增大为28x28尺寸
+            # Set icon size - increase to 28x28
             icon_size = QSize(28, 28)
             button.setIconSize(icon_size)
             
-            # 保存原始图标大小
+            # Save original icon size
             button._original_icon_size = icon_size
         
         except Exception as e:
@@ -527,7 +527,7 @@ class MainWindow(QMainWindow):
             if tooltip:
                 button.setToolTip(tooltip)
         
-        # 设置基本样式，添加过渡动画和左侧彩色指示条
+        # Set basic style, add transition animation and left colored indicator bar
         base_style = f"""
             QPushButton {{
                 text-align: left;
@@ -558,12 +558,12 @@ class MainWindow(QMainWindow):
         """
         button.setStyleSheet(base_style)
         
-        # 固定按钮高度和最小宽度，调整高度为52px
+        # Set button height and minimum width, adjust height to 52px
         button.setMinimumHeight(52)
         button.setMaximumHeight(52)
         button.setMinimumWidth(170)
         
-        # 检查是否启用动画
+        # Check if animations are enabled
         enable_animations = self.settings.get_setting("enable_animations", True)
         if isinstance(enable_animations, str):
             enable_animations = enable_animations.lower() in ('true', 'yes', '1', 'on')
@@ -572,14 +572,14 @@ class MainWindow(QMainWindow):
         else:
             enable_animations = bool(enable_animations)
         
-        # 如果启用了动画，则设置悬停和按下时的图标大小变化效果
+        # If animations are enabled, set hover and press icon size change effect
         if enable_animations:
-            # 创建动画组
+            # Create animation group
             self.hover_animation = QParallelAnimationGroup()
             self.press_animation = QParallelAnimationGroup()
             
-            # 当鼠标悬停时增大图标
-            # 检查Linux性能优化设置
+            # When mouse hovers, increase icon size
+            # Check Linux performance optimization settings
             optimize_linux = self.settings.get_setting("optimize_linux_performance", True)
             if isinstance(optimize_linux, str):
                 optimize_linux = optimize_linux.lower() in ('true', 'yes', '1', 'on')
@@ -588,68 +588,68 @@ class MainWindow(QMainWindow):
             else:
                 optimize_linux = bool(optimize_linux)
                 
-            # 在Linux上禁用复杂的图标动画以提高性能
+            # Disable complex icon animations on Linux to improve performance
             if not (self.platform_manager.is_linux() and optimize_linux):
                 def on_hover(hovered):
                     if hovered:
-                        target_size = QSize(32, 32)  # 悬停时图标大小增加
+                        target_size = QSize(32, 32)  # Hover icon size increase
                         anim = QPropertyAnimation(button, b"iconSize")
                         anim.setDuration(150)
                         anim.setStartValue(button.iconSize())
                         anim.setEndValue(target_size)
                         anim.start()
                     else:
-                        # 恢复原始大小
+                        # Restore original size
                         anim = QPropertyAnimation(button, b"iconSize")
                         anim.setDuration(150)
                         anim.setStartValue(button.iconSize())
                         anim.setEndValue(button._original_icon_size)
                         anim.start()
                 
-                # 当按下时缩小图标
+                # When pressed, shrink icon
                 def on_press(pressed):
                     if pressed:
-                        target_size = QSize(26, 26)  # 按下时图标大小减小
+                        target_size = QSize(26, 26)  # Pressed icon size decrease
                         anim = QPropertyAnimation(button, b"iconSize")
                         anim.setDuration(100)
                         anim.setStartValue(button.iconSize())
                         anim.setEndValue(target_size)
                         anim.start()
                 
-                # 连接事件
+                # Connect events
                 button.installEventFilter(self)
                 button.enterEvent = lambda e: on_hover(True)
                 button.leaveEvent = lambda e: on_hover(False)
                 button.pressed.connect(lambda: on_press(True))
-                button.released.connect(lambda: on_hover(True))  # 释放后恢复为悬停状态
+                button.released.connect(lambda: on_hover(True))  # Release to hover state
         
-        # 连接按钮点击事件
+        # Connect button click event
         button.clicked.connect(lambda: self.set_active_page(page_name))
         
         return button
 
     def setup_content_area(self):
-        """设置内容区域"""
-        # 创建内容部件
+        """Set content area"""
+        # Create content widget
         self.content_widget = QWidget()
         self.content_widget.setObjectName("content_widget")
         
-        # 创建内容布局
+        # Create content layout
         content_layout = QHBoxLayout(self.content_widget)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(0)
         
-        # 添加侧边栏
+        # Add sidebar
         self.sidebar = self.setup_sidebar()
         content_layout.addWidget(self.sidebar)
         
-        # 添加内容区域
+        # Add content area
         self.setup_content_area_internal()
         content_layout.addWidget(self.content_area)
         
-        # 设置内容部件的样式
+        # Set content widget style
         if not self.platform_manager.is_linux():
-            # 只在非Linux平台上设置圆角和阴影
+            # Set rounded corners and shadow on non-Linux platforms
             self.content_widget.setStyleSheet("""
                 QWidget#content_widget {
                     background-color: #252525;
@@ -657,14 +657,14 @@ class MainWindow(QMainWindow):
                 }
             """)
             
-            # 为窗口设置阴影效果
+            # Set shadow effect for window
             shadow = QGraphicsDropShadowEffect(self)
             shadow.setBlurRadius(20)
             shadow.setColor(QColor(0, 0, 0, 180))
             shadow.setOffset(0, 0)
             self.content_widget.setGraphicsEffect(shadow)
         else:
-            # Linux上使用简单的背景色
+            # Use simple background color on Linux
             self.content_widget.setStyleSheet("""
                 QWidget#content_widget {
                     background-color: #252525;
@@ -672,12 +672,12 @@ class MainWindow(QMainWindow):
             """)
 
     def setup_content_area_internal(self):
-        """设置内部内容区域"""
-        # 创建堆叠窗口部件用于页面切换
+        """Set internal content area"""
+        # Create stacked widget for page switching
         self.content_area = QStackedWidget()
         self.content_area.setObjectName("content_area")
         
-        # 创建各个页面组件
+        # Create each page component
         self.dashboard_widget = DashboardWidget()
         self.system_cleaner_widget = SystemCleanerWidget()
         self.disk_check_widget = DiskCheckWidget()
@@ -689,7 +689,7 @@ class MainWindow(QMainWindow):
         self.system_info_widget = SystemInfoWidget()
         self.settings_widget = SettingsWidget(self.settings)
         
-        # 添加页面到堆叠窗口部件
+        # Add pages to stacked widget
         self.content_area.addWidget(self.dashboard_widget)
         self.content_area.addWidget(self.system_cleaner_widget)
         self.content_area.addWidget(self.disk_check_widget)
@@ -701,7 +701,7 @@ class MainWindow(QMainWindow):
         self.content_area.addWidget(self.system_info_widget)
         self.content_area.addWidget(self.settings_widget)
         
-        # 设置内容区域样式
+        # Set content area style
         self.content_area.setStyleSheet("""
             QStackedWidget#content_area {
                 background-color: transparent;
@@ -710,10 +710,10 @@ class MainWindow(QMainWindow):
         """)
     
     def apply_theme(self):
-        """应用当前主题"""
+        """Apply current theme"""
         theme_name = self.settings.get_setting("theme", "dark")
         
-        # 加载主题数据
+        # Load theme data
         theme_data = self.settings.load_theme(theme_name)
         
         if theme_data and "colors" in theme_data:
@@ -722,7 +722,7 @@ class MainWindow(QMainWindow):
             accent_color = theme_data["colors"].get("accent_color", "#007acc")
             border_color = theme_data["colors"].get("border_color", "#444444")
             
-            # 更新复选框样式
+            # Update checkbox style
             checkbox_style = f"""
                 QCheckBox {{
                     color: {text_color};
@@ -772,15 +772,15 @@ class MainWindow(QMainWindow):
                 }}
             """
             
-            # 将复选框样式添加到主样式表中
+            # Add checkbox style to main style sheet
             self.setStyleSheet(self.styleSheet() + checkbox_style)
             
-        # 更新组件主题
+        # Update component theme
         self.update_component_themes()
             
     def update_component_themes(self):
         """Update the theme for all components"""
-        # 检查content_area是否存在
+        # Check if content_area exists
         try:
             # Find all BaseComponent widgets and refresh their themes
             for i in range(self.content_area.count()):
@@ -793,19 +793,19 @@ class MainWindow(QMainWindow):
                 
     def refresh_component_theme(self, widget):
         """Recursively refresh theme for a widget and its children"""
-        # 检查是否为特殊的组件类型，这些类型需要调用特定的主题方法
+        # Check if it is a special component type, which needs to call the specific theme method
         component_name = widget.__class__.__name__
         
-        # 优先使用特定组件的apply_current_theme方法
+        # Use the apply_current_theme method of the specific component first
         if component_name in ["BootRepairWidget", "VirusScanWidget"]:
             try:
                 if hasattr(widget, 'apply_current_theme') and callable(widget.apply_current_theme):
                     widget.apply_current_theme()
-                    return  # 已应用特定组件的主题方法，无需继续
+                    return  # The theme method of the specific component has been applied, no need to continue
             except Exception as e:
                 self.logger.error(f"Error applying custom theme to {component_name}: {str(e)}")
         
-        # 对于其他标准组件，应用通用的apply_theme方法
+        # For other standard components, apply the generic apply_theme method
         try:
             if hasattr(widget, 'apply_theme') and callable(widget.apply_theme):
                 widget.apply_theme()
@@ -918,7 +918,7 @@ class MainWindow(QMainWindow):
             temp_layout = QVBoxLayout(temp_page)
             temp_layout.addWidget(error_widget)
             
-            # 将错误页面添加到内容区域
+            # Add error page to content area
             error_index = self.content_area.addWidget(temp_page)
             self.content_area.setCurrentIndex(error_index)
     
@@ -929,7 +929,7 @@ class MainWindow(QMainWindow):
             language: Language code or name to set
         """
         try:
-            # 关闭当前打开的帮助对话框（如果有）
+            # Close current opened help dialog (if any)
             for dialog in self.findChildren(QDialog):
                 if dialog.objectName() == "HelpDialog":
                     dialog.reject()
@@ -938,7 +938,7 @@ class MainWindow(QMainWindow):
             self.settings.set_language(language)
             self.settings.sync()
             
-            # 直接更新UI文本，而不是触发信号
+            # Directly update UI text, instead of triggering signal
             self._update_ui_texts_directly(language)
             
             # Show a message indicating language was changed
@@ -949,27 +949,27 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Error changing language: {str(e)}")
 
     def _update_ui_texts_directly(self, language):
-        """直接更新UI文本，避免递归
+        """Directly update UI text, avoid recursion
         
         Args:
-            language: 当前语言代码
+            language: Current language code
         """
         try:
-            # 获取当前活动页面
+            # Get current active page
             active_page = self.current_page
             
-            # 直接从翻译字典获取翻译
+            # Directly get translation from translation dictionary
             translations = self.settings.translations.get(language, {})
             main_window_translations = translations.get("main_window", {})
             general_translations = translations.get("general", {})
             
-            # 更新按钮文本
+            # Update button text
             for button_name, button in self.page_buttons.items():
                 translation_key = button_name.lower().replace(' ', '_')
                 translated_name = main_window_translations.get(translation_key) or general_translations.get(translation_key) or button_name
                 button.setText(translated_name)
             
-            # 更新标题
+            # Update title
             page_translation_key = active_page.lower().replace(' ', '_')
             page_display_name = main_window_translations.get(page_translation_key) or general_translations.get(page_translation_key) or active_page
             
@@ -978,13 +978,13 @@ class MainWindow(QMainWindow):
             if hasattr(self, 'title_label'):
                 self.title_label.setText(window_title)
             
-            # 更新所有组件的语言
+            # Update language for all components
             for i in range(self.content_area.count()):
                 widget = self.content_area.widget(i)
                 if hasattr(widget, 'refresh_language') and callable(widget.refresh_language):
                     widget.refresh_language()
             
-            # 更新状态栏
+            # Update status bar
             if hasattr(self, 'status_label'):
                 ready_text = general_translations.get("ready", "Ready")
                 self.status_label.setText(ready_text)
@@ -1000,55 +1000,55 @@ class MainWindow(QMainWindow):
             button.setText(translated_name)
     
     def update_ui_language(self):
-        """更新 UI 的语言"""
-        # 获取当前活动页面并更新相关UI
+        """Update UI language"""
+        # Get current active page and update related UI
         active_page = self.current_page
         page_display_name = self.settings.get_translation("general", active_page.lower().replace(' ', '_'))
         
-        # 更新按钮文本
+        # Update button text
         for button_name, button in self.page_buttons.items():
             translated_name = self.settings.get_translation("general", button_name.lower().replace(' ', '_'))
             button.setText(translated_name)
         
-        # 更新标题
+        # Update title
         self.setWindowTitle(f"Glary Utilities - {page_display_name}")
         if hasattr(self, 'title_label'):
             self.title_label.setText(f"Glary Utilities - {page_display_name}")
         
-        # 刷新所有支持语言更新的组件
+        # Refresh all components that support language updates
         for widget_name in dir(self):
             widget = getattr(self, widget_name)
             if hasattr(widget, 'update_language') and callable(getattr(widget, 'update_language')):
                 widget.update_language()
     
     def refresh_all_components(self):
-        """刷新所有组件"""
-        # 循环浏览所有内容页面并更新它们
+        """Refresh all components"""
+        # Loop through all content pages and update them
         for i in range(self.content_area.count()):
             widget = self.content_area.widget(i)
-            # (无限递归问题修复) 如果组件有refresh_language方法，调用它
+            # (Fix infinite recursion problem) If the component has a refresh_language method, call it
             if hasattr(widget, 'refresh_language') and callable(getattr(widget, 'refresh_language')):
-                QTimer.singleShot(i * 10, lambda w=widget: w.refresh_language())  # 延迟执行以避免UI冻结
+                QTimer.singleShot(i * 10, lambda w=widget: w.refresh_language())  # Delay execution to avoid UI freeze
                 
-        # (无限递归问题修复) 更新所有侧边栏按钮 - 避免使用get_translation
+        # (Fix infinite recursion problem) Update all sidebar buttons - avoid using get_translation
         for button in self.findChildren(QPushButton):
             if hasattr(button, 'property') and button.property("page"):
                 page_name = button.property("page")
-                # 直接从main_window部分获取翻译，而不是从general部分
+                # Directly get translation from main_window section, not from general section
                 translation_key = page_name.lower().replace(' ', '_')
                 try:
-                    # 尝试从main_window部分获取翻译文本
+                    # Try to get translation text from main_window section
                     lang = self.settings.get_setting("language", "en")
                     translated_text = None
                     
-                    # 获取语言代码
+                    # Get language code
                     language_map = {
                         "en": "en", "english": "en", "English": "en",
                         "zh": "zh", "中文": "zh", "chinese": "zh", "Chinese": "zh"
                     }
                     lang_code = language_map.get(lang.lower(), lang)
                     
-                    # 直接从翻译字典获取翻译文本
+                    # Directly get translation text from translation dictionary
                     if lang_code in self.settings.translations:
                         translations = self.settings.translations[lang_code]
                         if "main_window" in translations and translation_key in translations["main_window"]:
@@ -1056,27 +1056,27 @@ class MainWindow(QMainWindow):
                         elif "en" in self.settings.translations and "main_window" in self.settings.translations["en"] and translation_key in self.settings.translations["en"]["main_window"]:
                             translated_text = self.settings.translations["en"]["main_window"][translation_key]
                     
-                    # 如果找到翻译，则设置按钮文本
+                    # If translation is found, set button text
                     if translated_text:
                         button.setText(translated_text)
                 except Exception as e:
-                    # 如果出错，使用原始页面名称
+                    # If error occurs, use original page name
                     self.logger.error(f"Error updating button text: {e}")
-                    # 保持原有文本，不做更改
+                    # Keep original text, do not change
                 
-        # 更新工具栏
+        # Update toolbar
         self.update_ui_texts()
                 
-        # 强制重绘整个UI
+        # Force redraw of entire UI
         self.update()
         
-        # 处理任何等待的事件，确保UI即时更新
+        # Process any waiting events, ensure UI is updated immediately
         QApplication.processEvents()
     
     def check_all_translations(self):
-        """检查所有必要的翻译是否都存在"""
-        # 修复递归问题：使用新添加的settings.validate_translations方法
-        # 而不是手动调用get_translation检查每个键
+        """Check if all necessary translations exist"""
+        # Fix recursion problem: use the new settings.validate_translations method
+        # instead of manually calling get_translation to check each key
         try:
             missing = self.settings.validate_translations()
             
@@ -1084,7 +1084,7 @@ class MainWindow(QMainWindow):
                 current_lang = self.settings.get_setting("language", "en")
                 if current_lang in missing:
                     missing_in_current = missing[current_lang]
-                    # 记录当前语言中缺失的翻译
+                    # Record missing translations in current language
                     for section, keys in missing_in_current.items():
                         for key in keys:
                             self.logger.warning(f"Missing translation for '{section}.{key}' in language '{current_lang}'")
@@ -1122,22 +1122,22 @@ class MainWindow(QMainWindow):
             self.setWindowOpacity(1.0)
     
     def show_status_message(self, message, timeout=2000):
-        """显示状态栏消息"""
-        # 在控制台记录消息
-        self.logger.debug(f"状态消息: {message}")
+        """Show status bar message"""
+        # Record message in console
+        self.logger.debug(f"Status message: {message}")
         
-        # 更新状态栏标签
+        # Update status bar label
         if hasattr(self, 'status_label'):
             self.status_label.setText(message)
             
-            # 设置临时样式以突出显示
+            # Set temporary style to highlight
             self.status_label.setStyleSheet("color: white; font-size: 12px; font-weight: bold;")
             
-            # 使用定时器恢复正常样式
+            # Use timer to restore normal style
             QTimer.singleShot(timeout, lambda: self.status_label.setStyleSheet("color: #bbbbbb; font-size: 12px;"))
 
     def setup_status_bar(self):
-        """创建底部状态栏"""
+        """Create bottom status bar"""
         status_bar = QFrame()
         status_bar.setObjectName("status_bar")
         status_bar.setFixedHeight(30)
@@ -1150,66 +1150,66 @@ class MainWindow(QMainWindow):
             }
         """)
         
-        # 状态栏布局
+        # Status bar layout
         layout = QHBoxLayout(status_bar)
         layout.setContentsMargins(10, 0, 10, 0)
         layout.setSpacing(10)
         
-        # 状态信息标签
-        self.status_label = QLabel("就绪")
+        # Status information label
+        self.status_label = QLabel("Ready")
         self.status_label.setStyleSheet("color: #bbbbbb; font-size: 12px; background-color: transparent;")
         layout.addWidget(self.status_label)
         
-        # 添加弹性空间
+        # Add stretch space
         layout.addStretch(1)
         
         return status_bar
         
 
     def _update_active_button(self, page_name):
-        """更新侧边栏中活动页面按钮的状态
+        """Update the status of the active page button in the sidebar
         
         Args:
-            page_name: 活动页面的名称
+            page_name: Name of the active page
         """
-        # 遍历所有侧边栏按钮，更新它们的状态
+        # Loop through all sidebar buttons and update their status
         for button in self.findChildren(QPushButton):
             if hasattr(button, 'property') and button.property("page"):
-                # 检查按钮是否对应当前活动页面
+                # Check if the button corresponds to the current active page
                 is_active = button.property("page") == page_name
                 
-                # 设置选中状态
+                # Set selected state
                 button.setChecked(is_active)
                 
-                # 更新样式以反映选中状态
+                # Update style to reflect selected state
                 if is_active:
                     button.setProperty("active", "true")
                 else:
                     button.setProperty("active", "false")
                 
-                # 强制重新应用样式表
+                # Force re-apply style sheet
                 button.style().unpolish(button)
                 button.style().polish(button)
                 button.update()
 
     def clear_layout(self, layout):
-        """清除布局中的所有部件
+        """Clear all widgets in the layout
         
         Args:
-            layout: 要清除的布局对象
+            layout: Layout object to clear
         """
         if layout is None:
             return
             
-        # 移除布局中的所有项目
+        # Remove all items in the layout
         while layout.count():
             item = layout.takeAt(0)
             
-            # 如果项目是部件，则删除
+            # If item is a widget, delete it
             if item.widget():
                 item.widget().setParent(None)
                 item.widget().deleteLater()
-            # 如果项目是布局，递归清除
+            # If item is a layout, recursively clear it
             elif item.layout():
                 self.clear_layout(item.layout())
 
@@ -1226,28 +1226,28 @@ class MainWindow(QMainWindow):
         return self.settings.get_translation("main_window", key, default)
 
     def show_about_dialog(self):
-        """显示关于界面（作为主窗口内的页面，而不是弹出对话框）"""
+        """Show about dialog (as a page within the main window, not a popup dialog)"""
         
-        # 创建内联关于页面（如果不存在）
+        # Create inline about page (if it doesn't exist)
         if not hasattr(self, 'about_page'):
-            # 创建关于页面
+            # Create about page
             self.about_page = QWidget()
             self.about_page.setObjectName("About")
             
-            # 创建页面布局
+            # Create page layout
             about_layout = QVBoxLayout(self.about_page)
             about_layout.setContentsMargins(20, 20, 20, 20)
             about_layout.setSpacing(20)
             
-            # 标题
+            # Title
             title = QLabel(self.get_translation("about_title", "About"))
             title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
             about_layout.addWidget(title)
             
-            # 应用图标和标题
+            # Application icon and title
             icon_title_layout = QHBoxLayout()
             
-            # 添加应用图标
+            # Add application icon
             app_icon_label = QLabel()
             app_icon_label.setFixedSize(80, 80)
             if os.path.exists(Icon.Icon.Path):
@@ -1255,7 +1255,7 @@ class MainWindow(QMainWindow):
                 app_icon_label.setPixmap(app_icon.scaled(80, 80, Qt.KeepAspectRatio, Qt.SmoothTransformation))
             app_icon_label.setStyleSheet("background-color: transparent;")
             
-            # 添加标题和版本布局
+            # Add title and version layout
             title_version_layout = QVBoxLayout()
             title_version_layout.setSpacing(10)
             
@@ -1275,31 +1275,31 @@ class MainWindow(QMainWindow):
             
             about_layout.addLayout(icon_title_layout)
             
-            # 添加分割线
+            # Add separator
             line = QFrame()
             line.setFrameShape(QFrame.HLine)
             line.setStyleSheet("background-color: #444444; max-height: 1px;")
             about_layout.addWidget(line)
             
-            # 添加内容区域
+            # Add content area
             content_widget = QWidget()
             content_widget.setStyleSheet("background-color: #2a2a2a; border-radius: 8px;")
             content_layout = QVBoxLayout(content_widget)
             content_layout.setContentsMargins(20, 20, 20, 20)
             content_layout.setSpacing(15)
             
-            # 应用描述
+            # Apply description
             description_label = QLabel(self.get_translation("app_description", "A powerful system optimization tool."))
             description_label.setWordWrap(True)
             description_label.setStyleSheet("font-size: 16px; color: #e0e0e0;")
             content_layout.addWidget(description_label)
             
-            # 添加主要功能
+            # Add main features
             features_label = QLabel(self.get_translation("features", "Main Features"))
             features_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff; margin-top: 10px;")
             content_layout.addWidget(features_label)
             
-            # 功能列表
+            # Feature list
             features_layout = QVBoxLayout()
             features_layout.setContentsMargins(15, 0, 0, 0)
             features_layout.setSpacing(8)
@@ -1318,7 +1318,7 @@ class MainWindow(QMainWindow):
             
             content_layout.addLayout(features_layout)
             
-            # 添加系统要求
+            # Add system requirements
             sys_req_label = QLabel(self.get_translation("system_requirements", "System Requirements"))
             sys_req_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff; margin-top: 15px;")
             content_layout.addWidget(sys_req_label)
@@ -1328,36 +1328,36 @@ class MainWindow(QMainWindow):
             sys_req_details.setStyleSheet("font-size: 15px; color: #e0e0e0; margin-left: 15px;")
             content_layout.addWidget(sys_req_details)
             
-            # 添加分割线
+            # Add separator
             inner_line = QFrame()
             inner_line.setFrameShape(QFrame.HLine)
             inner_line.setStyleSheet("background-color: #444444; max-height: 1px; margin-top: 10px;")
             content_layout.addWidget(inner_line)
             
-            # 添加版权信息
+            # Add copyright information
             copyright_label = QLabel(f"© 2025 Glarysoft Ltd. All rights reserved.")
             copyright_label.setStyleSheet("font-size: 14px; color: #999999; margin-top: 10px;")
             content_layout.addWidget(copyright_label)
             
-            # 添加开发者信息
+            # Add developer information
             dev_label = QLabel(self.get_translation("developed_by", "Developed by Chen Runsen"))
             dev_label.setStyleSheet("font-size: 14px; color: #999999;")
             content_layout.addWidget(dev_label)
             
-            # 添加网站链接
+            # Add website link
             website_label = QLabel("<a href='https://www.chenrunsen.com' style='color: #5b9bd5;'>www.chenrunsen.com</a>")
             website_label.setOpenExternalLinks(True)
             website_label.setStyleSheet("font-size: 14px; color: #5b9bd5;")
             content_layout.addWidget(website_label)
             
-            # 添加内容区域到主布局
+            # Add content area to main layout
             about_layout.addWidget(content_widget)
             
-            # 按钮布局
+            # Button layout
             button_layout = QHBoxLayout()
             button_layout.addStretch()
             
-            # 添加帮助按钮
+            # Add help button
             help_button = QPushButton(self.get_translation("help_button", "Help"))
             help_button.setFixedSize(120, 36)
             help_button.setStyleSheet("""
@@ -1379,55 +1379,55 @@ class MainWindow(QMainWindow):
             help_button.clicked.connect(self.show_help_dialog)
             button_layout.addWidget(help_button)
             
-            # 添加按钮布局到主布局
+            # Add button layout to main layout
             about_layout.addLayout(button_layout)
             
-            # 添加弹性空间
+            # Add stretch space
             about_layout.addStretch()
             
-            # 添加关于页面到内容区域
+            # Add about page to content area
             self.content_area.addWidget(self.about_page)
             
-            # 更新页面索引字典
+            # Update page index dictionary
             self.page_indices["About"] = self.content_area.count() - 1
             
-            # 创建侧边栏按钮（如果需要）
+            # Create sidebar button (if needed)
             if "About" not in self.page_buttons:
-                # 添加关于按钮到侧边栏
+                # Add about button to sidebar
                 about_btn = self.create_sidebar_button(
                     self.get_translation("about_title", "About"),
                     Icon.About.Path, 
                     "About",
                     self.get_translation("about_tooltip", "About Glary Utilities")
                 )
-                # 暂时不显示在侧边栏，只在需要时显示
+                # Hide in sidebar for now, only show when needed
                 about_btn.hide()
                 self.page_buttons["About"] = about_btn
         
-        # 切换到关于页面
+        # Switch to about page
         self.set_active_page("About")
 
     def lighten_color(self, color, amount=0):
-        """使颜色变亮或变暗
+        """Lighten or darken color
         
         Args:
-            color: 十六进制颜色代码
-            amount: 变化量，正数变亮，负数变暗（范围：-100 到 100）
+            color: Hex color code
+            amount: Change amount, positive number lightens, negative number darkens (range: -100 to 100)
                 
         Returns:
-            新的十六进制颜色代码
+            New hex color code
         """
         try:
-            # 移除井号并转换为RGB
+            # Remove hash and convert to RGB
             c = color.lstrip('#')
             c = tuple(int(c[i:i+2], 16) for i in (0, 2, 4))
             
-            # 调整每个颜色通道
+            # Adjust each color channel
             r = int(max(0, min(255, c[0] + (amount * 2.55))))
             g = int(max(0, min(255, c[1] + (amount * 2.55))))
             b = int(max(0, min(255, c[2] + (amount * 2.55))))
             
-            # 转换回十六进制格式
+            # Convert back to hex format
             return f'#{r:02x}{g:02x}{b:02x}'
         except Exception as e:
             self.logger.error(f"Color adjustment error: {str(e)}")
@@ -1457,7 +1457,7 @@ class MainWindow(QMainWindow):
             description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
             help_layout.addWidget(description)
             
-            # 帮助内容
+            # Help content
             help_text = QTextBrowser()
             help_text.setOpenExternalLinks(True)
             help_text.setStyleSheet("""
@@ -1485,7 +1485,7 @@ class MainWindow(QMainWindow):
                 }
             """)
             
-            # 使用翻译条目构建帮助内容HTML
+            # Use translation items to build help content HTML
             t = lambda key, default="": self.get_translation(key, default)
             
             help_html = f"""
@@ -1585,30 +1585,30 @@ class MainWindow(QMainWindow):
             help_text.setHtml(help_html)
             help_layout.addWidget(help_text)
             
-            # 添加帮助页面到内容区域
+            # Add help page to content area
             self.content_area.addWidget(self.help_page)
             
-            # 更新页面索引字典
+            # Update page index dictionary
             self.page_indices["Help"] = self.content_area.count() - 1
             
-            # 创建侧边栏按钮（如果需要）
+            # Create sidebar button (if needed)
             if "Help" not in self.page_buttons:
-                # 添加帮助按钮到侧边栏
+                # Add help button to sidebar
                 help_btn = self.create_sidebar_button(
                     self.get_translation("help_title", "Help"),
                     Icon.Help.Path, 
                     "Help",
                     self.get_translation("help_tooltip", "View help documentation")
                 )
-                # 暂时不显示在侧边栏，只在需要时显示
+                # Hide in sidebar for now, only show when needed
                 help_btn.hide()
                 self.page_buttons["Help"] = help_btn
         
-        # 切换到帮助页面
+        # Switch to help page
         self.set_active_page("Help")
         
     def setup_tooltips(self):
-        """设置所有主要组件的工具提示，提供内联帮助"""
+        """Set tooltips for all main components, providing inline help"""
         # Dashboard
         if hasattr(self, 'dashboard_btn'):
             self.dashboard_btn.setToolTip(self.get_translation("dashboard_tooltip", "View system overview and quick access to common tasks"))
@@ -1650,16 +1650,16 @@ class MainWindow(QMainWindow):
             self.settings_btn.setToolTip(self.get_translation("settings_tooltip", "Configure application settings and preferences"))
 
     def closeEvent(self, event):
-        """确保关闭窗口时终止所有后台线程/定时器，防止进程挂起"""
+        """Ensure all background threads/timers are terminated when closing window to prevent process hanging"""
         try:
-            # 停止所有 QTimer
+            # Stop all QTimer
             for timer in self.findChildren(QTimer):
                 try:
                     timer.stop()
                 except Exception:
                     pass
 
-            # 终止所有 QThread
+            # Terminate all QThread
             for thread in self.findChildren(QThread):
                 try:
                     thread.requestInterruption()
@@ -1670,6 +1670,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.logger.error(f"Error while shutting down threads: {e}")
 
-        # 继续默认处理，最终退出应用
+        # Continue with default handling, finally exit application
         super().closeEvent(event)
  
