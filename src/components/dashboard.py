@@ -362,20 +362,20 @@ class ActionTile(QFrame):
 
 class DashboardWidget(BaseComponent):
     def __init__(self, parent=None):
-        # 初始化属性
+        # Initialize attributes
         self.update_timer = None
         
-        # 调用父类构造函数
+        # Call parent class constructor
         super().__init__(parent)
         
-        # 检查缺失翻译（仅在开发模式下）
+        # Check for missing translations (development mode only)
         missing_keys = self.check_all_translations()
         if missing_keys:
-            self.logger.warning(f"Warning: Missing translations in DashboardWidget:")  # 警告：DashboardWidget 中缺少翻译
+            self.logger.warning(f"Warning: Missing translations in DashboardWidget:")
             for language, keys in missing_keys.items():
-                self.logger.warning(f"  Language: {language}, Missing keys: {', '.join(keys)}")  # 语言和缺少的键
+                self.logger.warning(f"  Language: {language}, Missing keys: {', '.join(keys)}")
         
-        # 设置定时器以更新系统信息
+        # Set timer to update system information
         self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update_system_info)
         self.update_timer.start(2000)
@@ -384,20 +384,20 @@ class DashboardWidget(BaseComponent):
         return self.settings.get_translation("dashboard", key, default)
     
     def setup_ui(self):
-        # 主布局
+        # Main layout
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(25, 25, 25, 25)
         self.main_layout.setSpacing(25)
         
-        # 仪表板标题和欢迎消息
+        # Dashboard title and welcome message
         title_container = QHBoxLayout()
         
-        # 仪表板标题
+        # Dashboard title
         self.title = QLabel(self.get_translation("system_status"))
         self.title.setStyleSheet("font-size: 28px; font-weight: bold; color: #e0e0e0; background-color: transparent;")
         title_container.addWidget(self.title)
         
-        # 欢迎消息，右对齐
+        # Welcome message, right-aligned
         self.welcome_label = QLabel(self.get_translation("welcome_message", "Welcome to Glary Utilities"))
         self.welcome_label.setStyleSheet("color: #a0a0a0; font-size: 16px; background-color: transparent;")
         self.welcome_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -405,61 +405,61 @@ class DashboardWidget(BaseComponent):
         
         self.main_layout.addLayout(title_container)
         
-        # 系统统计部分
+        # System statistics section
         self.create_system_stats_section()
         
-        # 快速访问部分
+        # Quick access section
         self.create_quick_access_section()
         
-        # 添加伸缩项，确保内容垂直居中且组件合理分布空间
+        # Add stretch item to ensure content is vertically centered and components distribute space reasonably
         self.main_layout.addStretch(1)
     
     def create_system_stats_section(self):        
-        # 统计容器
+        # Statistics container
         self.stats_frame = QFrame()
         self.stats_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.stats_layout = QGridLayout(self.stats_frame)
         self.stats_layout.setContentsMargins(0, 0, 0, 0)
         self.stats_layout.setSpacing(20)
         
-        # CPU 使用情况图表
+        # CPU usage chart
         cpu_icon_path = Icon.CPU.Path
         self.cpu_chart = ChartTile(
             self.get_translation("cpu_usage"), 
             cpu_icon_path if os.path.exists(cpu_icon_path) else Icon.CPU.Path,
-            chart_color="#E74856"  # 红色，模拟Windows Task Manager CPU图表
+            chart_color="#E74856"  # Red, simulate Windows Task Manager CPU chart
         )
         self.stats_layout.addWidget(self.cpu_chart, 0, 0)
         
-        # 内存使用情况图表
+        # Memory usage chart
         memory_icon_path = Icon.Memory.Path
         self.memory_chart = ChartTile(
             self.get_translation("memory_usage"), 
             memory_icon_path if os.path.exists(memory_icon_path) else Icon.Memory.Path,
-            chart_color="#00B7C3"  # 青色，模拟Windows Task Manager内存图表
+            chart_color="#00B7C3"  # Cyan, simulate Windows Task Manager memory chart
         )
         self.stats_layout.addWidget(self.memory_chart, 0, 1)
         
-        # 磁盘使用情况图表
+        # Disk usage chart
         disk_icon_path = Icon.Disk.Path
         self.disk_chart = ChartTile(
             self.get_translation("disk_usage"), 
             disk_icon_path if os.path.exists(disk_icon_path) else Icon.Disk.Path,
-            chart_color="#FFB900"  # 黄色，模拟Windows Task Manager磁盘图表
+            chart_color="#FFB900"  # Yellow, simulate Windows Task Manager disk chart
         )
         self.stats_layout.addWidget(self.disk_chart, 1, 0)
         
-        # 温度图表
+        # Temperature chart
         temp_icon_path = Icon.Temperature.Path
         self.temp_chart = ChartTile(
             self.get_translation("system_temperature"), 
             temp_icon_path if os.path.exists(temp_icon_path) else Icon.Temperature.Path,
-            chart_color="#10893E"  # 绿色，模拟Windows Task Manager温度图表
+            chart_color="#10893E"  # Green, simulate Windows Task Manager temperature chart
         )
         self.stats_layout.addWidget(self.temp_chart, 1, 1)
         
-        # 将统计框架添加到主布局，并设置为可扩展
-        self.main_layout.addWidget(self.stats_frame, 4)  # 图表部分占据更多空间
+        # Add statistics frame to main layout and set as expandable
+        self.main_layout.addWidget(self.stats_frame, 4)  # Chart section takes more space
     
     def create_quick_access_section(self):
         # 快速访问标题
@@ -546,56 +546,56 @@ class DashboardWidget(BaseComponent):
             
             self.disk_chart.update_value(disk_percent)
         except Exception as e:
-            self.disk_chart.update_value("Error")  # 错误
-            self.logger.error(f"Error getting disk usage: {e}")  # 获取磁盘使用情况时出错
+            self.disk_chart.update_value("Error")  # Error
+            self.logger.error(f"Error getting disk usage: {e}")  # Error getting disk usage
         
-        # 温度检测 - 增强版
+        # Temperature detection - enhanced version
         self._update_temperature()
     
     def _update_temperature(self):
-        """更新温度显示，使用 SystemInformation 来获取温度数据"""
+        """Update temperature display using SystemInformation to get temperature data"""
         try:
-            # 使用 SystemInformation 类的 get_temperature 方法获取温度
+            # Use SystemInformation class get_temperature method to get temperature
             temperature_data = self.system_information.get_temperature()
             
-            # 检查是否处于重试延迟中
+            # Check if in retry delay
             if len(temperature_data) == 2 and "CPU" in temperature_data and "System" in temperature_data:
                 if temperature_data["CPU"] == "N/A" and temperature_data["System"] == "N/A":
-                    # 如果处于延迟重试状态，显示特殊状态指示
+                    # If in delayed retry state, show special status indicator
                     if self.system_information._temp_failure_count > 1:
-                        # 计算下次尝试剩余时间
+                        # Calculate remaining time until next attempt
                         import time
                         time_elapsed = time.time() - self.system_information._temp_last_attempt
                         remaining = max(0, self.system_information._temp_retry_delay - time_elapsed)
                         
                         if remaining > 60:
-                            # 如果剩余时间超过1分钟，显示分钟
+                            # If remaining time is over 1 minute, show minutes
                             self.temp_chart.update_value(f"Retry in {int(remaining/60)}m")
                         else:
-                            # 否则显示秒数
+                            # Otherwise show seconds
                             self.temp_chart.update_value(f"Retry in {int(remaining)}s")
                         return
             
-            # 如果有 CPU 温度，优先显示它
+            # If there's CPU temperature, prioritize it
             if "CPU" in temperature_data:
                 self.temp_chart.update_value(temperature_data["CPU"])
                 return
             
-            # 如果没有 CPU 温度，但有其他温度数据，显示第一个
+            # If no CPU temperature but other temperature data, show the first one
             if temperature_data:
                 first_temp = next(iter(temperature_data.values()))
                 self.temp_chart.update_value(first_temp)
                 return
                 
-            # 如果没有找到温度数据，显示 N/A
+            # If no temperature data found, show N/A
             self.temp_chart.update_value("N/A")
         except Exception as e:
             self.temp_chart.update_value("N/A")
-            self.logger.error(f"Error getting temperature: {e}")  # 获取温度时出错
+            self.logger.error(f"Error getting temperature: {e}")  # Error getting temperature
     
     def navigate_to_page(self, page_index):
-        """在主窗口中导航到特定页面"""
-        # 页面索引与页面名称的映射
+        """Navigate to specific page in main window"""
+        # Page index to page name mapping
         page_names = {
             0: "Dashboard",
             1: "System Cleaner",
@@ -609,39 +609,39 @@ class DashboardWidget(BaseComponent):
             9: "Settings"
         }
         
-        # 查找主窗口以更改页面
+        # Find main window to change page
         main_window = self.window()
         if main_window and page_index in page_names:
             main_window.set_active_page(page_names[page_index])
 
     def refresh_language(self):
-        # 更新UI文本元素
+        # Update UI text elements
         self.title.setText(self.get_translation("system_status"))
         self.welcome_label.setText(self.get_translation("welcome_message", "Welcome to Glary Utilities"))
         self.quick_title.setText(self.get_translation("quick_access"))
         
-        # 更新图表标题
+        # Update chart titles
         self.cpu_chart.title_label.setText(self.get_translation("cpu_usage"))
         self.memory_chart.title_label.setText(self.get_translation("memory_usage"))
         self.disk_chart.title_label.setText(self.get_translation("disk_usage"))
         self.temp_chart.title_label.setText(self.get_translation("system_temperature"))
         
-        # 更新操作块
+        # Update action blocks
         self.repair_tile.title_label.setText(self.get_translation("system_repair"))
         self.clean_tile.title_label.setText(self.get_translation("clean_junk"))
         self.virus_tile.title_label.setText(self.get_translation("scan_system"))
         self.info_tile.title_label.setText(self.get_translation("get_system_info"))
         
-        # 添加动画以突出显示更改
+        # Add animation to highlight changes
         super().refresh_language()
 
     def check_all_translations(self):
-        """检查此组件中使用的所有翻译键是否存在
+        """Check if all translation keys used in this component exist
         
-        引发:
-            KeyError: 如果缺少任何翻译键
+        Raises:
+            KeyError: If any translation key is missing
         """
-        # 尝试获取此组件中使用的所有翻译
+        # Try to get all translations used in this component
         keys = [
             "system_status", "cpu_usage", "memory_usage", "disk_usage",
             "system_temperature", "quick_access", "optimize_system", 

@@ -55,7 +55,7 @@ class GlaryUtilitiesApp:
         # Initialize settings
         self.settings = Settings()
         
-        # 设置更好看的全局字体
+        # Set better looking global font
         self.setup_fonts()
         
         # Initialize resource manager
@@ -65,30 +65,30 @@ class GlaryUtilitiesApp:
         setup_logger()
 
     def setup_fonts(self) -> None:
-        """设置全局字体"""
-        # 创建字体
+        """Set global font"""
+        # Create font
         if self.platform_manager.is_windows():
-            # Windows系统上优先使用微软雅黑或Segoe UI
+            # On Windows, prioritize Microsoft YaHei or Segoe UI
             font_name = "Microsoft YaHei" if "zh" in self.settings.get_setting("language", "en") else "Segoe UI"
             font = QFont(font_name, 9)
         elif self.platform_manager.is_mac():
-            # macOS上使用SF Pro
+            # On macOS, use SF Pro
             font = QFont("SF Pro", 13)
         else:
-            # Linux上使用Ubuntu或Noto Sans
+            # On Linux, use Ubuntu or Noto Sans
             font = QFont("Ubuntu", 10)
         
-        # 设置字体特性
+        # Set font properties
         font.setStyleStrategy(QFont.PreferAntialias | QFont.PreferQuality)
         
-        # 应用到全局
+        # Apply globally
         self.app.setFont(font)
 
     def show_splash_screen(self) -> None:
-        """显示启动画面"""
+        """Show splash screen"""
         self.splash = SplashScreen()
         self.splash.show()
-        # 立即处理一次事件循环，确保启动画面和渐变动画立刻显示
+        # Process events immediately to ensure splash screen and fade animation display right away
         self.app.processEvents()
         
     def handle_translations(self, args: Dict[str, bool]) -> bool:
@@ -125,33 +125,33 @@ class GlaryUtilitiesApp:
             # Setup application
             self.setup_application()
             
-            # 显示启动画面
+            # Show splash screen
             if not args["no_splash"]:
                 self.show_splash_screen()
             
-            # 创建主窗口（但暂不显示）
+            # Create main window (but don't show yet)
             self.window = MainWindow(self.settings)
             
             # Handle translations
             if not self.handle_translations(args):
                 return 0
             
-            # 显示窗口，启动应用程序
+            # Show window, start application
             if args["no_splash"]:
-                # 如果不使用启动画面，直接显示主窗口
+                # If not using splash screen, show main window directly
                 self.window.show()
             else:
-                # 等待启动画面完成后，再显示主窗口
-                self.app.processEvents()  # 处理事件以确保启动画面显示
-                # 当启动画面结束后显示主窗口；若线程早已结束则立即显示
+                # Wait for splash screen to complete, then show main window
+                self.app.processEvents()  # Process events to ensure splash screen displays
+                # Show main window when splash screen ends; if thread already ended, show immediately
                 def _show_main_window():
                     if self.window is not None and not self.window.isVisible():
                         self.window.show()
 
-                # 连接线程结束信号
+                # Connect thread finished signal
                 self.splash.loading_thread.finished.connect(_show_main_window)
 
-                # 如果线程已经提前结束（极端情况下），立即调用一次
+                # If thread already ended (extreme case), call once immediately
                 if not self.splash.loading_thread.isRunning():
                     _show_main_window()
                 

@@ -40,30 +40,30 @@ class DiskCheckThread(BaseThread):
             self.operation_completed.emit(False)
     
     def check_disk(self):
-        """检查磁盘错误而不修复它们"""
-        # 验证驱动器
+        """Check disk errors without fixing them"""
+        # Validate drive
         if not os.path.exists(self.drive):
-            self.progress_updated.emit(f"驱动器 {self.drive} 不存在或不可访问")
+            self.progress_updated.emit(f"Drive {self.drive} does not exist or is not accessible")
             self.operation_completed.emit(False)
             return
         
-        self.progress_updated.emit(f"正在检查驱动器 {self.drive}...")
+        self.progress_updated.emit(f"Checking drive {self.drive}...")
         
-        # 构建命令参数
+        # Build command arguments
         cmd = ["chkdsk", self.drive]
         
-        # 添加必要的选项
+        # Add necessary options
         if self.check_file_system:
-            # 文件系统检查不需要额外参数
+            # File system check doesn't need additional parameters
             pass
         
         if self.check_bad_sectors:
-            cmd.append("/B")  # 检查坏扇区
+            cmd.append("/B")  # Check bad sectors
         
-        self.progress_updated.emit(f"运行命令: {' '.join(cmd)}")
+        self.progress_updated.emit(f"Running command: {' '.join(cmd)}")
         
         try:
-            # 使用self.platform_manager运行chkdsk
+            # Use self.platform_manager to run chkdsk
             proc = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -73,7 +73,7 @@ class DiskCheckThread(BaseThread):
                 creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, 'CREATE_NO_WINDOW') else 0
             )
             
-            # 处理输出
+            # Process output
             while True:
                 line = proc.stdout.readline()
                 if not line:
@@ -86,24 +86,24 @@ class DiskCheckThread(BaseThread):
             proc.wait()
             
             if proc.returncode == 0:
-                self.progress_updated.emit("磁盘检查成功完成")
+                self.progress_updated.emit("Disk check completed successfully")
                 self.operation_completed.emit(True)
             else:
-                self.progress_updated.emit(f"磁盘检查失败，返回代码 {proc.returncode}")
+                self.progress_updated.emit(f"Disk check failed with return code {proc.returncode}")
                 self.operation_completed.emit(False)
         except FileNotFoundError:
-            self.progress_updated.emit("错误: 找不到chkdsk命令。请确保您在Windows系统上运行此程序。")
+            self.progress_updated.emit("Error: chkdsk command not found. Please ensure you are running this program on a Windows system.")
             self.operation_completed.emit(False)
         except PermissionError:
-            self.progress_updated.emit("错误: 权限被拒绝。请尝试以管理员身份运行程序。")
+            self.progress_updated.emit("Error: Permission denied. Please try running the program as administrator.")
             self.operation_completed.emit(False)
         except Exception as e:
-            self.progress_updated.emit(f"运行磁盘检查时出错: {str(e)}")
+            self.progress_updated.emit(f"Error running disk check: {str(e)}")
             self.operation_completed.emit(False)
     
     def repair_disk(self):
         """Check and repair disk errors"""
-        self.progress_updated.emit(f"正在检查并修复驱动器 {self.drive}...")
+        self.progress_updated.emit(f"Checking and repairing drive {self.drive}...")
         
         # Build command arguments
         cmd = ["chkdsk", self.drive, "/F"]  # /F to fix errors
@@ -111,11 +111,11 @@ class DiskCheckThread(BaseThread):
         if self.check_bad_sectors:
             cmd.append("/R")  # Repair bad sectors
         
-        self.progress_updated.emit(f"运行命令: {' '.join(cmd)}")
-        self.progress_updated.emit("注意: 此操作可能需要系统重新启动")
+        self.progress_updated.emit(f"Running command: {' '.join(cmd)}")
+        self.progress_updated.emit("Note: This operation may require system restart")
         
         try:
-            # 使用self.platform_manager运行chkdsk修复命令
+            # Use self.platform_manager to run chkdsk repair command
             result = self.platform_manager.run_command(cmd)
             
             if result.returncode == 0:
@@ -123,7 +123,7 @@ class DiskCheckThread(BaseThread):
                     if line.strip():
                         self.progress_updated.emit(line.strip())
                 
-                self.progress_updated.emit("磁盘修复已成功安排")
+                self.progress_updated.emit("Disk repair has been successfully scheduled")
                 self.operation_completed.emit(True)
             else:
                 for line in result.stdout.split('\n'):
@@ -131,10 +131,10 @@ class DiskCheckThread(BaseThread):
                         self.progress_updated.emit(line.strip())
                 
                 if result.stderr:
-                    self.progress_updated.emit(f"错误: {result.stderr}")
+                    self.progress_updated.emit(f"Error: {result.stderr}")
                 
-                self.progress_updated.emit(f"磁盘修复失败，返回代码 {result.returncode}")
+                self.progress_updated.emit(f"Disk repair failed with return code {result.returncode}")
                 self.operation_completed.emit(False)
         except Exception as e:
-            self.progress_updated.emit(f"运行磁盘修复时出错: {str(e)}")
+            self.progress_updated.emit(f"Error running disk repair: {str(e)}")
             self.operation_completed.emit(False)

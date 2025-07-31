@@ -18,7 +18,7 @@ from tools.virus_scan import VirusScanThread
 class VirusScanWidget(BaseComponent):
     """Widget for virus scanning operations"""
     def __init__(self, parent=None):
-        # 初始化属性
+        # Initialize attributes
         self.scanner_worker = None
         self.scan_thread = None
         self.custom_scan_targets = []
@@ -37,49 +37,49 @@ class VirusScanWidget(BaseComponent):
         return self.settings.get_translation("virus_scan", key, default)
 
     def setup_ui(self):
-        """设置UI元素"""
-        # 主布局
+        """Setup UI elements"""
+        # Main layout
         self.main_layout = QVBoxLayout(self)
-        # 与其他页面一致的边距和间距
+        # Consistent margins and spacing with other pages
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(20)
         
-        # 添加标题
+        # Add title
         self.title_label = QLabel(self.get_translation("title"))
         self.title_label.setObjectName("title_label")
         self.title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0; background-color: transparent;")
         self.main_layout.addWidget(self.title_label)
         
-        # 描述
+        # Description
         self.desc_label = QLabel(self.get_translation("scan_description"))
         self.desc_label.setObjectName("desc_label")
         self.desc_label.setStyleSheet("font-size: 14px;")
         self.desc_label.setWordWrap(True)
         self.main_layout.addWidget(self.desc_label)
 
-        # 创建选项卡部件
+        # Create tab widget
         self.tabs = QTabWidget()
         
-        # 扫描选项卡
+        # Scan tab
         self.scan_tab = QWidget()
         self.setup_scan_tab(self.scan_tab)
         self.tabs.addTab(self.scan_tab, self.get_translation("scan_tab", "Scan"))
         
-        # 隔离区选项卡
+        # Quarantine tab
         self.quarantine_tab = QWidget()
         self.setup_quarantine_tab(self.quarantine_tab)
         self.tabs.addTab(self.quarantine_tab, self.get_translation("quarantine_tab", "Quarantine"))
         
-        # 添加到主布局
+        # Add to main layout
         self.main_layout.addWidget(self.tabs)
         
     
     def apply_theme(self):
-        """应用主题样式到组件"""
-        # 调用父类的应用主题方法，使用统一样式
+        """Apply theme styles to component"""
+        # Call parent class apply theme method, use unified style
         super().apply_theme()
         
-        # 获取当前主题
+        # Get current theme
         theme_name = self.settings.get_setting("theme", "dark")
         theme_data = self.settings.load_theme(theme_name)
         
@@ -97,7 +97,7 @@ class VirusScanWidget(BaseComponent):
             button_pressed_bg_color = theme_data["colors"].get("button_pressed_bg_color", self.lighten_color(bg_color, 5))
             input_bg_color = theme_data["colors"].get("input_bg_color", self.lighten_color(bg_color, -5))
 
-            # 更新组件样式 - 更全面的样式覆盖
+            # Update component styles - more comprehensive style coverage
             self.setStyleSheet(f"""
                 QWidget {{ background-color: transparent; color: {text_color}; }}
                 QTabWidget::pane {{ border: 1px solid {border_color}; border-radius: 4px; background-color: {bg_color}; }}
@@ -765,24 +765,24 @@ class VirusScanWidget(BaseComponent):
                     self._apply_saved_scan_type(scan_type)
 
         except Exception as e:
-            self.logger.error(f"在 VirusScanWidget 中应用设置时发生错误: {str(e)}")
+            self.logger.error(f"Error applying settings in VirusScanWidget: {str(e)}")
             import traceback
             self.logger.error(traceback.format_exc())
     
     def _apply_saved_scan_type(self, scan_type):
-        """应用保存的扫描类型设置
+        """Apply saved scan type settings
         
         Args:
-            scan_type: 要应用的扫描类型ID
+            scan_type: Scan type ID to apply
         """
         try:
-            # 先将所有选项都设为未选中
+            # First uncheck all options
             self.quick_scan_rb.setChecked(False)
             self.full_scan_rb.setChecked(False)
             self.custom_scan_rb.setChecked(False)
             self.toggle_custom_scan(False)
                 
-            # 设置相应的复选框为选中状态
+            # Set corresponding checkbox to checked state
             if scan_type == 'virus_scan_quick':
                 self.quick_scan_rb.setChecked(True)
             elif scan_type == 'virus_scan_full':
@@ -791,23 +791,23 @@ class VirusScanWidget(BaseComponent):
                 self.custom_scan_rb.setChecked(True)
                 self.toggle_custom_scan(True)
             else:
-                # 默认选择快速扫描
+                # Default to quick scan
                 self.quick_scan_rb.setChecked(True)
         except Exception as e:
-            self.logger.error(f"应用扫描类型时出错: {str(e)}")
+            self.logger.error(f"Error applying scan type: {str(e)}")
 
     def on_scan_option_clicked(self, checkbox):
-        """处理扫描类型选择改变"""
+        """Handle scan type selection change"""
         button_id = checkbox.objectName()
-        self.logger.info(f"病毒扫描类型更改为: {checkbox.text()}")
+        self.logger.info(f"Virus scan type changed to: {checkbox.text()}")
         
-        # 如果用户选中一个选项
+        # If user selects an option
         if checkbox.isChecked():
-            # 保存设置
+            # Save settings
             self.settings.set_setting("virus_scan_type", button_id)
             self.settings.sync()
             
-            # 确保其他选项被取消选中（互斥性）
+            # Ensure other options are unchecked (mutual exclusivity)
             if button_id == "virus_scan_quick":
                 self.full_scan_rb.setChecked(False)
                 self.custom_scan_rb.setChecked(False)
@@ -821,9 +821,9 @@ class VirusScanWidget(BaseComponent):
                 self.full_scan_rb.setChecked(False)
                 self.toggle_custom_scan(True)
         else:
-            # 如果用户取消了当前选项，确保至少有一个选项是选中的
+            # If user unchecks current option, ensure at least one option is selected
             if not (self.quick_scan_rb.isChecked() or 
                    self.full_scan_rb.isChecked() or 
                    self.custom_scan_rb.isChecked()):
-                # 默认选中当前选项（不允许没有选项被选中）
+                # Default to current option (don't allow no option to be selected)
                 checkbox.setChecked(True) 

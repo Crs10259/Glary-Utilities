@@ -34,61 +34,61 @@ from config import Icon
 from config import App
 
 class MainWindow(QMainWindow):
-    """主应用程序窗口"""
+    """Main application window"""
     
-    # 语言更改信号
+    # Language change signal
     language_changed = pyqtSignal(str)
     page_changed = pyqtSignal(str)
     
     def __init__(self, settings):
-        """初始化主窗口
+        """Initialize main window
         
         Args:
-            settings: 设置管理器实例
+            settings: Settings manager instance
         """
         super().__init__()
         
-        # 配置日志
+        # Configure logging
         self.logger = Logger().get_logger()
 
-        # 保存设置实例
+        # Save settings instance
         self.settings = settings
         
-        # 平台管理器
+        # Platform manager
         self.platform_manager = PlatformManager()
         
-        # 设置属性
+        # Set properties
         self.dragging = False
         self.drag_position = None
         self.current_page = "Dashboard"
         
-        # 初始化字典
+        # Initialize dictionary
         self.page_buttons = {}
         
-        # 设置窗口基本属性
+        # Set window basic properties
         self.setWindowTitle("Glary Utilities")
         self.setGeometry(100, 100, 1200, 800)
         self.setMinimumSize(900, 600)
         
-        # 根据平台设置窗口属性
+        # Set window properties based on platform
         if self.platform_manager.is_linux():
-            # Linux: 使用系统原生标题栏
+            # Linux: Use system native title bar
             self.setWindowFlags(Qt.Window)
             self.setAttribute(Qt.WA_TranslucentBackground, False)
             self.setFocusPolicy(Qt.StrongFocus)
         else:
-            # Windows/macOS: 使用自定义无边框窗口
+            # Windows/macOS: Use custom borderless window
             self.setWindowFlags(Qt.FramelessWindowHint)
             self.setAttribute(Qt.WA_TranslucentBackground)
             self.setFocusPolicy(Qt.StrongFocus)
         
-        # 初始化UI
+        # Initialize UI
         self.initUI()
         
-        # 应用主题
+        # Apply theme
         self.apply_theme()
         
-        # 设置窗口图标
+        # Set window icon
         self.apply_window_icon()
         
         # 初始化页面到Dashboard
@@ -518,8 +518,8 @@ class MainWindow(QMainWindow):
             button._original_icon_size = icon_size
         
         except Exception as e:
-            self.logger.error(f"创建侧边栏按钮时出错: {e}")
-            # 创建不带图标的按钮
+            self.logger.error(f"Error creating sidebar button: {e}")
+            # Create button without icon
             button = QPushButton(name)
             button.setCheckable(True)
             button.setObjectName(f"sidebar_btn_{page_name}")
@@ -817,25 +817,25 @@ class MainWindow(QMainWindow):
             self.refresh_component_theme(child)
 
     def apply_window_icon(self):
-        """设置窗口图标"""
+        """Set window icon"""
         try:
-            # 使用根目录中的图标文件
+            # Use icon file in root directory
             icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resources", "icons", "icon.png")
             if not os.path.exists(icon_path):
-                self.logger.warning(f"警告: 窗口图标文件不存在: {icon_path}")
+                self.logger.warning(f"Warning: Window icon file does not exist: {icon_path}")
                 return
                 
             self.setWindowIcon(QIcon(icon_path))
         except Exception as e:
-            self.logger.error(f"设置窗口图标时出错: {str(e)}")
+            self.logger.error(f"Error setting window icon: {str(e)}")
     
     def set_active_page(self, page_name):
-        """设置活动页面
+        """Set active page
         
         Args:
-            page_name (str): 页面名称
+            page_name (str): Page name
         """
-        # 页面名称到索引的映射
+        # Page name to index mapping
         page_indices = {
             "Dashboard": 0,
             "System Cleaner": 1,
@@ -854,66 +854,66 @@ class MainWindow(QMainWindow):
             self.content_area.setCurrentIndex(index)
             self.current_page = page_name
             
-            # 更新活动按钮状态
+            # Update active button state
             self._update_active_button(page_name)
             
-            # 更新窗口标题
+            # Update window title
             self.setWindowTitle(f"Glary Utilities - {page_name}")
             
-            # 记录页面切换
-            self.logger.debug(f"切换到页面: {page_name}")
+            # Log page switch
+            self.logger.debug(f"Switched to page: {page_name}")
         else:
-            self.logger.warning(f"未知页面: {page_name}")
+            self.logger.warning(f"Unknown page: {page_name}")
     
     def _update_page_content(self, page_name):
-        """根据页面名称更新内容区域"""
-        self.logger.info(f"切换到页面: {page_name}")
+        """Update content area based on page name"""
+        self.logger.info(f"Switched to page: {page_name}")
         
-        # 获取页面的本地化显示名称
+        # Get localized display name for the page
         page_display_name = self.settings.get_translation("general", page_name.lower().replace(' ', '_'))
         
-        # 更新窗口标题和工具栏标题
+        # Update window title and toolbar title
         self.setWindowTitle(f"Glary Utilities - {page_display_name}")
         if hasattr(self, 'title_label'):
             self.title_label.setText(f"Glary Utilities - {page_display_name}")
         
-        # 更新激活的按钮状态
+        # Update active button state
         self._update_active_button(page_name)
         
-        # 如果有搜索框，清除搜索
+        # Clear search if search box exists
         if hasattr(self, 'search_box'):
             self.search_box.clear()
             
         try:
-            # 如果页面索引存在，则直接切换到该页面
+            # If page index exists, directly switch to that page
             if page_name in self.page_indices:
                 self.content_area.setCurrentIndex(self.page_indices[page_name])
                 
-                # 获取当前页面部件
+                # Get current page widget
                 current_widget = self.content_area.currentWidget()
                 
-                # 切换到此页面后，让页面部件自动更新数据
+                # After switching to this page, let the page widget automatically update data
                 if hasattr(current_widget, 'update_data') and callable(getattr(current_widget, 'update_data')):
                     current_widget.update_data()
                     
-                # 保存当前页面名称
+                # Save current page name
                 self.current_page = page_name
                 
-                # 发射页面切换信号
+                # Emit page change signal
                 self.page_changed.emit(page_name)
             else:
-                # 如果页面不存在，显示一个错误消息
-                self.logger.warning(f"未找到页面 '{page_name}' 的索引")
-                self.show_status_message(f"页面 '{page_name}' 不存在", 3000)
+                # If page doesn't exist, show an error message
+                self.logger.warning(f"Index not found for page '{page_name}'")
+                self.show_status_message(f"Page '{page_name}' does not exist", 3000)
                 
         except Exception as e:
-            # 处理异常情况
-            self.logger.error(f"切换到页面 '{page_name}' 时出错：{e}")
-            error_widget = QLabel(f"加载页面时出错：{e}")
+            # Handle exception cases
+            self.logger.error(f"Error switching to page '{page_name}': {e}")
+            error_widget = QLabel(f"Error loading page: {e}")
             error_widget.setStyleSheet("color: red;")
             error_widget.setAlignment(Qt.AlignCenter)
             
-            # 创建一个临时页面显示错误
+            # Create a temporary page to display error
             temp_page = QWidget()
             temp_layout = QVBoxLayout(temp_page)
             temp_layout.addWidget(error_widget)
@@ -1430,29 +1430,29 @@ class MainWindow(QMainWindow):
             # 转换回十六进制格式
             return f'#{r:02x}{g:02x}{b:02x}'
         except Exception as e:
-            self.logger.error(f"颜色调整出错: {str(e)}")
-            return color  # 如果出错返回原始颜色
+            self.logger.error(f"Color adjustment error: {str(e)}")
+            return color  # Return original color if error occurs
 
     def show_help_dialog(self):
-        """显示帮助内容（作为主窗口内的页面，而不是弹出对话框）"""
+        """Show help content (as a page within the main window, not a popup dialog)"""
         
-        # 创建内联帮助页面（如果不存在）
+        # Create inline help page (if it doesn't exist)
         if not hasattr(self, 'help_page'):
-            # 创建帮助页面
+            # Create help page
             self.help_page = QWidget()
             self.help_page.setObjectName("Help")
             
-            # 创建页面布局
+            # Create page layout
             help_layout = QVBoxLayout(self.help_page)
             help_layout.setContentsMargins(20, 20, 20, 20)
             help_layout.setSpacing(15)
             
-            # 标题
+            # Title
             title = QLabel(self.get_translation("help_title", "Help Documentation"))
             title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0;")
             help_layout.addWidget(title)
             
-            # 描述
+            # Description
             description = QLabel(self.get_translation("help_description", "Find answers and learn how to use Glary Utilities effectively"))
             description.setStyleSheet("font-size: 14px; color: #a0a0a0;")
             help_layout.addWidget(description)

@@ -24,22 +24,22 @@ class Settings(QObject):
         self.load_translations()
         
     def load_translations(self):
-        """加载所有可用的翻译"""
+        """Load all available translations"""
 
-        # 确保目录存在
+        # Ensure directory exists
         if not os.path.exists(Path.TRANSLATIONS_DIR):
             os.makedirs(Path.TRANSLATIONS_DIR)
         
-        # 语言代码映射
+        # Language code mapping
         language_mapping = {
-            "en.json": "en",    # 英语
-            "zh.json": "zh"     # 中文
+            "en.json": "en",    # English
+            "zh.json": "zh"     # Chinese
         }
         
-        # 清空现有翻译
+        # Clear existing translations
         self.translations = {
-            "en": {},  # 默认的英语翻译
-            "zh": {}   # 默认的中文翻译
+            "en": {},  # Default English translations
+            "zh": {}   # Default Chinese translations
         }
         
         for file in os.listdir(Path.TRANSLATIONS_DIR):
@@ -52,7 +52,7 @@ class Settings(QObject):
                     self.logger.error(f"Error loading translation {file}: {e}")
     
     def get_config_dir(self):
-        """获取配置目录路径"""
+        """Get configuration directory path"""
         if platform.system() == "Windows":
             return os.path.join(os.environ.get("APPDATA"), "GlaryUtilities")
         elif platform.system() == "Darwin":  # macOS
@@ -61,19 +61,19 @@ class Settings(QObject):
             return os.path.join(os.path.expanduser("~/.config"), "GlaryUtilities")
             
     def load_theme(self, theme_name):
-        """加载指定主题的配置数据
+        """Load configuration data for specified theme
         
         Args:
-            theme_name (str): 主题名称
+            theme_name (str): Theme name
             
         Returns:
-            dict: 主题配置数据，如果主题不存在则返回None
+            dict: Theme configuration data, returns None if theme doesn't exist
         """
-        # 主题文件路径 - 先检查用户自定义主题
+        # Theme file path - first check user custom theme
         themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resources", "themes")
         theme_file = os.path.join(themes_dir, f"{theme_name}.json")
         
-        # 如果自定义主题不存在，尝试加载内置主题
+        # If custom theme doesn't exist, try to load built-in theme
         # if not os.path.exists(theme_file):
         #     builtin_themes_dir = os.path.join(
         #         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
@@ -94,21 +94,21 @@ class Settings(QObject):
             return None
         
     def save_custom_theme(self, theme_data):
-        """保存自定义主题配置"""
+        """Save custom theme configuration"""
         themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "themes")
         theme_file = os.path.join(themes_dir, "custom.json")
         
-        # 确保目录存在
+        # Ensure directory exists
         if not os.path.exists(themes_dir):
             os.makedirs(themes_dir)
         
-        # 确保主题数据包含必要字段
+        # Ensure theme data contains required fields
         if not theme_data.get("name"):
             theme_data["name"] = "custom"
         if not theme_data.get("display_name"):
-            theme_data["display_name"] = {"en": "Custom", "zh": "自定义"}
+            theme_data["display_name"] = {"en": "Custom", "zh": "Custom"}
         
-        # 保存主题文件
+        # Save theme file
         try:
             with open(theme_file, 'w', encoding='utf-8') as f:
                 json.dump(theme_data, f, indent=4, ensure_ascii=False)
@@ -118,16 +118,16 @@ class Settings(QObject):
             return False
 
     def get_available_themes(self):
-        """获取所有可用的主题"""
+        """Get all available themes"""
         themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resources", "themes")
         themes = []
         
-        # 确保目录存在
+        # Ensure directory exists
         if not os.path.exists(themes_dir):
             os.makedirs(themes_dir)
             return themes
         
-        # 加载所有主题文件
+        # Load all theme files
         for file in os.listdir(themes_dir):
             if file.endswith(".json"):
                 theme_name = file.split(".")[0]
@@ -135,7 +135,7 @@ class Settings(QObject):
                 if theme_data:
                     display_name = "Unknown"
                     if "display_name" in theme_data:
-                        # 获取当前语言的显示名称
+                        # Get display name in current language
                         current_lang = self.get_setting("language", "en")
                         if current_lang.lower() in ["中文", "chinese", "zh"]:
                             display_name = theme_data["display_name"].get("zh", theme_name)
@@ -152,11 +152,11 @@ class Settings(QObject):
         return themes
     
     def get_setting(self, key, default_value=None):
-        """获取设置值，带默认回退
+        """Get setting value with default fallback
         
         Args:
-            key (str): 设置键名
-            default_value: 默认值
+            key (str): Setting key name
+            default_value: Default value
             
         Returns:
             设置值，如果是布尔值相关的设置会确保返回bool类型
@@ -193,7 +193,7 @@ class Settings(QObject):
     def reset_settings(self):
         """重置所有设置为默认值"""
         self.settings.clear()
-        self.logger.info("所有设置已重置为默认值")
+        self.logger.info("All settings have been reset to default values")
         
         # 设置基本默认值
         self.set_setting("theme", "dark")

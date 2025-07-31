@@ -4,7 +4,7 @@ import sys
 import logging
 from typing import List, Dict, Tuple
 
-# 平台适配导入
+# Platform adaptation imports
 if sys.platform.startswith("win"):
     import winreg
     import win32com.client
@@ -19,7 +19,7 @@ from .base_tools import BaseThread
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 
 class StartupManager:
-    """管理Windows启动项的工具类"""
+    """Tool class for managing Windows startup items"""
     logger = logging.getLogger(__name__)
 
     if sys.platform.startswith("win"):
@@ -34,10 +34,10 @@ class StartupManager:
     
     @staticmethod
     def get_startup_items() -> List[Dict]:
-        """获取所有启动项
+        """Get all startup items
         
         Returns:
-            List[Dict]: 启动项列表，每项包含name, path, status, type
+            List[Dict]: List of startup items, each containing name, path, status, type
         """
         items = []
         
@@ -46,30 +46,30 @@ class StartupManager:
             return []
 
         try:
-            # 获取注册表启动项
+            # Get registry startup items
             items.extend(StartupManager._get_registry_items())
             
-            # 获取启动文件夹项
+            # Get startup folder items
             items.extend(StartupManager._get_folder_items())
             
-            # 获取计划任务启动项
+            # Get scheduled task startup items
             items.extend(StartupManager._get_scheduled_tasks())
             
             return items
         except Exception as e:
-            StartupManager.logger.error(f"获取启动项时出错: {e}")
+            StartupManager.logger.error(f"Error getting startup items: {e}")
             return []
     
     @staticmethod
     def _get_registry_items() -> List[Dict]:
-        """获取注册表中的启动项"""
+        """Get startup items from registry"""
         items = []
         
         if not sys.platform.startswith("win"):
             return []
 
         for location_name, location_value in StartupManager.STARTUP_LOCATIONS.items():
-            # 只处理元组类型的注册表位置，跳过字符串路径
+            # Only process tuple-type registry locations, skip string paths
             if not isinstance(location_value, tuple) or len(location_value) != 2:
                 continue
                 
@@ -80,33 +80,33 @@ class StartupManager:
                     while True:
                         try:
                             name, value, _ = winreg.EnumValue(key, i)
-                            # 检查是否被禁用
+                            # Check if disabled
                             is_enabled = not StartupManager._is_registry_item_disabled(name)
                             
                             items.append({
                                 "name": name,
                                 "path": value,
-                                "status": "已启用" if is_enabled else "已禁用",
-                                "type": "注册表"
+                                "status": "Enabled" if is_enabled else "Disabled",
+                                "type": "Registry"
                             })
                             i += 1
                         except OSError:
                             break
             except Exception as e:
-                StartupManager.logger.error(f"读取注册表启动项出错 ({location_name}): {e}")
+                StartupManager.logger.error(f"Error reading registry startup items ({location_name}): {e}")
         
         return items
     
     @staticmethod
     def _get_folder_items() -> List[Dict]:
-        """获取启动文件夹中的启动项"""
+        """Get startup items from startup folders"""
         items = []
         
         if not sys.platform.startswith("win"):
             return []
 
         for location_name, location_value in StartupManager.STARTUP_LOCATIONS.items():
-            # 只处理字符串类型的路径，跳过注册表键值对
+            # Only process string-type paths, skip registry key-value pairs
             if not isinstance(location_value, str):
                 continue
                 
@@ -116,7 +116,7 @@ class StartupManager:
                     for filename in os.listdir(folder_path):
                         file_path = os.path.join(folder_path, filename)
                         if os.path.isfile(file_path) and (filename.endswith('.lnk') or filename.endswith('.url')):
-                            # 获取快捷方式目标
+                            # Get shortcut target
                             shell_obj = win32com.client.Dispatch("WScript.Shell")
                             shortcut = shell_obj.CreateShortCut(file_path)
                             target_path = shortcut.Targetpath
@@ -124,17 +124,17 @@ class StartupManager:
                             items.append({
                                 "name": os.path.splitext(filename)[0],
                                 "path": target_path,
-                                "status": "已启用",  # 文件夹中的项总是启用的
-                                "type": "启动文件夹"
+                                "status": "Enabled",  # Items in folders are always enabled
+                                "type": "Startup Folder"
                             })
             except Exception as e:
-                StartupManager.logger.error(f"读取启动文件夹项出错 ({location_name}): {e}")
+                StartupManager.logger.error(f"Error reading startup folder items ({location_name}): {e}")
         
         return items
     
     @staticmethod
     def _get_scheduled_tasks() -> List[Dict]:
-        """获取计划任务中的启动项"""
+        """Get startup items from scheduled tasks"""
         items = []
         
         if not sys.platform.startswith("win"):
@@ -152,20 +152,20 @@ class StartupManager:
                         items.append({
                             "name": task.Name,
                             "path": task.Path,
-                            "status": "已启用" if task.Enabled else "已禁用",
-                            "type": "任务计划程序"
+                            "status": "Enabled" if task.Enabled else "Disabled",
+                            "type": "Task Scheduler"
                         })
                 except Exception as e:
-                    StartupManager.logger.error(f"读取计划任务 {task.Name} 出错: {e}")
+                    StartupManager.logger.error(f"Error reading scheduled task {task.Name}: {e}")
                     continue
         except Exception as e:
-            StartupManager.logger.error(f"读取计划任务启动项出错: {e}")
+            StartupManager.logger.error(f"Error reading scheduled task startup items: {e}")
         
         return items
     
     @staticmethod
     def _is_registry_item_disabled(name: str) -> bool:
-        """检查注册表启动项是否被禁用"""
+        """Check if registry startup item is disabled"""
         if not sys.platform.startswith("win"):
             return False
         try:
@@ -178,7 +178,7 @@ class StartupManager:
             
             try:
                 value, _ = winreg.QueryValueEx(disabled_key, name)
-                # 第一个字节为02表示禁用
+                # First byte 0x02 indicates disabled
                 return value[0] == 0x02
             except OSError:
                 return False
@@ -189,111 +189,111 @@ class StartupManager:
     
     @staticmethod
     def enable_startup_item(name: str, item_type: str) -> bool:
-        """启用启动项
+        """Enable startup item
         
         Args:
-            name: 启动项名称
-            item_type: 启动项类型 ("注册表", "启动文件夹", "任务计划程序")
+            name: Startup item name
+            item_type: Startup item type ("Registry", "Startup Folder", "Task Scheduler")
             
         Returns:
-            bool: 是否成功
+            bool: Whether successful
         """
         if not sys.platform.startswith("win"):
             return False
         try:
-            if item_type == "注册表":
+            if item_type == "Registry":
                 return StartupManager._enable_registry_item(name)
-            elif item_type == "任务计划程序":
+            elif item_type == "Task Scheduler":
                 return StartupManager._enable_scheduled_task(name)
             else:
-                StartupManager.logger.warning(f"不支持启用类型为 {item_type} 的启动项")
+                StartupManager.logger.warning(f"Unsupported startup item type for enabling: {item_type}")
                 return False
         except Exception as e:
-            StartupManager.logger.error(f"启用启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error enabling startup item {name}: {e}")
             return False
     
     @staticmethod
     def disable_startup_item(name: str, item_type: str) -> bool:
-        """禁用启动项
+        """Disable startup item
         
         Args:
-            name: 启动项名称
-            item_type: 启动项类型 ("注册表", "启动文件夹", "任务计划程序")
+            name: Startup item name
+            item_type: Startup item type ("Registry", "Startup Folder", "Task Scheduler")
             
         Returns:
-            bool: 是否成功
+            bool: Whether successful
         """
         if not sys.platform.startswith("win"):
             return False
         try:
-            if item_type == "注册表":
+            if item_type == "Registry":
                 return StartupManager._disable_registry_item(name)
-            elif item_type == "任务计划程序":
+            elif item_type == "Task Scheduler":
                 return StartupManager._disable_scheduled_task(name)
             else:
-                StartupManager.logger.warning(f"不支持禁用类型为 {item_type} 的启动项")
+                StartupManager.logger.warning(f"Unsupported startup item type for disabling: {item_type}")
                 return False
         except Exception as e:
-            StartupManager.logger.error(f"禁用启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error disabling startup item {name}: {e}")
             return False
     
     @staticmethod
     def delete_startup_item(name: str, path: str, item_type: str) -> bool:
-        """删除启动项
+        """Delete startup item
         
         Args:
-            name: 启动项名称
-            path: 启动项路径
-            item_type: 启动项类型 ("注册表", "启动文件夹", "任务计划程序")
+            name: Startup item name
+            path: Startup item path
+            item_type: Startup item type ("Registry", "Startup Folder", "Task Scheduler")
             
         Returns:
-            bool: 是否成功
+            bool: Whether successful
         """
         if not sys.platform.startswith("win"):
             return False
         try:
-            if item_type == "注册表":
+            if item_type == "Registry":
                 return StartupManager._delete_registry_item(name)
-            elif item_type == "启动文件夹":
+            elif item_type == "Startup Folder":
                 return StartupManager._delete_folder_item(path)
-            elif item_type == "任务计划程序":
+            elif item_type == "Task Scheduler":
                 return StartupManager._delete_scheduled_task(name)
             else:
-                StartupManager.logger.warning(f"不支持删除类型为 {item_type} 的启动项")
+                StartupManager.logger.warning(f"Unsupported startup item type for deletion: {item_type}")
                 return False
         except Exception as e:
-            StartupManager.logger.error(f"删除启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error deleting startup item {name}: {e}")
             return False
     
     @staticmethod
-    def add_startup_item(name: str, path: str, item_type: str = "注册表") -> bool:
-        """添加新的启动项
+    def add_startup_item(name: str, path: str, item_type: str = "Registry") -> bool:
+        """Add new startup item
         
         Args:
-            name: 启动项名称
-            path: 启动项路径
-            item_type: 启动项类型 ("注册表", "启动文件夹")
+            name: Startup item name
+            path: Startup item path
+            item_type: Startup item type ("Registry", "Startup Folder")
             
         Returns:
-            bool: 是否成功
+            bool: Whether successful
         """
         if not sys.platform.startswith("win"):
             return False
         try:
-            if item_type == "注册表":
+            if item_type == "Registry":
                 return StartupManager._add_registry_item(name, path)
-            elif item_type == "启动文件夹":
+            elif item_type == "Startup Folder":
                 return StartupManager._add_folder_item(name, path)
             else:
-                StartupManager.logger.warning(f"不支持添加类型为 {item_type} 的启动项")
+                StartupManager.logger.warning(f"Unsupported startup item type for adding: {item_type}")
                 return False
         except Exception as e:
-            StartupManager.logger.error(f"添加启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error adding startup item {name}: {e}")
             return False
     
     @staticmethod
     def _enable_registry_item(name: str) -> bool:
-        """启用注册表启动项"""
+        """Enable registry startup item"""
         if not sys.platform.startswith("win"):
             return False
         try:
@@ -304,18 +304,18 @@ class StartupManager:
                 winreg.KEY_WRITE
             )
             
-            # 设置启用状态（全部字节设为0）
+            # Set enabled status (all bytes set to 0)
             value = bytes([0x00] * 12)
             winreg.SetValueEx(key, name, 0, winreg.REG_BINARY, value)
             winreg.CloseKey(key)
             return True
         except Exception as e:
-            StartupManager.logger.error(f"启用注册表启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error enabling registry startup item {name}: {e}")
             return False
     
     @staticmethod
     def _disable_registry_item(name: str) -> bool:
-        """禁用注册表启动项"""
+        """Disable registry startup item"""
         if not sys.platform.startswith("win"):
             return False
         try:
@@ -326,18 +326,18 @@ class StartupManager:
                 winreg.KEY_WRITE
             )
             
-            # 设置禁用状态（第一个字节为02）
+            # Set disabled status (first byte is 0x02)
             value = bytes([0x02] + [0x00] * 11)
             winreg.SetValueEx(key, name, 0, winreg.REG_BINARY, value)
             winreg.CloseKey(key)
             return True
         except Exception as e:
-            StartupManager.logger.error(f"禁用注册表启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error disabling registry startup item {name}: {e}")
             return False
     
     @staticmethod
     def _enable_scheduled_task(name: str) -> bool:
-        """启用计划任务"""
+        """Enable scheduled task"""
         if not sys.platform.startswith("win"):
             return False
         try:
@@ -347,12 +347,12 @@ class StartupManager:
             task.Enabled = True
             return True
         except Exception as e:
-            StartupManager.logger.error(f"启用计划任务 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error enabling scheduled task {name}: {e}")
             return False
     
     @staticmethod
     def _disable_scheduled_task(name: str) -> bool:
-        """禁用计划任务"""
+        """Disable scheduled task"""
         if not sys.platform.startswith("win"):
             return False
         try:
@@ -362,16 +362,16 @@ class StartupManager:
             task.Enabled = False
             return True
         except Exception as e:
-            StartupManager.logger.error(f"禁用计划任务 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error disabling scheduled task {name}: {e}")
             return False
     
     @staticmethod
     def _delete_registry_item(name: str) -> bool:
-        """删除注册表启动项"""
+        """Delete registry startup item"""
         if not sys.platform.startswith("win"):
             return False
         try:
-            # 尝试从HKCU删除
+            # Try to delete from HKCU
             try:
                 key = winreg.OpenKey(
                     winreg.HKEY_CURRENT_USER,
@@ -385,7 +385,7 @@ class StartupManager:
             except OSError:
                 pass
             
-            # 尝试从HKLM删除
+            # Try to delete from HKLM
             try:
                 key = winreg.OpenKey(
                     winreg.HKEY_LOCAL_MACHINE,
@@ -401,12 +401,12 @@ class StartupManager:
             
             return False
         except Exception as e:
-            StartupManager.logger.error(f"删除注册表启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error deleting registry startup item {name}: {e}")
             return False
     
     @staticmethod
     def _delete_folder_item(path: str) -> bool:
-        """删除启动文件夹项"""
+        """Delete startup folder item"""
         if not sys.platform.startswith("win"):
             return False
         try:
@@ -415,12 +415,12 @@ class StartupManager:
                 return True
             return False
         except Exception as e:
-            StartupManager.logger.error(f"删除启动文件夹项 {path} 时出错: {e}")
+            StartupManager.logger.error(f"Error deleting startup folder item {path}: {e}")
             return False
     
     @staticmethod
     def _delete_scheduled_task(name: str) -> bool:
-        """删除计划任务"""
+        """Delete scheduled task"""
         if not sys.platform.startswith("win"):
             return False
         try:
@@ -430,12 +430,12 @@ class StartupManager:
             root_folder.DeleteTask(name, 0)
             return True
         except Exception as e:
-            StartupManager.logger.error(f"删除计划任务 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error deleting scheduled task {name}: {e}")
             return False
     
     @staticmethod
     def _add_registry_item(name: str, path: str) -> bool:
-        """添加注册表启动项"""
+        """Add registry startup item"""
         if not sys.platform.startswith("win"):
             return False
         try:
@@ -449,12 +449,12 @@ class StartupManager:
             winreg.CloseKey(key)
             return True
         except Exception as e:
-            StartupManager.logger.error(f"添加注册表启动项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error adding registry startup item {name}: {e}")
             return False
     
     @staticmethod
     def _add_folder_item(name: str, path: str) -> bool:
-        """添加启动文件夹项"""
+        """Add startup folder item"""
         if not sys.platform.startswith("win"):
             return False
         try:
@@ -467,7 +467,7 @@ class StartupManager:
             shortcut.save()
             return True
         except Exception as e:
-            StartupManager.logger.error(f"添加启动文件夹项 {name} 时出错: {e}")
+            StartupManager.logger.error(f"Error adding startup folder item {name}: {e}")
             return False 
         
 class BootRepairThread(BaseThread):

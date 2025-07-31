@@ -13,70 +13,70 @@ from tools.boot_repair import StartupManager
 class BootToolsWidget(BaseComponent):
     """Widget for boot tools operations including repair and startup management"""
     def __init__(self, parent=None):
-        # 初始化属性
+        # Initialize attributes
         self.boot_worker = None
         
-        # 调用父类构造函数
+        # Call parent class constructor
         super().__init__(parent)
         
     def setup_ui(self):
-        """设置UI元素"""
-        # 设置主布局
+        """Setup UI elements"""
+        # Set main layout
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(15)
         
-        # 启用样式表背景
+        # Enable stylesheet background
         self.setAttribute(Qt.WA_StyledBackground, True)
         
-        # 标题
+        # Title
         self.title = QLabel(self.get_translation("title", "Boot Tools & Startup Manager"))
         self.title.setStyleSheet("font-size: 24px; font-weight: bold;")
         self.main_layout.addWidget(self.title)
         
-        # 描述
+        # Description
         self.description = QLabel(self.get_translation("description", "Repair Windows boot issues and manage startup programs."))
         self.description.setStyleSheet("font-size: 14px;")
         self.description.setWordWrap(True)
         self.main_layout.addWidget(self.description)
         
-        # 非Windows系统的警告标签
+        # Warning label for non-Windows systems
         if not self.platform_manager.is_windows():
             warning_label = QLabel("⚠️ Boot tools features are only available on Windows")
             warning_label.setStyleSheet("color: #ff9900; font-weight: bold;")
             self.main_layout.addWidget(warning_label)
         
-        # 创建标签页
+        # Create tabs
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
         
-        # 修复标签页
+        # Repair tab
         self.repair_tab = QWidget()
         
-        # 启动项管理标签页
+        # Startup management tab
         self.startup_tab = QWidget()
         
-        # 设置标签页的内容
+        # Setup tab contents
         self.setup_repair_tab(self.repair_tab)
         self.setup_startup_manager_tab(self.startup_tab)
         
-        # 添加标签页
+        # Add tabs
         self.tabs.addTab(self.repair_tab, self.get_translation("repair_tab", "Boot Repair"))
         self.tabs.addTab(self.startup_tab, self.get_translation("startup_tab", "Startup Manager"))
         
-        # 添加到主布局
+        # Add to main layout
         self.main_layout.addWidget(self.tabs)
         
-        # 应用当前主题
+        # Apply current theme
         self.apply_theme()
         
     def apply_theme(self):
-        """应用主题样式到组件"""
+        """Apply theme styles to component"""
         try:
-            # 首先调用基类的应用主题方法
+            # First call the base class apply theme method
             super().apply_theme()
             
-            # 获取当前主题
+            # Get current theme
             theme_name = self.settings.get_setting("theme", "dark")
             theme_data = self.settings.load_theme(theme_name)
             
@@ -93,14 +93,14 @@ class BootToolsWidget(BaseComponent):
                 button_hover_bg_color = theme_data["colors"].get("button_hover_bg_color", self.lighten_color(bg_color, 15))
                 button_pressed_bg_color = theme_data["colors"].get("button_pressed_bg_color", self.lighten_color(bg_color, 5))
 
-                # 更新标题和描述的颜色（如果它们存在）
+                # Update title and description colors (if they exist)
                 if hasattr(self, 'title') and self.title is not None:
                     self.title.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {text_color};")
                 
                 if hasattr(self, 'description') and self.description is not None:
                     self.description.setStyleSheet(f"font-size: 14px; color: {text_color};")
 
-                # 更新组件样式 - 更全面的样式覆盖
+                # Update component styles - more comprehensive style coverage
                 self.setStyleSheet(f"""
                     QWidget {{ background-color: transparent; color: {text_color}; }}
                     QTabWidget::pane {{ border: 1px solid {border_color}; border-radius: 4px; background-color: {bg_color}; }}
@@ -675,17 +675,17 @@ class BootToolsWidget(BaseComponent):
             self.description.setText(self.get_translation("description", ""))
             
     def on_repair_option_clicked(self, checkbox):
-        """处理修复选项点击"""
+        """Handle repair option click"""
         button_id = checkbox.objectName()
-        self.logger.info(f"启动修复选项更改为: {checkbox.text()}")
+        self.logger.info(f"Boot repair option changed to: {checkbox.text()}")
         
-        # 如果用户选中一个选项
+        # If user selects an option
         if checkbox.isChecked():
-            # 保存设置
+            # Save settings
             self.settings.set_setting("boot_repair_type", button_id)
             self.settings.sync()
             
-            # 确保其他选项被取消选中（互斥性）
+            # Ensure other options are unchecked (mutual exclusivity)
             if checkbox != self.repair_mbr_radio:
                 self.repair_mbr_radio.setChecked(False)
             if checkbox != self.repair_bcd_radio:
@@ -697,17 +697,17 @@ class BootToolsWidget(BaseComponent):
             if checkbox != self.repair_full_radio:
                 self.repair_full_radio.setChecked(False)
             
-            # 记录所选修复选项
+            # Log selected repair option
             repair_type = button_id.replace("_radio", "")
             self.log_output.append(self.get_translation("selected_repair", f"Selected repair: {checkbox.text()}"))
         else:
-            # 如果用户取消了当前选项，确保至少有一个选项是选中的
+            # If user unchecks current option, ensure at least one option is selected
             if not (self.repair_mbr_radio.isChecked() or 
                     self.repair_bcd_radio.isChecked() or 
                     self.repair_bootmgr_radio.isChecked() or 
                     self.repair_winload_radio.isChecked() or 
                     self.repair_full_radio.isChecked()):
-                # 默认选中当前选项（不允许没有选项被选中）
+                # Default to current option (don't allow no option to be selected)
                 checkbox.setChecked(True)
 
     def toggle_startup_item(self, state):

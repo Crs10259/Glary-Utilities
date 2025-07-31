@@ -794,17 +794,17 @@ class SystemCleanerWidget(BaseComponent):
                 self.exclusions_list.clear()
                 for excl in self.exclusions:
                     self.exclusions_list.addItem(excl)
-                self.logger.debug(f"已加载 {len(self.exclusions)} 个排除项")
+                self.logger.debug(f"Loaded {len(self.exclusions)} exclusions")
         except Exception as e:
-            self.logger.error(f"加载排除项失败: {str(e)}")
+            self.logger.error(f"Failed to load exclusions: {str(e)}")
     
     def save_exclusions(self):
         """保存排除项列表到设置"""
         try:
             self.settings.set_setting("system_cleaner_exclusions", self.exclusions)
-            self.logger.debug(f"已保存 {len(self.exclusions)} 个排除项")
+            self.logger.debug(f"Saved {len(self.exclusions)} exclusions")
         except Exception as e:
-            self.logger.error(f"保存排除项失败: {str(e)}")
+            self.logger.error(f"Failed to save exclusions: {str(e)}")
 
     def load_extensions(self):
         """从设置加载扩展名列表"""
@@ -816,17 +816,17 @@ class SystemCleanerWidget(BaseComponent):
                 self.extensions_list.clear()
                 for ext in self.extensions:
                     self.extensions_list.addItem(ext)
-                self.logger.debug(f"已加载 {len(self.extensions)} 个扩展名")
+                self.logger.debug(f"Loaded {len(self.extensions)} extensions")
         except Exception as e:
-            self.logger.error(f"加载扩展名失败: {str(e)}")
+            self.logger.error(f"Failed to load extensions: {str(e)}")
     
     def save_extensions(self):
         """保存扩展名列表到设置"""
         try:
             self.settings.set_setting("system_cleaner_extensions", self.extensions)
-            self.logger.debug(f"已保存 {len(self.extensions)} 个扩展名")
+            self.logger.debug(f"Saved {len(self.extensions)} extensions")
         except Exception as e:
-            self.logger.error(f"保存扩展名失败: {str(e)}") 
+            self.logger.error(f"Failed to save extensions: {str(e)}") 
 
     def apply_theme(self):
         """Apply theme colors dynamically instead of hard-coded dark scheme."""

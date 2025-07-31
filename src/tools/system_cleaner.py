@@ -122,7 +122,7 @@ class CleanerWorker(BaseThread):
                 else:
                     results["failed_count"] += 1
             except Exception as e:
-                self.logger.error(f"清理 {file_path} 时出错: {e}")
+                self.logger.error(f"Error cleaning {file_path}: {e}")
                 results["failed_count"] += 1
         
         self.progress_updated.emit(100, f"清理完成。清理了 {results['cleaned_count']} 个文件 ({self.format_size(results['cleaned_size'])})")
@@ -159,9 +159,9 @@ class CleanerWorker(BaseThread):
                             "size": file_size
                         })
                     except Exception as e:
-                        self.logger.error(f"获取文件信息时出错 {file_path}: {e}")
+                        self.logger.error(f"Error getting file info {file_path}: {e}")
         except Exception as e:
-            self.logger.error(f"扫描目录 {directory} 时出错: {e}")
+            self.logger.error(f"Error scanning directory {directory}: {e}")
         
         return files
     
@@ -186,7 +186,7 @@ class CleanerWorker(BaseThread):
                 if os.path.exists(trash_path):
                     files = self.scan_directory(trash_path)
         except Exception as e:
-            self.logger.error(f"扫描回收站时出错: {e}")
+            self.logger.error(f"Error scanning recycle bin: {e}")
         
         return files
     
@@ -236,7 +236,7 @@ class CleanerWorker(BaseThread):
                     files.extend(self.scan_directory(edge_cache))
             
         except Exception as e:
-            self.logger.error(f"扫描浏览器缓存时出错: {e}")
+            self.logger.error(f"Error scanning browser cache: {e}")
         
         return files
     
@@ -271,7 +271,7 @@ class CleanerWorker(BaseThread):
                                             "size": file_size
                                         })
                                     except Exception as e:
-                                        self.logger.error(f"获取日志文件信息时出错: {e}")
+                                        self.logger.error(f"Error getting log file info: {e}")
             elif system == "Darwin" or system == "Linux":
                 # macOS/Linux日志
                 log_paths = [
@@ -286,7 +286,7 @@ class CleanerWorker(BaseThread):
                         log_files = [f for f in log_files if f["name"].endswith(".log")]
                         files.extend(log_files)
         except Exception as e:
-            self.logger.error(f"扫描日志文件时出错: {e}")
+            self.logger.error(f"Error scanning log files: {e}")
         
         return files
     

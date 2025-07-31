@@ -10,46 +10,46 @@ import logging
 import time
 
 class PlatformManager:
-    """平台相关的工具函数"""
+    """Platform-related utility functions"""
     def __init__(self):
         self.current_system = platform.system().lower()
         self.logger = logging.getLogger('GlaryUtilities')
 
     def is_windows(self):
-        """检查当前操作系统是否为Windows"""
+        """Check if current operating system is Windows"""
         return self.current_system == 'windows'
     
     def is_linux(self):
-        """检查当前操作系统是否为Linux"""
+        """Check if current operating system is Linux"""
         return self.current_system == 'linux'
     
     def is_mac(self):
-        """检查当前操作系统是否为macOS"""
+        """Check if current operating system is macOS"""
         return self.current_system == 'darwin'
     
 class SystemInformation(PlatformManager):
-    """平台相关的工具函数"""
+    """Platform-related utility functions"""
     
-    _instance = None  # 类变量，用于存储单例实例
-    _temp_failure_count = 0  # 温度数据获取失败计数
-    _temp_retry_delay = 1  # 温度数据重试延迟时间（秒）
-    _temp_last_attempt = 0  # 上次尝试获取温度的时间戳
-    _MAX_RETRY_DELAY = 1000000  # 最大重试延迟时间（秒）
+    _instance = None  # Class variable for storing singleton instance
+    _temp_failure_count = 0  # Temperature data acquisition failure count
+    _temp_retry_delay = 1  # Temperature data retry delay time (seconds)
+    _temp_last_attempt = 0  # Timestamp of last temperature acquisition attempt
+    _MAX_RETRY_DELAY = 1000000  # Maximum retry delay time (seconds)
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(SystemInformation, cls).__new__(cls)
-            cls._instance._initialized = False  # 标记为未初始化
+            cls._instance._initialized = False  # Mark as uninitialized
         return cls._instance
 
     def __init__(self):
-        # 确保初始化只执行一次
+        # Ensure initialization only happens once
         if not hasattr(self, '_initialized') or not self._initialized:
             super().__init__()
-            self._initialized = True  # 标记为已初始化
+            self._initialized = True  # Mark as initialized
 
     def get_drives_list(self):
-        """获取系统所有驱动器列表，返回驱动器字典列表，包含名称、类型等信息"""
+        """Get list of all system drives, returns list of drive dictionaries containing name, type, etc."""
         if self.is_windows():
             return self._get_drives_list_windows()
         elif self.is_linux() or self.is_mac():
@@ -58,7 +58,7 @@ class SystemInformation(PlatformManager):
             return []
         
     def _get_drives_list_windows(self):
-        """获取系统所有驱动器列表，返回驱动器字典列表，包含名称、类型等信息"""
+        """Get list of all system drives, returns list of drive dictionaries containing name, type, etc."""
         try:
             drives = []
             if self.is_windows():
@@ -66,25 +66,25 @@ class SystemInformation(PlatformManager):
                 import win32file
                 
                 drive_strings = win32api.GetLogicalDriveStrings()
-                drive_letters = drive_strings.split('\000')[:-1]  # 删除最后一个空字符串
+                drive_letters = drive_strings.split('\000')[:-1]  # Remove last empty string
                 
                 for drive in drive_letters:
                     try:
                         drive_type = win32file.GetDriveType(drive)
                         drive_type_name = {
-                            0: "未知",
-                            1: "不存在",
-                            2: "可移动磁盘",
-                            3: "硬盘",
-                            4: "网络硬盘",
-                            5: "光盘",
-                            6: "RAM磁盘"
-                        }.get(drive_type, "未知")
+                            0: "Unknown",
+                            1: "Not Exists",
+                            2: "Removable Disk",
+                            3: "Hard Disk",
+                            4: "Network Disk",
+                            5: "CD-ROM",
+                            6: "RAM Disk"
+                        }.get(drive_type, "Unknown")
                         
-                        # 检查驱动器是否可访问
+                        # Check if drive is accessible
                         accessible = os.access(drive, os.R_OK)
                         
-                        # 获取卷标（如果可能）
+                        # Get volume label (if possible)
                         volume_name = ""
                         try:
                             volume_info = win32api.GetVolumeInformation(drive)
@@ -93,12 +93,12 @@ class SystemInformation(PlatformManager):
                         except:
                             pass
                         
-                        # 创建显示名称（驱动器盘符 + 卷标）
+                        # Create display name (drive letter + volume label)
                         display_name = drive
                         if volume_name:
                             display_name = f"{drive} ({volume_name})"
                         
-                        # 创建驱动器信息字典
+                        # Create drive information dictionary
                         drive_info = {
                             "name": drive,
                             "display_name": display_name,
@@ -109,44 +109,44 @@ class SystemInformation(PlatformManager):
                         
                         drives.append(drive_info)
                     except Exception as e:
-                        self.logger.warning(f"获取驱动器 {drive} 信息出错: {e}")
+                        self.logger.warning(f"Error getting drive {drive} information: {e}")
                         continue
                 
-            return drives  # 确保返回驱动器列表
+            return drives  # Ensure drive list is returned
 
         except Exception as e:
-            self.logger.error(f"获取驱动器列表时出错: {e}")
+            self.logger.error(f"Error getting drive list: {e}")
             return []
         
     def _get_drives_list_unix(self):
-        """获取Unix系统所有驱动器列表，返回驱动器字典列表，包含名称、类型等信息"""
+        """Get list of all Unix system drives, returns list of drive dictionaries containing name, type, etc."""
         try:
             drives = []
-            # 对于Unix系统，返回根目录
+            # For Unix systems, return root directory
             drives.append({
                 "name": "/",
-                "display_name": "根目录 (/)",
-                "type": "文件系统",
+                "display_name": "Root Directory (/)",
+                "type": "File System",
                 "accessible": os.access("/", os.R_OK),
                 "volume_name": ""
             })
                 
             return drives
         except Exception as e:
-            self.logger.error(f"获取Unix系统驱动器列表时出错: {e}")
+            self.logger.error(f"Error getting Unix system drive list: {e}")
             return []
     
     def get_home_dir(self):
-        """获取用户主目录路径"""
+        """Get user home directory path"""
         try:
             home = os.path.expanduser("~")
             return home
         except Exception as e:
-            self.logger.error(f"获取用户主目录时出错: {e}")
+            self.logger.error(f"Error getting user home directory: {e}")
             return os.path.dirname(os.path.abspath(__file__))
     
     def get_system_info(self):
-        """获取系统基本信息"""
+        """Get basic system information"""
         try:
             info = {
                 "os": platform.system() + " " + platform.release(),
@@ -157,17 +157,17 @@ class SystemInformation(PlatformManager):
                 "python_version": platform.python_version()
             }
             
-            # 添加CPU信息
+            # Add CPU information
             cpu_info = self.get_cpu_info()
             info.update(cpu_info)
             
-            # 添加内存信息
+            # Add memory information
             memory = psutil.virtual_memory()
             info["memory_total"] = self.format_bytes(memory.total)
             info["memory_available"] = self.format_bytes(memory.available)
             info["memory_percent"] = f"{memory.percent}%"
             
-            # 添加磁盘信息
+            # Add disk information
             disk_info = {}
             for i, disk in enumerate(self.get_disk_info()):
                 disk_info[f"disk_{i}_device"] = disk["device"]
@@ -180,20 +180,20 @@ class SystemInformation(PlatformManager):
             
             return info
         except Exception as e:
-            self.logger.error(f"获取系统信息时出错: {e}")
+            self.logger.error(f"Error getting system information: {e}")
             return {"error": str(e)}
     
     def get_cpu_info(self):
-        """获取CPU信息"""
+        """Get CPU information"""
         try:
             info = {}
             
-            # 基本信息
+            # Basic information
             info["cpu_brand"] = platform.processor()
             info["cpu_cores_physical"] = psutil.cpu_count(logical=False)
             info["cpu_cores_logical"] = psutil.cpu_count(logical=True)
             
-            # CPU频率
+            # CPU frequency
             cpu_freq = psutil.cpu_freq()
             if cpu_freq:
                 info["cpu_freq_current"] = f"{cpu_freq.current:.2f} MHz"
@@ -202,16 +202,16 @@ class SystemInformation(PlatformManager):
                 if hasattr(cpu_freq, "max") and cpu_freq.max:
                     info["cpu_freq_max"] = f"{cpu_freq.max:.2f} MHz"
             
-            # CPU使用率
+            # CPU usage
             info["cpu_percent"] = f"{psutil.cpu_percent(interval=0.1)}%"
             
             return info
         except Exception as e:
-            self.logger.error(f"获取CPU信息时出错: {e}")
+            self.logger.error(f"Error getting CPU information: {e}")
             return {"cpu_error": str(e)}
     
     def get_memory_info(self):
-        """获取内存信息"""
+        """Get memory information"""
         try:
             memory = psutil.virtual_memory()
             swap = psutil.swap_memory()
@@ -228,15 +228,15 @@ class SystemInformation(PlatformManager):
             
             return info
         except Exception as e:
-            self.logger.error(f"获取内存信息时出错: {e}")
+            self.logger.error(f"Error getting memory information: {e}")
             return {"Memory Error": str(e)}
     
     def get_disk_info(self):
-        """获取磁盘信息"""
+        """Get disk information"""
         try:
             disks = []
             
-            # 获取所有磁盘分区
+            # Get all disk partitions
             partitions = psutil.disk_partitions()
             for partition in partitions:
                 try:
@@ -252,32 +252,32 @@ class SystemInformation(PlatformManager):
                     }
                     disks.append(disk)
                 except (PermissionError, OSError) as e:
-                    # 某些卷可能无法访问
+                    # Some volumes may not be accessible
                     continue
             
             return disks
         except Exception as e:
-            self.logger.error(f"获取磁盘信息时出错: {e}")
+            self.logger.error(f"Error getting disk information: {e}")
             return []
     
     def get_network_info(self):
-        """获取网络信息"""
+        """Get network information"""
         try:
             info = {}
             
-            # 获取主机名和IP地址
+            # Get hostname and IP address
             info["hostname"] = socket.gethostname()
             try:
                 info["ip_address"] = socket.gethostbyname(info["hostname"])
             except:
                 info["ip_address"] = "Unknown"
             
-            # 获取MAC地址
+            # Get MAC address
             mac_address = ':'.join(['{:02x}'.format((uuid.getnode() >> elements) & 0xff)
                                   for elements in range(0, 8 * 6, 8)][::-1])
             info["mac_address"] = mac_address
             
-            # 获取网络接口
+            # Get network interfaces
             interfaces = []
             for name, addrs in psutil.net_if_addrs().items():
                 interface = {"name": name, "addresses": []}
@@ -305,11 +305,11 @@ class SystemInformation(PlatformManager):
             
             return info
         except Exception as e:
-            self.logger.error(f"获取网络信息时出错: {e}")
+            self.logger.error(f"Error getting network information: {e}")
             return {"error": str(e)}
     
     def format_bytes(self, bytes_value):
-        """格式化字节数为可读字符串"""
+        """Format bytes to readable string"""
         try:
             for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB']:
                 if bytes_value < 1024.0:
@@ -325,10 +325,10 @@ class SystemInformation(PlatformManager):
         return dt.strftime("%Y-%m-%d %H:%M:%S")
     
     def get_gpu_info(self):
-        """获取GPU信息，优先使用GPUtil库，若不可用则使用命令行工具"""
+        """Get GPU information, prioritize GPUtil library, fallback to command line tools"""
         try:
             gpu_info = None
-            # 尝试使用GPUtil库获取信息
+            # Try to use GPUtil library to get information
             try:
                 import GPUtil
                 gpus = GPUtil.getGPUs()
@@ -336,25 +336,25 @@ class SystemInformation(PlatformManager):
                     info = []
                     for gpu in gpus:
                         gpu_info = [
-                            f"名称: {gpu.name}",
-                            f"显存: {gpu.memoryTotal} MB",
-                            f"驱动版本: {gpu.driver}",
-                            f"显存使用率: {gpu.memoryUtil*100:.1f}%",
-                            f"GPU使用率: {gpu.load*100:.1f}%",
-                            f"温度: {gpu.temperature}°C" if hasattr(gpu, 'temperature') else "温度: 未知"
+                            f"Name: {gpu.name}",
+                            f"Memory: {gpu.memoryTotal} MB",
+                            f"Driver Version: {gpu.driver}",
+                            f"Memory Usage: {gpu.memoryUtil*100:.1f}%",
+                            f"GPU Usage: {gpu.load*100:.1f}%",
+                            f"Temperature: {gpu.temperature}°C" if hasattr(gpu, 'temperature') else "Temperature: Unknown"
                         ]
                         info.append("\n".join(gpu_info))
                     return "\n\n".join(info)
                 
-                # GPUtil找不到GPU
-                gpu_info = "使用GPUtil未检测到GPU, "
+                # GPUtil couldn't find GPU
+                gpu_info = "GPUtil didn't detect GPU, "
             
             except ImportError:
-                self.logger.info("GPUtil库不可用，尝试使用命令行获取GPU信息")
-                # 继续使用命令行获取信息
+                self.logger.info("GPUtil library not available, trying command line to get GPU information")
+                # Continue using command line to get information
                 pass
             
-            # 使用系统命令获取GPU信息
+            # Use system commands to get GPU information
             if self.is_windows():
                 return self._get_gpu_info_windows()
             elif self.is_linux():
@@ -362,18 +362,18 @@ class SystemInformation(PlatformManager):
             elif self.is_mac():
                 return self._get_gpu_info_mac()
             else:
-                gpu_info += "使用命令行，不支持的操作系统"
+                gpu_info += "using command line, unsupported operating system"
             
             return gpu_info
         
         except Exception as e:
-            self.logger.error(f"获取GPU信息时出错: {str(e)}")
-            return f"GPU信息错误: {str(e)}"
+            self.logger.error(f"Error getting GPU information: {str(e)}")
+            return f"GPU information error: {str(e)}"
     
     def _get_gpu_info_windows(self):
-        """使用wmic命令在Windows上获取GPU信息"""
+        """Use wmic command to get GPU information on Windows"""
         try:
-            # 尝试使用wmic获取信息
+            # Try to use wmic to get information
             process = subprocess.Popen(
                 ["wmic", "path", "win32_VideoController", "get", "Name,AdapterRAM,DriverVersion,VideoProcessor,DriverDate"],
                 stdout=subprocess.PIPE,
@@ -383,33 +383,33 @@ class SystemInformation(PlatformManager):
             stdout, stderr = process.communicate()
             
             if stderr:
-                self.logger.warning(f"wmic命令执行出错: {stderr}")
+                self.logger.warning(f"wmic command execution error: {stderr}")
             
             if not stdout or stdout.strip() == "":
-                # 尝试使用PowerShell获取信息
+                # Try to use PowerShell to get information
                 return self._get_gpu_info_windows_powershell()
             
-            # 处理wmic输出
+            # Process wmic output
             lines = stdout.splitlines()
             if len(lines) <= 1:
                 return self._get_gpu_info_windows_powershell()
             
-            # 删除表头并过滤掉空行
+            # Remove header and filter out empty lines
             data_lines = [line for line in lines[1:] if line.strip()]
             
             if not data_lines:
                 return self._get_gpu_info_windows_powershell()
             
-            # 提取GPU信息
+            # Extract GPU information
             info = []
             for i, line in enumerate(data_lines):
                 parts = line.split()
                 if not parts:
                     continue
                 
-                # 尝试解析wmic输出
+                # Try to parse wmic output
                 try:
-                    # 解析AdapterRAM（通常是第一个数字）
+                    # Parse AdapterRAM (usually the first number)
                     ram = None
                     processor = None
                     driver = None
@@ -419,7 +419,7 @@ class SystemInformation(PlatformManager):
                     for part in parts:
                         if part.isdigit() and ram is None:
                             try:
-                                ram = int(part) / (1024 * 1024)  # 转换为MB
+                                ram = int(part) / (1024 * 1024)  # Convert to MB
                             except:
                                 pass
                         elif "." in part and driver is None and any(c.isdigit() for c in part):
@@ -433,35 +433,35 @@ class SystemInformation(PlatformManager):
                     
                     name = " ".join(name_parts) if name_parts else f"GPU {i+1}"
                     
-                    gpu_info = [f"名称: {name}"]
+                    gpu_info = [f"Name: {name}"]
                     if processor:
-                        gpu_info.append(f"处理器: {processor}")
+                        gpu_info.append(f"Processor: {processor}")
                     if ram:
-                        gpu_info.append(f"显存: {ram:.0f} MB")
+                        gpu_info.append(f"Memory: {ram:.0f} MB")
                     if driver:
-                        gpu_info.append(f"驱动版本: {driver}")
+                        gpu_info.append(f"Driver Version: {driver}")
                     if driver_date:
-                        gpu_info.append(f"驱动日期: {driver_date}")
+                        gpu_info.append(f"Driver Date: {driver_date}")
                     
-                    # 如果信息太少，尝试使用dxdiag获取更多信息
+                    # If too little information, try to use dxdiag to get more information
                     if len(gpu_info) < 3:
                         dxdiag_info = self._get_gpu_info_windows_dxdiag(i)
-                        if dxdiag_info and "名称:" in dxdiag_info:
+                        if dxdiag_info and "Name:" in dxdiag_info:
                             gpu_info = dxdiag_info.split("\n")
                     
                     info.append("\n".join(gpu_info))
                 except Exception as e:
-                    self.logger.warning(f"解析GPU行出错: {e}")
+                    self.logger.warning(f"Error parsing GPU line: {e}")
                     info.append(f"GPU {i+1}: {line}")
             
             return "\n\n".join(info) if info else self._get_gpu_info_windows_powershell()
             
         except Exception as e:
-            self.logger.error(f"Windows GPU信息获取失败: {str(e)}")
+            self.logger.error(f"Windows GPU information acquisition failed: {str(e)}")
             return self._get_gpu_info_windows_powershell()
     
     def _get_gpu_info_windows_powershell(self):
-        """使用PowerShell获取GPU信息"""
+        """Use PowerShell to get GPU information"""
         try:
             process = subprocess.Popen(
                 ["powershell", "-Command", "Get-WmiObject win32_VideoController | Select-Object Name, AdapterRAM, DriverVersion, VideoProcessor, DriverDate | Format-List"],
@@ -472,13 +472,13 @@ class SystemInformation(PlatformManager):
             stdout, stderr = process.communicate()
             
             if stderr:
-                self.logger.warning(f"PowerShell命令执行出错: {stderr}")
+                self.logger.warning(f"PowerShell command execution error: {stderr}")
             
             if not stdout or stdout.strip() == "":
-                # 尝试使用DirectX诊断工具
+                # Try to use DirectX diagnostic tool
                 return self._get_gpu_info_windows_dxdiag()
             
-            # 处理PowerShell输出
+            # Process PowerShell output
             info = []
             current_gpu = []
             
@@ -495,20 +495,20 @@ class SystemInformation(PlatformManager):
                     key = key.strip()
                     value = value.strip()
                     if key == "Name":
-                        current_gpu.append(f"名称: {value}")
+                        current_gpu.append(f"Name: {value}")
                     elif key == "AdapterRAM":
                         try:
                             ram = int(value) / (1024 * 1024)
-                            current_gpu.append(f"显存: {ram:.0f} MB")
+                            current_gpu.append(f"Memory: {ram:.0f} MB")
                         except:
                             if value:
-                                current_gpu.append(f"显存: {value}")
+                                current_gpu.append(f"Memory: {value}")
                     elif key == "DriverVersion":
-                        current_gpu.append(f"驱动版本: {value}")
+                        current_gpu.append(f"Driver Version: {value}")
                     elif key == "VideoProcessor":
-                        current_gpu.append(f"处理器: {value}")
+                        current_gpu.append(f"Processor: {value}")
                     elif key == "DriverDate":
-                        current_gpu.append(f"驱动日期: {value}")
+                        current_gpu.append(f"Driver Date: {value}")
             
             if current_gpu:
                 info.append("\n".join(current_gpu))
@@ -516,18 +516,18 @@ class SystemInformation(PlatformManager):
             return "\n\n".join(info) if info else self._get_gpu_info_windows_dxdiag()
             
         except Exception as e:
-            self.logger.error(f"PowerShell GPU信息获取失败: {str(e)}")
+            self.logger.error(f"PowerShell GPU information acquisition failed: {str(e)}")
             return self._get_gpu_info_windows_dxdiag()
             
     def _get_gpu_info_windows_dxdiag(self, gpu_index=None):
-        """使用DirectX诊断工具获取GPU信息"""
+        """Use DirectX diagnostic tool to get GPU information"""
         try:
-            # 创建临时文件用于输出
+            # Create temporary file for output
             import tempfile
             with tempfile.NamedTemporaryFile(suffix='.txt', delete=False) as tmp:
                 tmp_path = tmp.name
             
-            # 运行dxdiag并输出到文件
+            # Run dxdiag and output to file
             process = subprocess.Popen(
                 ["dxdiag", "/t", tmp_path],
                 stdout=subprocess.PIPE,
@@ -535,10 +535,10 @@ class SystemInformation(PlatformManager):
             )
             process.communicate()
             
-            # 等待一会儿让dxdiag完成输出
+            # Wait a moment for dxdiag to complete output
             time.sleep(2)
             
-            # 读取输出文件
+            # Read output file
             gpu_sections = []
             current_section = None
             display_section = False
@@ -561,40 +561,40 @@ class SystemInformation(PlatformManager):
                         elif current_section is not None and display_section:
                             current_section.append(line)
                 
-                # 添加最后一个GPU段
+                # Add the last GPU section
                 if current_section and display_section:
                     gpu_sections.append(current_section)
                 
-                # 清理临时文件
+                # Clean up temporary file
                 try:
                     os.unlink(tmp_path)
                 except:
                     pass
                 
-                # 解析GPU信息
+                # Parse GPU information
                 if gpu_index is not None and 0 <= gpu_index < len(gpu_sections):
-                    # 返回指定索引的GPU信息
+                    # Return GPU information for specified index
                     return self._parse_dxdiag_display_section(gpu_sections[gpu_index])
                 else:
-                    # 返回所有GPU信息
+                    # Return all GPU information
                     info = []
                     for section in gpu_sections:
                         parsed = self._parse_dxdiag_display_section(section)
                         if parsed:
                             info.append(parsed)
                     
-                    return "\n\n".join(info) if info else "未检测到GPU"
+                    return "\n\n".join(info) if info else "No GPU detected"
                 
             except Exception as e:
-                self.logger.error(f"读取dxdiag输出失败: {e}")
+                self.logger.error(f"Failed to read dxdiag output: {e}")
                 return None
                 
         except Exception as e:
-            self.logger.error(f"DirectX诊断工具执行失败: {str(e)}")
-            return "获取GPU信息失败"
+            self.logger.error(f"DirectX diagnostic tool execution failed: {str(e)}")
+            return "Failed to get GPU information"
     
     def _parse_dxdiag_display_section(self, section_lines):
-        """解析DxDiag显示设备部分"""
+        """Parse DxDiag display device section"""
         gpu_info = []
         
         for line in section_lines:
@@ -606,36 +606,36 @@ class SystemInformation(PlatformManager):
             value = value.strip()
             
             if "Card name" in key:
-                gpu_info.append(f"名称: {value}")
+                gpu_info.append(f"Name: {value}")
             elif "Manufacturer" in key:
-                gpu_info.append(f"制造商: {value}")
+                gpu_info.append(f"Manufacturer: {value}")
             elif "Chip type" in key:
-                gpu_info.append(f"芯片类型: {value}")
+                gpu_info.append(f"Chip Type: {value}")
             elif "Display Memory" in key:
-                gpu_info.append(f"显存: {value}")
+                gpu_info.append(f"Memory: {value}")
             elif "Driver Version" in key or "Driver" in key and "Version" in key:
-                gpu_info.append(f"驱动版本: {value}")
+                gpu_info.append(f"Driver Version: {value}")
             elif "Driver Date/Size" in key:
-                gpu_info.append(f"驱动日期: {value.split(',')[0]}")
+                gpu_info.append(f"Driver Date: {value.split(',')[0]}")
             elif "Current Mode" in key:
-                gpu_info.append(f"当前模式: {value}")
+                gpu_info.append(f"Current Mode: {value}")
             elif "Monitor Model" in key:
-                gpu_info.append(f"显示器型号: {value}")
+                gpu_info.append(f"Monitor Model: {value}")
             elif "Monitor Name" in key:
-                gpu_info.append(f"显示器: {value}")
+                gpu_info.append(f"Monitor: {value}")
         
         return "\n".join(gpu_info) if gpu_info else None
 
     def _get_gpu_info_linux(self):
-        """使用lspci命令在Linux上获取GPU信息"""
+        """Use lspci command to get GPU information on Linux"""
         try:
-            # 检查lspci命令是否可用
+            # Check if lspci command is available
             try:
                 subprocess.check_output(["which", "lspci"])
             except:
-                return "无法获取GPU信息：lspci命令不可用"
+                return "Cannot get GPU information: lspci command not available"
             
-            # 获取显卡信息
+            # Get graphics card information
             process = subprocess.Popen(
                 ["lspci", "-vnn", "|", "grep", "-i", "VGA", "-A", "12"],
                 stdout=subprocess.PIPE,
@@ -646,10 +646,10 @@ class SystemInformation(PlatformManager):
             stdout, stderr = process.communicate()
             
             if stderr:
-                self.logger.warning(f"lspci命令执行出错: {stderr}")
+                self.logger.warning(f"lspci command execution error: {stderr}")
             
             if not stdout or stdout.strip() == "":
-                # 尝试nvidia-smi命令（如果有NVIDIA显卡）
+                # Try nvidia-smi command (if NVIDIA graphics card is available)
                 try:
                     process = subprocess.Popen(
                         ["nvidia-smi", "--query-gpu=name,memory.total,driver_version,utilization.gpu,temperature.gpu", "--format=csv,noheader"],
@@ -660,12 +660,12 @@ class SystemInformation(PlatformManager):
                     stdout, stderr = process.communicate()
                     
                     if stderr and "not found" in stderr:
-                        return "未检测到NVIDIA GPU"
+                        return "No NVIDIA GPU detected"
                     
                     if not stdout or stdout.strip() == "":
-                        return "未检测到GPU"
+                        return "No GPU detected"
                     
-                    # 处理nvidia-smi输出
+                    # Process nvidia-smi output
                     info = []
                     for i, line in enumerate(stdout.splitlines()):
                         if not line.strip():
@@ -674,23 +674,23 @@ class SystemInformation(PlatformManager):
                         parts = line.split(",")
                         if len(parts) >= 5:
                             gpu_info = [
-                                f"名称: {parts[0].strip()}",
-                                f"显存: {parts[1].strip()}",
-                                f"驱动版本: {parts[2].strip()}",
-                                f"GPU使用率: {parts[3].strip()}",
-                                f"温度: {parts[4].strip()}"
+                                f"Name: {parts[0].strip()}",
+                                f"Memory: {parts[1].strip()}",
+                                f"Driver Version: {parts[2].strip()}",
+                                f"GPU Usage: {parts[3].strip()}",
+                                f"Temperature: {parts[4].strip()}"
                             ]
                             info.append("\n".join(gpu_info))
                         else:
                             info.append(f"GPU {i+1}: {line.strip()}")
                     
-                    return "\n\n".join(info) if info else "未检测到GPU"
+                    return "\n\n".join(info) if info else "No GPU detected"
                     
                 except Exception as e:
-                    self.logger.warning(f"nvidia-smi命令执行出错: {e}")
-                    return "未检测到GPU"
+                    self.logger.warning(f"nvidia-smi command execution error: {e}")
+                    return "No GPU detected"
             
-            # 处理lspci输出
+            # Process lspci output
             info = []
             gpu_blocks = stdout.split("\n\n")
             
@@ -699,13 +699,13 @@ class SystemInformation(PlatformManager):
                     continue
                 
                 lines = block.splitlines()
-                gpu_name = "未知GPU"
+                gpu_name = "Unknown GPU"
                 gpu_info = []
                 
                 for line in lines:
                     line = line.strip()
                     if "VGA compatible controller" in line or "3D controller" in line:
-                        # 提取GPU名称
+                        # Extract GPU name
                         parts = line.split(":")
                         if len(parts) > 2:
                             gpu_name = parts[2].strip()
@@ -713,26 +713,26 @@ class SystemInformation(PlatformManager):
                             gpu_name = line
                     
                     if "Memory" in line or "memory" in line:
-                        gpu_info.append(f"内存: {line}")
+                        gpu_info.append(f"Memory: {line}")
                     if "Kernel driver in use" in line:
-                        gpu_info.append(f"驱动: {line.split(':')[1].strip()}")
+                        gpu_info.append(f"Driver: {line.split(':')[1].strip()}")
                     if "Kernel modules" in line:
-                        gpu_info.append(f"模块: {line.split(':')[1].strip()}")
+                        gpu_info.append(f"Module: {line.split(':')[1].strip()}")
                 
-                block_info = [f"名称: {gpu_name}"]
+                block_info = [f"Name: {gpu_name}"]
                 block_info.extend(gpu_info)
                 info.append("\n".join(block_info))
             
-            return "\n\n".join(info) if info else "未检测到GPU"
+            return "\n\n".join(info) if info else "No GPU detected"
             
         except Exception as e:
-            self.logger.error(f"Linux GPU信息获取失败: {str(e)}")
-            return f"获取GPU信息失败: {str(e)}"
+            self.logger.error(f"Linux GPU information acquisition failed: {str(e)}")
+            return f"Failed to get GPU information: {str(e)}"
     
     def _get_gpu_info_mac(self):
-        """使用system_profiler命令在macOS上获取GPU信息"""
+        """Use system_profiler command to get GPU information on macOS"""
         try:
-            # 使用system_profiler获取GPU信息
+            # Use system_profiler to get GPU information
             process = subprocess.Popen(
                 ["system_profiler", "SPDisplaysDataType"],
                 stdout=subprocess.PIPE,
@@ -742,12 +742,12 @@ class SystemInformation(PlatformManager):
             stdout, stderr = process.communicate()
             
             if stderr:
-                self.logger.warning(f"system_profiler命令执行出错: {stderr}")
+                self.logger.warning(f"system_profiler command execution error: {stderr}")
             
             if not stdout or stdout.strip() == "":
-                return "未检测到GPU"
+                return "No GPU detected"
             
-            # 处理system_profiler输出
+            # Process system_profiler output
             in_graphics_card = False
             current_gpu = []
             info = []
@@ -766,31 +766,31 @@ class SystemInformation(PlatformManager):
                     if "Chipset Model" in line:
                         parts = line.split(":")
                         if len(parts) > 1:
-                            current_gpu.append(f"名称: {parts[1].strip()}")
+                            current_gpu.append(f"Name: {parts[1].strip()}")
                 elif in_graphics_card:
                     if ":" in line:
                         key, value = line.split(":", 1)
                         if "VRAM" in key:
-                            current_gpu.append(f"显存: {value.strip()}")
+                            current_gpu.append(f"Memory: {value.strip()}")
                         elif "Vendor" in key:
-                            current_gpu.append(f"厂商: {value.strip()}")
+                            current_gpu.append(f"Vendor: {value.strip()}")
                         elif "Device" in key:
-                            current_gpu.append(f"设备ID: {value.strip()}")
+                            current_gpu.append(f"Device ID: {value.strip()}")
                         elif "Metal" in key:
-                            current_gpu.append(f"Metal支持: {value.strip()}")
+                            current_gpu.append(f"Metal Support: {value.strip()}")
                     
                     if "Displays" in line:
                         in_graphics_card = False
             
-            # 添加最后一个GPU
+            # Add the last GPU
             if current_gpu:
                 info.append("\n".join(current_gpu))
             
-            return "\n\n".join(info) if info else "未检测到GPU"
+            return "\n\n".join(info) if info else "No GPU detected"
             
         except Exception as e:
-            self.logger.error(f"macOS GPU信息获取失败: {str(e)}")
-            return f"获取GPU信息失败: {str(e)}" 
+            self.logger.error(f"macOS GPU information acquisition failed: {str(e)}")
+            return f"Failed to get GPU information: {str(e)}" 
         
     def get_os_info(self):
         """Get operating system information"""
@@ -839,10 +839,10 @@ class SystemInformation(PlatformManager):
         return python_info
     
     def get_disk_table_data(self):
-        """获取磁盘表格数据
+        """Get disk table data
         
         Returns:
-            list: 包含磁盘信息的列表，每个元素是一个字典，包含device、mountpoint、fstype、total、used等信息
+            list: List containing disk information, each element is a dictionary containing device, mountpoint, fstype, total, used, etc.
         """
         try:
             disk_data = []
@@ -879,7 +879,7 @@ class SystemInformation(PlatformManager):
             return disk_data
         
         except Exception as e:
-            self.logger.error(f"获取磁盘表格数据时出错: {e}")
+            self.logger.error(f"Error getting disk table data: {e}")
             return [{
                 'device': "Error",
                 'mountpoint': str(e),
@@ -889,10 +889,10 @@ class SystemInformation(PlatformManager):
             }]
 
     def get_network_interfaces_data(self):
-        """获取网络接口表格数据
+        """Get network interface table data
         
         Returns:
-            list: 包含网络接口信息的列表，每个元素是一个字典，包含name、address、netmask、status等信息
+            list: List containing network interface information, each element is a dictionary containing name, address, netmask, status, etc.
         """
         try:
             interface_data = []
@@ -906,7 +906,7 @@ class SystemInformation(PlatformManager):
                             'status': "Unknown"
                         }
                         
-                        # 获取接口状态
+                        # Get interface status
                         try:
                             stats = psutil.net_if_stats()
                             if name in stats:
@@ -919,32 +919,32 @@ class SystemInformation(PlatformManager):
             return interface_data
         
         except Exception as e:
-            self.logger.error(f"获取网络接口表格数据时出错: {e}")
+            self.logger.error(f"Error getting network interface table data: {e}")
             return []
 
     def get_drives(self):
-        """获取系统所有驱动器列表，get_drives_list 的别名"""
+        """Get list of all system drives, alias for get_drives_list"""
         return self.get_drives_list()
 
     def get_temperature(self):
-        """获取系统温度信息，兼容不同操作系统"""
+        """Get system temperature information, compatible with different operating systems"""
         current_time = time.time()
         
-        # 检查是否需要等待更长时间再次尝试
+        # Check if need to wait longer before retrying
         if self._temp_failure_count > 1:
             time_elapsed = current_time - self._temp_last_attempt
             if time_elapsed < self._temp_retry_delay:
-                self.logger.info(f"等待重试周期 {self._temp_retry_delay}秒，距离下次尝试还有 {self._temp_retry_delay - time_elapsed:.1f}秒")
-                # 直接返回 N/A，避免频繁报错
+                self.logger.info(f"Waiting for retry cycle {self._temp_retry_delay} seconds, {self._temp_retry_delay - time_elapsed:.1f} seconds until next attempt")
+                # Return N/A directly to avoid frequent errors
                 return {"CPU": "N/A", "System": "N/A"}
         
-        # 更新尝试时间
+        # Update attempt time
         self._temp_last_attempt = current_time
         
         try:
             temperature_data = {}
             
-            # 尝试使用 psutil.sensors_temperatures() 获取温度
+            # Try to use psutil.sensors_temperatures() to get temperature
             if hasattr(psutil, 'sensors_temperatures'):
                 temps = psutil.sensors_temperatures()
                 if temps:
@@ -952,74 +952,74 @@ class SystemInformation(PlatformManager):
                         for sensor in sensors:
                             label = sensor.label or f"{chip}_{sensors.index(sensor)}"
                             temperature_data[label] = f"{sensor.current:.1f}°C"
-                    # 成功获取温度，重置失败计数和延迟
+                    # Successfully got temperature, reset failure count and delay
                     self._temp_failure_count = 0
                     self._temp_retry_delay = 1
                     return temperature_data
             
-            # 在 Windows 系统上，尝试使用 WMI 获取温度
+            # On Windows system, try to use WMI to get temperature
             if self.is_windows():
                 try:
                     import wmi
                     w = wmi.WMI(namespace="root\\wmi")
                     temperature_info = w.MSAcpi_ThermalZoneTemperature()[0]
-                    # 转换为摄氏度 (原始值是 Kelvin * 10)
+                    # Convert to Celsius (original value is Kelvin * 10)
                     temp_celsius = (temperature_info.CurrentTemperature / 10) - 273.15
                     temperature_data["CPU"] = f"{temp_celsius:.1f}°C"
-                    # 成功获取温度，重置失败计数和延迟
+                    # Successfully got temperature, reset failure count and delay
                     self._temp_failure_count = 0
                     self._temp_retry_delay = 1
                     return temperature_data
                 except Exception as e:
-                    self.logger.warning(f"获取 WMI 温度信息失败: {e}")
+                    self.logger.warning(f"Failed to get WMI temperature information: {e}")
             
-            # 在 Linux 系统上，尝试从 /sys/class/thermal 读取温度
+            # On Linux system, try to read temperature from /sys/class/thermal
             if self.is_linux():
                 try:
                     thermal_zones = [f for f in os.listdir("/sys/class/thermal") if f.startswith("thermal_zone")]
                     for zone in thermal_zones:
                         try:
                             with open(f"/sys/class/thermal/{zone}/temp", "r") as f:
-                                temp = int(f.read().strip()) / 1000  # 通常以毫摄氏度为单位
+                                temp = int(f.read().strip()) / 1000  # Usually in millidegrees Celsius
                             with open(f"/sys/class/thermal/{zone}/type", "r") as f:
                                 zone_type = f.read().strip()
                             temperature_data[zone_type] = f"{temp:.1f}°C"
                         except:
                             pass
                     if temperature_data:
-                        # 成功获取温度，重置失败计数和延迟
+                        # Successfully got temperature, reset failure count and delay
                         self._temp_failure_count = 0
                         self._temp_retry_delay = 1
                         return temperature_data
                 except Exception as e:
-                    self.logger.warning(f"读取 Linux 温度信息失败: {e}")
+                    self.logger.warning(f"Failed to read Linux temperature information: {e}")
             
-            # 如果上述方法都失败，增加失败计数并延长重试时间
+            # If all above methods fail, increase failure count and extend retry time
             self._temp_failure_count += 1
             
-            # 如果连续失败超过两次，指数级增加延迟时间
+            # If consecutive failures exceed twice, exponentially increase delay time
             if self._temp_failure_count >= 2:
                 self._temp_retry_delay = min(self._temp_retry_delay * 2, self._MAX_RETRY_DELAY)
-                self.logger.info(f"连续 {self._temp_failure_count} 次获取温度失败，下次重试延迟增加到 {self._temp_retry_delay} 秒")
+                self.logger.info(f"Consecutive {self._temp_failure_count} temperature acquisition failures, next retry delay increased to {self._temp_retry_delay} seconds")
             
-            # 如果上述方法都失败，返回 N/A
-            self.logger.info("无法获取真实温度数据，返回 N/A")
+            # If all above methods fail, return N/A
+            self.logger.info("Cannot get real temperature data, returning N/A")
             temperature_data["CPU"] = "N/A"
             temperature_data["System"] = "N/A"
             return temperature_data
             
         except Exception as e:
-            # 发生错误时也增加失败计数并延长重试时间
+            # Also increase failure count and extend retry time when error occurs
             self._temp_failure_count += 1
             if self._temp_failure_count >= 2:
                 self._temp_retry_delay = min(self._temp_retry_delay * 2, self._MAX_RETRY_DELAY)
-                self.logger.info(f"连续 {self._temp_failure_count} 次获取温度失败，下次重试延迟增加到 {self._temp_retry_delay} 秒")
+                self.logger.info(f"Consecutive {self._temp_failure_count} temperature acquisition failures, next retry delay increased to {self._temp_retry_delay} seconds")
                 
-            self.logger.error(f"获取温度信息时出错: {e}")
-            return {"Error": f"获取温度失败: {str(e)}"}
+            self.logger.error(f"Error getting temperature information: {e}")
+            return {"Error": f"Failed to get temperature: {str(e)}"}
 
     def get_system_temperatures(self):
-        """获取系统温度的别名"""
+        """Alias for getting system temperatures"""
         return self.get_temperature()
 
 class BaseThread(QThread):

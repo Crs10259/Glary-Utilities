@@ -776,6 +776,6 @@ class ThemeManager(QObject):
                 json.dump(theme_data, f, ensure_ascii=False, indent=4)
             return True
         except Exception as e:
-            self.logger.error(f"创建主题失败: {e}")
+            self.logger.error(f"Failed to create theme: {e}")
             return False 
         

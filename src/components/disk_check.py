@@ -232,9 +232,9 @@ class DiskCheckWidget(BaseComponent):
     
     def populate_drives(self):
         """填充驱动器下拉列表"""
-        # 确保log_output已初始化
+        # Ensure log_output is initialized
         if not hasattr(self, 'log_output') or self.log_output is None:
-            self.logger.warning("警告: log_output 尚未初始化")
+            self.logger.warning("Warning: log_output not yet initialized")
             return
         
         try:
@@ -249,18 +249,18 @@ class DiskCheckWidget(BaseComponent):
                         name = drive.get("name")
                         self.drive_combo.addItem(display_name, name)
                         
-                        # 记录日志
-                        drive_type = drive.get("type", "未知")
-                        self.log_output.append(f"发现驱动器: {name} - 类型: {drive_type}")
+                        # Log
+                        drive_type = drive.get("type", "Unknown")
+                        self.log_output.append(f"Found drive: {name} - Type: {drive_type}")
                     else:
-                        # 记录不可访问的驱动器
-                        self.log_output.append(f"跳过不可访问的驱动器: {drive.get('name')}")
+                        # Log inaccessible drives
+                        self.log_output.append(f"Skipping inaccessible drive: {drive.get('name')}")
                 
-                # 默认选择第一个驱动器
+                # Default to first drive
                 if self.drive_combo.count() > 0:
                     self.drive_combo.setCurrentIndex(0)
                     
-                # 在Windows上，尝试选择C盘作为默认驱动器（如果可用）
+                # On Windows, try to select C: as default drive (if available)
                 if self.platform_manager.is_windows():
                     c_drive_index = -1
                     for i in range(self.drive_combo.count()):
@@ -271,14 +271,14 @@ class DiskCheckWidget(BaseComponent):
                     if c_drive_index >= 0:
                         self.drive_combo.setCurrentIndex(c_drive_index)
             else:
-                self.log_output.append("未找到可用驱动器")
-                # 禁用检查按钮
+                self.log_output.append("No available drives found")
+                # Disable check buttons
                 self.check_button.setEnabled(False)
                 self.repair_button.setEnabled(False)
                 
         except Exception as e:
-            self.log_output.append(f"填充驱动器列表时出错: {str(e)}")
-            self.logger.error(f"填充驱动器列表时出错: {str(e)}")
+            self.log_output.append(f"Error populating drive list: {str(e)}")
+            self.logger.error(f"Error populating drive list: {str(e)}")
     
     def check_disk(self):
         """检查磁盘错误"""
@@ -439,13 +439,13 @@ class DiskCheckWidget(BaseComponent):
     def on_checkbox_changed(self, checkbox_name, state):
         """Handle checkbox state change"""
         checked = state == Qt.Checked
-        self.logger.info(f"磁盘检查设置: {checkbox_name} = {checked}")
+        self.logger.info(f"Disk check setting: {checkbox_name} = {checked}")
         
-        # 保存设置
+        # Save settings
         self.settings.set_setting(checkbox_name, checked)
         self.settings.sync()
         
-        # 更新UI状态
+        # Update UI state
         if checkbox_name == "disk_check_file_system":
             self.file_system_cb.setChecked(checked)
         elif checkbox_name == "disk_check_bad_sectors":
@@ -453,7 +453,7 @@ class DiskCheckWidget(BaseComponent):
         elif checkbox_name == "disk_check_readonly":
             self.read_only_cb.setChecked(checked)
         else:
-            self.logger.warning(f"未知复选框: {checkbox_name}") 
+            self.logger.warning(f"Unknown checkbox: {checkbox_name}") 
 
     def apply_theme(self):
         """Apply theme colors dynamically."""

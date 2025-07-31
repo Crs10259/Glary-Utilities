@@ -57,20 +57,19 @@ To build the application and create an installer:
    pip install -r requirements.txt
    ```
 
-2. Use PyInstaller to create a standalone executable:
-   ```
-   pip install pyinstaller
-   pyinstaller --onefile --windowed --name "Glary-Utilities" src/main.py
-   ```
+2. For creating standalone executables, you can use various packaging tools:
+   - **Windows**: Use tools like cx_Freeze, py2exe, or auto-py-to-exe
+   - **macOS**: Use py2app or create-dmg
+   - **Linux**: Use AppImage or snapcraft
 
-This will create a standalone executable in the `dist` directory. For creating installers, you can use tools like:
-- **Windows**: NSIS (Nullsoft Scriptable Install System)
-- **macOS**: pkgbuild or create-dmg
-- **Linux**: AppImage or snapcraft
+3. For creating installers, you can use:
+   - **Windows**: NSIS (Nullsoft Scriptable Install System) or Inno Setup
+   - **macOS**: pkgbuild or create-dmg
+   - **Linux**: AppImage or snapcraft
 
 ## Translations
 
-The application supports multiple languages. Translations are stored in JSON files in the `src/translations` directory. The application will automatically use the system language if a translation is available.
+The application supports multiple languages. Translations are stored in JSON files in the `resources/translations` directory. The application will automatically use the system language if a translation is available.
 
 To add a new translation:
 1. Copy the `en.json` file to a new file named with the language code (e.g., `fr.json` for French)
@@ -81,8 +80,3 @@ To add a new translation:
 
 [MIT License](LICENSE)
 
-## Acknowledgements
-
-- [PyQt5](https://www.riverbankcomputing.com/software/pyqt/) - GUI framework
-- [psutil](https://github.com/giampaolo/psutil) - System monitoring library
-- [PyInstaller](https://www.pyinstaller.org/) - Application packaging 

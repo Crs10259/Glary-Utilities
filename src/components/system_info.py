@@ -13,24 +13,24 @@ class SystemInfoWidget(BaseComponent):
     """系统信息小部件，显示硬件、操作系统和网络详细信息"""
     
     def __init__(self, parent=None):
-        # 调用父类构造函数
+        # Call parent class constructor
         super().__init__(parent)
-        self.logger.info("初始化系统信息组件")
+        self.logger.info("Initializing system info component")
     
     def get_translation(self, key, default=None):
-        """获取翻译，带默认回退"""
+        """Get translation with default fallback"""
         return self.settings.get_translation("system_info", key, default)
     
     def setup_ui(self):
-        # 清除旧布局（如果有）
+        # Clear old layout (if any)
         if self.layout():
-            # 清除旧布局中的所有部件
+            # Clear all widgets in old layout
             while self.layout().count():
                 item = self.layout().takeAt(0)
                 if item.widget():
                     item.widget().deleteLater()
         
-        # 主布局
+        # Main layout
         self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(20)
@@ -650,7 +650,7 @@ class SystemInfoWidget(BaseComponent):
                 self.disk_table.setItem(row_position, 4, QTableWidgetItem(disk_info['used']))
                 
         except Exception as e:
-            self.logger.error(f"填充磁盘表格时出错: {e}")
+            self.logger.error(f"Error populating disk table: {e}")
             self.disk_table.setRowCount(1)
             self.disk_table.setItem(0, 0, QTableWidgetItem("Error"))
             self.disk_table.setItem(0, 1, QTableWidgetItem(str(e)))
@@ -659,7 +659,7 @@ class SystemInfoWidget(BaseComponent):
             self.disk_table.setItem(0, 4, QTableWidgetItem(""))
     
     def populate_interfaces_table(self):
-        """填充网络接口表格"""
+        """Populate network interfaces table"""
         try:
             self.interfaces_table.setRowCount(0)
             interface_data = self.system_information.get_network_interfaces_data()
@@ -668,14 +668,14 @@ class SystemInfoWidget(BaseComponent):
                 row_position = self.interfaces_table.rowCount()
                 self.interfaces_table.insertRow(row_position)
                 
-                # 设置表格项
+                # Set table items
                 self.interfaces_table.setItem(row_position, 0, QTableWidgetItem(interface_info['name']))
                 self.interfaces_table.setItem(row_position, 1, QTableWidgetItem(interface_info['address']))
                 self.interfaces_table.setItem(row_position, 2, QTableWidgetItem(interface_info['netmask']))
                 self.interfaces_table.setItem(row_position, 3, QTableWidgetItem(interface_info['status']))
                 
         except Exception as e:
-            self.logger.error(f"填充网络接口表格时出错: {e}")
+            self.logger.error(f"Error populating network interfaces table: {e}")
     
     def refresh_info(self):
         """刷新所有系统信息"""
@@ -694,20 +694,20 @@ class SystemInfoWidget(BaseComponent):
                     if key in self._memory_value_labels:
                         self._memory_value_labels[key].setText(str(value))
 
-            # 仅刷新数据，不重新创建UI元素
-            # 更新磁盘信息
+            # Only refresh data, don't recreate UI elements
+            # Update disk information
             if hasattr(self, 'disk_table'):
                 self.populate_disk_table()
             
-            # 更新网络接口信息
+            # Update network interface information
             if hasattr(self, 'interfaces_table'):
                 self.populate_interfaces_table()
             
-            # 更新GPU信息
+            # Update GPU information
             if hasattr(self, 'gpu_info_layout'):
                 self.update_gpu_info()
             
-            self.logger.info("系统信息已刷新")
+            self.logger.info("System information refreshed")
             
             # 显示成功消息（带应用程序图标）
             msg_box = QMessageBox(self)
@@ -747,7 +747,7 @@ class SystemInfoWidget(BaseComponent):
             """)
             msg_box.exec_()
         except Exception as e:
-            self.logger.error(f"刷新系统信息时出错: {e}")
+            self.logger.error(f"Error refreshing system information: {e}")
             # 显示错误消息（带应用程序图标）
             msg_box = QMessageBox(self)
             msg_box.setWindowTitle(self.get_translation("error", "Error"))
@@ -846,16 +846,16 @@ class SystemInfoWidget(BaseComponent):
         gpu_util_message = self.get_translation("gpu_install_message", "Please install GPUtil library to get GPU information:\npip install GPUtil")
         error_message = self.get_translation("gpu_info_error", "Error getting GPU information")
         
-        # 获取当前应用的语言
+        # Get current application language
         current_language = self.settings.get_setting("language", "en")
-        self.logger.info(f"当前显示语言: {current_language}")
+        self.logger.info(f"Current display language: {current_language}")
         
         try:
-            # 直接从系统信息类获取原始GPU信息
+            # Get raw GPU information directly from system information class
             raw_info = self.system_information.get_gpu_info()
-            self.logger.info(f"原始GPU信息: {raw_info[:100]}...")  # 只记录前100个字符
+            self.logger.info(f"Raw GPU information: {raw_info[:100]}...")  # Only log first 100 characters
             
-            # 检查是否为错误信息或空信息
+            # Check if it's an error message or empty information
             if not raw_info:
                 label = QLabel(error_message)
                 label.setStyleSheet("color: #a0a0a0; font-size: 14px; padding: 20px;")
@@ -863,7 +863,7 @@ class SystemInfoWidget(BaseComponent):
                 self.gpu_info_layout.addWidget(label)
                 return
             
-            # 处理各种状态信息，确保根据当前语言设置显示正确的文本
+            # Handle various status messages, ensure correct text is displayed based on current language setting
             if any(x in raw_info for x in ["未检测到GPU", "No GPU", "not detected"]):
                 label = QLabel(no_gpu_message)
                 label.setStyleSheet("color: #a0a0a0; font-size: 14px; padding: 20px;")
@@ -883,9 +883,9 @@ class SystemInfoWidget(BaseComponent):
                 self.gpu_info_layout.addWidget(label)
                 return
             
-            # 将所有中文键名映射到相应的英文键名，以支持翻译
+            # Map all Chinese key names to corresponding English key names to support translation
             key_mapping = {
-                # 中文 -> 英文映射
+                # Chinese -> English mapping
                 "名称": "Name",
                 "显存": "Memory",
                 "总内存": "Total Memory",
@@ -905,7 +905,7 @@ class SystemInfoWidget(BaseComponent):
                 "Metal支持": "Metal Support"
             }
             
-            # GPU属性翻译键映射（适用于所有语言）
+            # GPU property translation key mapping (applicable to all languages)
             gpu_property_map = {
                 "name": "gpu_name",
                 "memory": "gpu_memory",
@@ -925,14 +925,14 @@ class SystemInfoWidget(BaseComponent):
                 "module": "gpu_module"
             }
             
-            # 分割GPU信息块
+            # Split GPU information blocks
             gpu_blocks = raw_info.split("\n\n")
             
             for i, gpu_block in enumerate(gpu_blocks):
                 if not gpu_block.strip():
                     continue
                 
-                # 创建GPU组，从0开始编号
+                # Create GPU group, numbered from 0
                 gpu_title = self.get_translation("gpu_number", "GPU") + f" {i}"
                 gpu_group = QGroupBox(gpu_title)
                 gpu_group.setStyleSheet("""

@@ -837,7 +837,7 @@ class SettingsWidget(QWidget):
                     except Exception as e:
                         self.logger.error(f"Error loading setting for {setting_key}: {e}")
             
-            self.logger.info("设置加载完成")
+            self.logger.info("Settings loaded successfully")
         except Exception as e:
             self.logger.error(f"Error loading settings: {e}")
     
@@ -847,22 +847,22 @@ class SettingsWidget(QWidget):
         try:
             self.language_combo.setCurrentText("English")
         except AttributeError:
-            self.logger.error("无法重置语言设置")
+            self.logger.error("Cannot reset language settings")
         
         try:
             self.start_minimized_check.setChecked(False)
         except AttributeError:
-            self.logger.error("无法重置最小化设置")
+            self.logger.error("Cannot reset minimize settings")
         
         try:
             self.close_to_tray_check.setChecked(False)
         except AttributeError:
-            self.logger.error("无法重置托盘设置")
+            self.logger.error("Cannot reset tray settings")
         
         try:
             self.enable_animations_check.setChecked(False)
         except AttributeError:
-            self.logger.error("无法重置动画设置")
+            self.logger.error("Cannot reset animation settings")
         
         # 重置主题设置
         try:
@@ -876,60 +876,60 @@ class SettingsWidget(QWidget):
             if dark_index >= 0:
                 self.theme_combo.setCurrentIndex(dark_index)
         except AttributeError:
-            self.logger.error("无法重置主题设置")
+            self.logger.error("Cannot reset theme settings")
         
-        # 重置自定义颜色
+        # Reset custom colors
         try:
             self.update_color_buttons()
         except AttributeError:
-            self.logger.error("无法重置自定义颜色")
+            self.logger.error("Cannot reset custom colors")
         
-        # 重置高级设置
+        # Reset advanced settings
         try:
             self.check_backup_before_repair.setChecked(True)
         except AttributeError:
-            self.logger.error("无法重置备份设置")
+            self.logger.error("Cannot reset backup settings")
         
         try:
             self.edit_backup_location.setText(os.path.join(os.environ.get("USERPROFILE", ""), "GlaryBackups"))
         except AttributeError:
-            self.logger.error("无法重置备份位置")
+            self.logger.error("Cannot reset backup location")
         
         try:
             self.check_enable_logging.setChecked(True)
         except AttributeError:
-            self.logger.error("无法重置日志设置")
+            self.logger.error("Cannot reset logging settings")
         
         try:
             self.spinbox_max_backups.setValue(5)
         except AttributeError:
-            self.logger.error("无法重置最大备份数量")
+            self.logger.error("Cannot reset max backup count")
         
-        # 重置扫描设置
+        # Reset scan settings
         try:
             self.auto_scan_checkbox.setChecked(True)
         except AttributeError:
-            self.logger.error("无法重置自动扫描设置")
+            self.logger.error("Cannot reset auto scan settings")
         
         try:
             self.scan_freq_combo.setCurrentText("daily")
         except AttributeError:
-            self.logger.error("无法重置扫描频率")
+            self.logger.error("Cannot reset scan frequency")
         
         try:
             self.temp_files_checkbox.setChecked(True)
         except AttributeError:
-            self.logger.error("无法重置临时文件设置")
+            self.logger.error("Cannot reset temp files settings")
         
         try:
             self.recycle_bin_checkbox.setChecked(True)
         except AttributeError:
-            self.logger.error("无法重置回收站设置")
+            self.logger.error("Cannot reset recycle bin settings")
         
         try:
             self.cache_files_checkbox.setChecked(True)
         except AttributeError:
-            self.logger.error("无法重置缓存文件设置")
+            self.logger.error("Cannot reset cache files settings")
         
         try:
             self.log_files_checkbox.setChecked(True)
@@ -1430,89 +1430,89 @@ class SettingsWidget(QWidget):
             self.settings.set_setting(setting_key, checked)
             self.settings.sync()
             
-            # 记录设置变更
-            self.logger.info(f"设置已更改: {setting_key} = {checked}")
+            # Log setting change
+            self.logger.info(f"Setting changed: {setting_key} = {checked}")
             
-            # 根据设置键执行特定操作
+            # Execute specific operations based on setting key
             if setting_key == "enable_animations":
-                # 更新动画设置
+                # Update animation settings
                 self.apply_animation_settings(checked)
             elif setting_key == "use_system_title_bar":
-                # 更新标题栏设置
+                # Update title bar settings
                 self.apply_titlebar_settings(checked)
             elif setting_key == "show_tooltips":
-                # 更新工具提示设置
+                # Update tooltip settings
                 self.apply_tooltip_settings(checked)
             elif setting_key == "enable_logging":
-                # 更新日志设置
+                # Update logging settings
                 self.apply_logging_settings(checked)
             
-            # 应用设置更改
+            # Apply setting changes
             self.apply_settings()
             
         except Exception as e:
-            self.logger.error(f"更改设置时出错: {str(e)}")
+            self.logger.error(f"Error changing setting: {str(e)}")
             # 恢复复选框状态
             sender = self.sender()
             if sender:
                 sender.setChecked(not checked)
                 
     def apply_animation_settings(self, enabled):
-        """应用动画设置
+        """Apply animation settings
         
         Args:
-            enabled: 是否启用动画
+            enabled: Whether to enable animations
         """
         try:
-            # 更新所有支持动画的组件
+            # Update all components that support animations
             main_window = self.window()
             if main_window:
                 main_window.refresh_all_components()
         except Exception as e:
-            self.logger.error(f"应用动画设置时出错: {str(e)}")
+            self.logger.error(f"Error applying animation settings: {str(e)}")
             
     def apply_titlebar_settings(self, use_system):
-        """应用标题栏设置
+        """Apply title bar settings
         
         Args:
-            use_system: 是否使用系统标题栏
+            use_system: Whether to use system title bar
         """
         try:
-            # 通知主窗口更新标题栏
+            # Notify main window to update title bar
             main_window = self.window()
             if main_window and hasattr(main_window, 'update_titlebar'):
                 main_window.update_titlebar(use_system)
         except Exception as e:
-            self.logger.error(f"应用标题栏设置时出错: {str(e)}")
+            self.logger.error(f"Error applying title bar settings: {str(e)}")
             
     def apply_tooltip_settings(self, show):
-        """应用工具提示设置
+        """Apply tooltip settings
         
         Args:
-            show: 是否显示工具提示
+            show: Whether to show tooltips
         """
         try:
-            # 更新所有工具提示
+            # Update all tooltips
             main_window = self.window()
             if main_window:
                 for widget in main_window.findChildren(QWidget):
                     if widget.toolTip():
                         widget.setToolTipDuration(-1 if show else 0)
         except Exception as e:
-            self.logger.error(f"应用工具提示设置时出错: {str(e)}")
+            self.logger.error(f"Error applying tooltip settings: {str(e)}")
             
     def apply_logging_settings(self, enabled):
-        """应用日志设置
+        """Apply logging settings
         
         Args:
-            enabled: 是否启用日志
+            enabled: Whether to enable logging
         """
         try:
-            # 更新日志级别
+            # Update log level
             log_level = logging.DEBUG if enabled else logging.WARNING
             logging.getLogger().setLevel(log_level)
         except Exception as e:
-            self.logger.error(f"应用日志设置时出错: {str(e)}")
+            self.logger.error(f"Error applying logging settings: {str(e)}")
 
     def _on_restart_clicked(self):
         """Save settings and restart the application"""

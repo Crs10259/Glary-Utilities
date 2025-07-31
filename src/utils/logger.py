@@ -18,27 +18,27 @@ class Logger:
             self._logger = logging.getLogger('GlaryUtilities')
             self._logger.setLevel(logging.DEBUG)
             
-            # 创建日志目录
+            # Create log directory
             log_dir = Path.LOG_DIR
             os.makedirs(log_dir, exist_ok=True)
             
-            # 创建日志文件名（使用当前日期）
+            # Create log filename (using current date)
             log_file = os.path.join(log_dir, f'app_{datetime.now().strftime("%Y%m%d")}.log')
             
-            # 文件处理器
+            # File handler
             file_handler = logging.FileHandler(log_file, encoding='utf-8')
             file_handler.setLevel(logging.DEBUG)
             
-            # 控制台处理器
+            # Console handler
             console_handler = logging.StreamHandler()
             console_handler.setLevel(logging.INFO)
             
-            # 设置格式
+            # Set format
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             file_handler.setFormatter(formatter)
             console_handler.setFormatter(formatter)
             
-            # 添加处理器
+            # Add handlers
             self._logger.addHandler(file_handler)
             self._logger.addHandler(console_handler)
     
@@ -46,26 +46,26 @@ class Logger:
         return self._logger
     
     def debug(self, message):
-        """记录调试级别日志"""
+        """Log debug level message"""
         self._logger.debug(message)
     
     def info(self, message):
-        """记录信息级别日志"""
+        """Log info level message"""
         self._logger.info(message)
     
     def warning(self, message):
-        """记录警告级别日志"""
+        """Log warning level message"""
         self._logger.warning(message)
     
     def error(self, message):
-        """记录错误级别日志"""
+        """Log error level message"""
         self._logger.error(message)
     
     def critical(self, message):
-        """记录严重错误级别日志"""
+        """Log critical error level message"""
         self._logger.critical(message)
 
 def setup_logger():
-    """初始化并配置全局日志记录器"""
+    """Initialize and configure global logger"""
     logger_instance = Logger()
     return logger_instance.get_logger()

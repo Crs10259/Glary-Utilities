@@ -11,14 +11,14 @@ from tools.network_reset import NetworkResetThread
 
 class NetworkResetWidget(BaseComponent):
     def __init__(self, parent=None):
-        # 初始化属性
+        # Initialize attributes
         self.reset_worker = None
         
-        # 调用父类构造函数
+        # Call parent class constructor
         super().__init__(parent)
     
     def setup_ui(self):
-        """设置UI"""
+        """Setup UI"""
         # Create layout
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(20, 20, 20, 20)
@@ -153,10 +153,10 @@ class NetworkResetWidget(BaseComponent):
         # Set the layout
         self.setLayout(main_layout)
         
-        # 确保样式正确应用
+        # Ensure styles are applied correctly
         self.setAttribute(Qt.WA_StyledBackground, True)
         
-        # 应用主题样式
+        # Apply theme styles
         self.apply_theme()
     
     def reset_network(self):
@@ -210,11 +210,11 @@ class NetworkResetWidget(BaseComponent):
         return self.settings.get_translation("network_reset", key, default) 
 
     def apply_theme(self):
-        """应用主题样式到组件"""
-        # 首先调用父类的应用主题方法
+        """Apply theme styles to component"""
+        # First call parent class apply theme method
         super().apply_theme()
         
-        # 获取当前主题颜色
+        # Get current theme colors
         theme_name = self.settings.get_setting("theme", "dark")
         theme_data = self.settings.load_theme(theme_name)
         
@@ -223,7 +223,7 @@ class NetworkResetWidget(BaseComponent):
             text_color = theme_data["colors"].get("text_color", "#dcdcdc")
             accent_color = theme_data["colors"].get("accent_color", "#007acc")
             
-            # 创建复选框样式
+            # Create checkbox styles
             checkbox_style = f"""
                 QCheckBox {{ 
                     color: {text_color}; 
@@ -261,7 +261,7 @@ class NetworkResetWidget(BaseComponent):
                 }}
             """
             
-            # 应用到各个复选框
+            # Apply to various checkboxes
             if hasattr(self, 'flush_dns_cb'):
                 self.flush_dns_cb.setStyleSheet(checkbox_style)
             if hasattr(self, 'reset_winsock_cb'):

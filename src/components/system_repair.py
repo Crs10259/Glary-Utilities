@@ -28,20 +28,20 @@ class SystemRepairWidget(BaseComponent):
         return self.settings.get_translation("system_repair", key, default)
     
     def setup_ui(self):
-        """设置UI组件"""
-        # 清除旧布局（如果有）
+        """Setup UI components"""
+        # Clear old layout (if any)
         # if self.layout():
-        #     # 清除旧布局中的所有部件
+        #     # Clear all widgets in old layout
         #     while self.layout().count():
         #         item = self.layout().takeAt(0)
         #         if item.widget():
         #             item.widget().deleteLater()
             
-        #     # 删除旧布局
+        #     # Delete old layout
         #     old_layout = self.layout()
-        #     QWidget().setLayout(old_layout)  # 将旧布局设置给一个临时部件以便删除
+        #     QWidget().setLayout(old_layout)  # Set old layout to a temporary widget for deletion
         
-        # 主布局
+        # Main layout
         self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(20)
@@ -124,7 +124,7 @@ class SystemRepairWidget(BaseComponent):
         self.status_label.setStyleSheet("color: #a0a0a0; background-color: transparent;")
         self.main_layout.addWidget(self.status_label)
         
-        # 设置布局
+        # Set layout
         self.setLayout(self.main_layout)
         
         # 确保样式正确应用

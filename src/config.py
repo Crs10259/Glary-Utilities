@@ -13,7 +13,7 @@ class App:
     MAX_DATA_POINTS = 60
 
 class Path:
-    # 基础资源路径
+    # Base resource paths
     BASE_DIR = Path(__file__).parent.parent.absolute()
     LOG_DIR = os.path.join(BASE_DIR, "logs")
     RESOURCES_DIR = os.path.join(BASE_DIR, "resources")
@@ -22,88 +22,88 @@ class Path:
     TRANSLATIONS_DIR = os.path.join(RESOURCES_DIR, "translations")
 
 class ResourceManager:
-    """资源管理器类，用于统一管理应用程序资源"""
+    """Resource manager class for unified management of application resources"""
     
     _initialized = False
 
     @classmethod
     def ensure_directory(cls, directory):
-        """确保目录存在"""
+        """Ensure directory exists"""
         if not os.path.exists(directory):
             try:
                 os.makedirs(directory)
-                logger.info(f"创建目录: {directory}")
+                logger.info(f"Created directory: {directory}")
             except Exception as e:
-                logger.error(f"创建目录时出错 {directory}: {e}")
+                logger.error(f"Error creating directory {directory}: {e}")
     
     @classmethod
     def initialize(cls):
-        """初始化资源目录结构"""
+        """Initialize resource directory structure"""
         if cls._initialized:
             return True
             
-        logger.info("初始化资源管理器...")
+        logger.info("Initializing resource manager...")
         
-        # 确保所有资源目录存在
+        # Ensure all resource directories exist
         cls.ensure_directory(Path.RESOURCES_DIR)
         cls.ensure_directory(Path.ICONS_DIR)
         cls.ensure_directory(Path.THEMES_DIR)
  
         cls._initialized = True
-        logger.info("资源管理器初始化完成")
+        logger.info("Resource manager initialization completed")
         return True
 
 class Icon:
-    """图标管理类，用于处理应用程序图标"""
+    """Icon management class for handling application icons"""
     
     @staticmethod
     @lru_cache()
     def exists(path):
-        """检查指定路径的图标文件是否存在"""
+        """Check if icon file exists at specified path"""
         try:
-            # 修正文件路径检查方式
+            # Fix file path checking method
             if os.path.isabs(path):
                 full_path = path
             else:
-                # 获取项目根目录
+                # Get project root directory
                 full_path = os.path.normpath(os.path.join(Path.BASE_DIR, path))
             
             return os.path.exists(full_path) and os.path.isfile(full_path)
         except Exception as e:
-            logger.error(f"检查图标是否存在时出错 {path}: {str(e)}")
+            logger.error(f"Error checking if icon exists {path}: {str(e)}")
             return False
     
     @staticmethod
     @lru_cache()
     def get_path(path):
-        """获取图标文件的完整路径"""
+        """Get complete path of icon file"""
         try:
-            # 修正文件路径获取方式
+            # Fix file path getting method
             if os.path.isabs(path):
                 full_path = path
             else:
-                # 获取项目根目录
+                # Get project root directory
                 full_path = os.path.normpath(os.path.join(Path.BASE_DIR, path))
             
-            # 检查文件是否存在
+            # Check if file exists
             if os.path.exists(full_path) and os.path.isfile(full_path):
                 return full_path
             else:
                 logger.warning(f"Icon file not found: {full_path}")
-                # 返回占位符图标路径
+                # Return placeholder icon path
                 return os.path.join(Path.ICONS_DIR, "placeholder.svg")
         except Exception as e:
-            logger.error(f"获取图标路径时出错 {path}: {str(e)}")
+            logger.error(f"Error getting icon path {path}: {str(e)}")
             return os.path.join(Path.ICONS_DIR, "placeholder.svg")
 
     @staticmethod
     def ensure_dir_exists(dir_path):
-        """确保图标目录存在"""
+        """Ensure icon directory exists"""
         try:
             os.makedirs(dir_path, exist_ok=True)
             return True
         except Exception as e:
-            logger.error(f"创建目录时出错 {dir_path}: {str(e)}")
+            logger.error(f"Error creating directory {dir_path}: {str(e)}")
             return False
     
     class Icon:
@@ -261,5 +261,5 @@ class Icon:
         Path = _path
         Exist = os.path.exists(_path)
 
-# 初始化资源管理器
+# Initialize resource manager
 ResourceManager.initialize()

@@ -12,44 +12,44 @@ from tools.dism_tools import DismThread
 
 class DismToolWidget(BaseComponent):
     def __init__(self, parent=None):
-        # 调用父类构造函数
+        # Call parent class constructor
         super().__init__(parent)
         
-        # 初始化属性
+        # Initialize attributes
         self.dism_worker = None
     
     def get_translation(self, key, default=None):
-        """重写 get_translation 以使用正确的部分名称"""
+        """Override get_translation to use correct section name"""
         return self.settings.get_translation("dism_tool", key, default)
     
     def apply_theme(self):
-        """应用主题样式到组件"""
-        # 调用父类的应用主题方法，使用统一样式
+        """Apply theme styles to component"""
+        # Call parent class apply theme method, use unified style
         super().apply_theme()
         
     def setup_ui(self):
-        # 主布局
+        # Main layout
         self.main_layout = QVBoxLayout()
         self.main_layout.setContentsMargins(20, 20, 20, 20)
         self.main_layout.setSpacing(20)
         
-        # 标题
+        # Title
         self.title = QLabel(self.get_translation("title"))
         self.title.setStyleSheet("font-size: 24px; font-weight: bold; color: #e0e0e0; background-color: transparent;")
         self.main_layout.addWidget(self.title)
         
-        # 描述
+        # Description
         self.description = QLabel(self.get_translation("description"))
         self.description.setStyleSheet("font-size: 14px; color: #a0a0a0; background-color: transparent;")
         self.main_layout.addWidget(self.description)
         
-        # 非Windows系统的警告标签
+        # Warning label for non-Windows systems
         if platform.system() != "Windows":
-            warning_label = QLabel("⚠️ DISM仅在Windows系统上可用")
+            warning_label = QLabel("⚠️ DISM is only available on Windows systems")
             warning_label.setStyleSheet("color: #ff9900; font-weight: bold; background-color: transparent;")
             self.main_layout.addWidget(warning_label)
         
-        # 操作组
+        # Operations group
         self.operations_group = QGroupBox(self.get_translation("operations"))
         self.operations_group.setStyleSheet(""" 
             QGroupBox {
