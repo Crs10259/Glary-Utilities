@@ -1,6 +1,7 @@
 # Glary Utilities
 
-A comprehensive system utility tool for Windows that helps optimize, clean, and maintain your computer.
+A comprehensive system utility tool for Windows that helps optimize, clean, and maintain your computer, but author is fool.
+The project is not perfect, such as translation (mostly usable), light colored themes (mostly unusable), and incomplete functional testing (MacOS).
 
 ## Features
 
