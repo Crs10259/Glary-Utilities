@@ -45,16 +45,25 @@ The project is not perfect, such as translation (mostly usable), light colored t
    uv sync
    ```
 
-   **Option B: Using pip**
+   **Option B: Using pip (Development mode)**
    ```bash
    pip install -e .
    ```
 
+   **Option C: Using pipx (For system-wide installation)**
+   ```bash
+   # Install pipx if you haven't already
+   pip install pipx
+   
+   # Install the application
+   pipx install .
+   ```
+
 3. Run the application using one of the following methods:
 
-   **Option A: Using the installed command (after installation)**
+   **Option A: Using uv (Development)**
    ```bash
-   glary-utilities
+   uv run python src/main.py
    ```
 
    **Option B: Direct Python execution**
@@ -65,6 +74,11 @@ The project is not perfect, such as translation (mostly usable), light colored t
    **Option C: Using the launcher script**
    ```bash
    python run.py
+   ```
+
+   **Option D: Using the installed command (after pipx installation)**
+   ```bash
+   glary-utilities
    ```
 
 ## Building from Source
@@ -78,9 +92,14 @@ To build the application and create an installer:
    uv sync
    ```
 
-   **Using pip:**
+   **Using pip (Development mode):**
    ```bash
    pip install -e .
+   ```
+
+   **Using pipx (For system installation):**
+   ```bash
+   pipx install .
    ```
 
 2. For creating standalone executables, you can use various packaging tools:
@@ -105,21 +124,25 @@ pyinstaller --onefile --windowed --name "Glary-Utilities" src/main.py
 
 ## Running the Application
 
-After installation, you can run the application in several ways:
+You can run the application in several ways:
 
-### 1. Using the installed command (recommended)
+### 1. Development mode (recommended for development)
 ```bash
-glary-utilities
-```
+# Using uv
+uv run python src/main.py
 
-### 2. Direct Python execution
-```bash
+# Using pip
 python src/main.py
 ```
 
-### 3. Using the launcher script
+### 2. Using the launcher script
 ```bash
 python run.py
+```
+
+### 3. System installation (after pipx install)
+```bash
+glary-utilities
 ```
 
 ### Command Line Options
@@ -131,6 +154,31 @@ The application supports several command line options:
 - `--check-translations`: Check for missing translations
 - `--reset-settings`: Reset all settings to default
 - `--exit-after-check`: Exit after translation check
+
+## Application Installation
+
+This is a desktop application, not a library. Here are the recommended installation methods:
+
+### For Development
+```bash
+# Using uv (recommended)
+uv sync
+uv run python src/main.py
+
+# Using pip
+pip install -e .
+python src/main.py
+```
+
+### For System Installation
+```bash
+# Using pipx (recommended for applications)
+pip install pipx
+pipx install .
+
+# Then run from anywhere
+glary-utilities
+```
 
 ## Dependency Management
 

@@ -4,6 +4,20 @@ version = "1.0.0"
 description = "Glary Utilities - System optimization and maintenance tools"
 readme = "README.md"
 requires-python = ">=3.13"
+authors = [
+    {name = "Glarysoft", email = "support@glarysoft.com"}
+]
+keywords = ["system", "utilities", "optimization", "maintenance", "desktop", "gui"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
 dependencies = [
     "altgraph>=0.17.4",
     "gputil>=1.4.0",
