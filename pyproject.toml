@@ -23,6 +23,9 @@ dependencies = [
     "WMI; sys_platform == 'win32'",
 ]
 
+[project.scripts]
+glary-utilities = "src.main:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",

@@ -50,9 +50,21 @@ The project is not perfect, such as translation (mostly usable), light colored t
    pip install -e .
    ```
 
-3. Run the application:
+3. Run the application using one of the following methods:
+
+   **Option A: Using the installed command (after installation)**
+   ```bash
+   glary-utilities
+   ```
+
+   **Option B: Direct Python execution**
    ```bash
    python src/main.py
+   ```
+
+   **Option C: Using the launcher script**
+   ```bash
+   python run.py
    ```
 
 ## Building from Source
@@ -90,6 +102,35 @@ uv add pyinstaller
 # Build executable
 pyinstaller --onefile --windowed --name "Glary-Utilities" src/main.py
 ```
+
+## Running the Application
+
+After installation, you can run the application in several ways:
+
+### 1. Using the installed command (recommended)
+```bash
+glary-utilities
+```
+
+### 2. Direct Python execution
+```bash
+python src/main.py
+```
+
+### 3. Using the launcher script
+```bash
+python run.py
+```
+
+### Command Line Options
+
+The application supports several command line options:
+
+- `--debug`: Enable debug mode
+- `--no-splash`: Skip splash screen
+- `--check-translations`: Check for missing translations
+- `--reset-settings`: Reset all settings to default
+- `--exit-after-check`: Exit after translation check
 
 ## Dependency Management
 
