@@ -1,0 +1,4 @@
+include resources/icons/*
+include resources/themes/*
+include resources/translations/*
+recursive-include resources * 

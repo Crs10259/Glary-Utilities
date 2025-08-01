@@ -7,8 +7,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QFrame, QPushButton, QSizePolicy, QSpacerItem,
                             QRadioButton, QTextEdit, QCheckBox, QButtonGroup, QGroupBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from components.base_component import BaseComponent
-from tools.dism_tools import DismThread
+from src.components.base_component import BaseComponent
+from src.tools.dism_tools import DismThread
 
 class DismToolWidget(BaseComponent):
     def __init__(self, parent=None):

@@ -8,8 +8,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QCheckBox, QListWidget, QProgressBar, QTabWidget, 
                             QGroupBox, QListWidgetItem)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from components.base_component import BaseComponent
-from tools.system_repair import RepairThread
+from src.components.base_component import BaseComponent
+from src.tools.system_repair import RepairThread
 
 class SystemRepairWidget(BaseComponent):
     """System repair widget, display system repair options"""

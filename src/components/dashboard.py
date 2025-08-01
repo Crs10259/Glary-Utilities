@@ -13,8 +13,8 @@ from PyQt5.QtGui import (
 )
 from PyQt5.QtChart import QChart, QChartView, QLineSeries, QValueAxis
 
-from .base_component import BaseComponent
-from config import App, Icon
+from src.components.base_component import BaseComponent
+from src.config import App, Icon
 from collections import deque
 
 # Maximum data points

@@ -9,13 +9,13 @@ from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5.QtCore import QCoreApplication, Qt, QLibraryInfo
 
-from utils.settings import Settings
-from main_window import MainWindow
-from config import Icon
-from tools.base_tools import PlatformManager
-from utils.logger import Logger, setup_logger
-from splash_screen import SplashScreen
-from config import ResourceManager
+from src.utils.settings import Settings
+from src.main_window import MainWindow
+from src.config import Icon
+from src.tools.base_tools import PlatformManager
+from src.utils.logger import Logger, setup_logger
+from src.splash_screen import SplashScreen
+from src.config import ResourceManager
 import logging
 
 class GlaryUtilitiesApp:

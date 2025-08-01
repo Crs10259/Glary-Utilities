@@ -5,8 +5,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QGridLayout)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize
 from PyQt5.QtGui import QIcon
-from components.base_component import BaseComponent
-from config import Icon
+from src.components.base_component import BaseComponent
+from src.config import Icon
 import os
 
 class SystemInfoWidget(BaseComponent):

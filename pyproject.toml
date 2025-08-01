@@ -4,9 +4,6 @@ version = "1.0.0"
 description = "Glary Utilities - System optimization and maintenance tools"
 readme = "README.md"
 requires-python = ">=3.13"
-authors = [
-    {name = "Glarysoft", email = "support@glarysoft.com"}
-]
 keywords = ["system", "utilities", "optimization", "maintenance", "desktop", "gui"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -55,11 +52,15 @@ build = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.setuptools.package-data]
+"src" = ["resources/**/*"]
 
 [tool.uv]
 index-url = "https://mirrors.aliyun.com/pypi/simple/"

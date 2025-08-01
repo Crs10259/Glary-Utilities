@@ -4,10 +4,10 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QLabel,
                             QProgressBar, QGraphicsDropShadowEffect)
 from PyQt5.QtGui import QPixmap, QColor, QPainter, QFont
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QPropertyAnimation, QEasingCurve
-from config import Icon
-from config import App
-from utils.settings import Settings
-from utils.logger import Logger
+from src.config import Icon
+from src.config import App
+from src.utils.settings import Settings
+from src.utils.logger import Logger
 
 class LoadingThread(QThread):
     """Loading thread, simulates time-consuming operations"""

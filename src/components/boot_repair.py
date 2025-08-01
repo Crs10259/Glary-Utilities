@@ -5,10 +5,10 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QTableWidget, QTableWidgetItem, QFrame, QSizePolicy,
                              QSpacerItem, QHeaderView, QButtonGroup, QFileDialog)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
-from components.base_component import BaseComponent
+from src.components.base_component import BaseComponent
 from PyQt5.QtGui import QBrush, QColor
-from tools.boot_repair import BootRepairThread
-from tools.boot_repair import StartupManager
+from src.tools.boot_repair import BootRepairThread
+from src.tools.boot_repair import StartupManager
 
 class BootToolsWidget(BaseComponent):
     """Widget for boot tools operations including repair and startup management"""
@@ -90,6 +90,10 @@ class BootToolsWidget(BaseComponent):
                 button_hover_bg_color = theme_data["colors"].get("button_hover_bg_color", self.lighten_color(bg_color, 15))
                 button_pressed_bg_color = theme_data["colors"].get("button_pressed_bg_color", self.lighten_color(bg_color, 5))
 
+                # Get icon path for check icon
+                from src.config import Icon
+                check_icon_path = Icon.get_path("resources/icons/check.svg")
+
                 # Update title and description colors (if they exist)
                 if hasattr(self, 'title') and self.title is not None:
                     self.title.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {text_color};")
@@ -124,7 +128,7 @@ class BootToolsWidget(BaseComponent):
                     QCheckBox::indicator:checked {{ 
                         background-color: {accent_color}; 
                         border: 2px solid {accent_color};
-                        image: url("resources/icons/check.svg");
+                        image: url("{check_icon_path}");
                     }}
                     QCheckBox::indicator:unchecked:hover {{ border-color: {self.lighten_color(accent_color, 20)}; background-color: {self.lighten_color(bg_color, 10)}; }}
                     QCheckBox::indicator:checked:hover {{ background-color: {self.lighten_color(accent_color, 10)}; }}

@@ -7,8 +7,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QProgressBar, QMessageBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont
-from components.base_component import BaseComponent
-from tools.disk_check import DiskCheckThread
+from src.components.base_component import BaseComponent
+from src.tools.disk_check import DiskCheckThread
 
 class DiskCheckWidget(BaseComponent):
     def __init__(self, parent=None):

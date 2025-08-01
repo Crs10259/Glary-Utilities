@@ -15,7 +15,9 @@ class Path:
     # Base resource paths
     BASE_DIR = Path(__file__).parent.parent.absolute()
     LOG_DIR = os.path.join(BASE_DIR, "logs")
-    RESOURCES_DIR = os.path.join(BASE_DIR, "resources")
+    # For packaged version, resources are in src/resources
+    SRC_DIR = Path(__file__).parent.absolute()
+    RESOURCES_DIR = os.path.join(SRC_DIR, "resources")
     ICONS_DIR = os.path.join(RESOURCES_DIR, "icons")
     THEMES_DIR = os.path.join(RESOURCES_DIR, "themes")
     TRANSLATIONS_DIR = os.path.join(RESOURCES_DIR, "translations")
@@ -64,8 +66,8 @@ class Icon:
             if os.path.isabs(path):
                 full_path = path
             else:
-                # Get project root directory
-                full_path = os.path.normpath(os.path.join(Path.BASE_DIR, path))
+                # For packaged version, use SRC_DIR instead of BASE_DIR
+                full_path = os.path.normpath(os.path.join(Path.SRC_DIR, path))
             
             return os.path.exists(full_path) and os.path.isfile(full_path)
         except Exception as e:
@@ -81,8 +83,8 @@ class Icon:
             if os.path.isabs(path):
                 full_path = path
             else:
-                # Get project root directory
-                full_path = os.path.normpath(os.path.join(Path.BASE_DIR, path))
+                # For packaged version, use SRC_DIR instead of BASE_DIR
+                full_path = os.path.normpath(os.path.join(Path.SRC_DIR, path))
             
             # Check if file exists
             if os.path.exists(full_path) and os.path.isfile(full_path):

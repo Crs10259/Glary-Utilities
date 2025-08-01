@@ -12,8 +12,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                              QLineEdit, QButtonGroup)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer, QDir, QDateTime
 from PyQt5.QtWidgets import QApplication
-from components.base_component import BaseComponent
-from tools.virus_scan import VirusScanThread
+from src.components.base_component import BaseComponent
+from src.tools.virus_scan import VirusScanThread
 
 class VirusScanWidget(BaseComponent):
     """Widget for virus scanning operations"""
@@ -97,6 +97,10 @@ class VirusScanWidget(BaseComponent):
             button_pressed_bg_color = theme_data["colors"].get("button_pressed_bg_color", self.lighten_color(bg_color, 5))
             input_bg_color = theme_data["colors"].get("input_bg_color", self.lighten_color(bg_color, -5))
 
+            # Get icon path for check icon
+            from src.config import Icon
+            check_icon_path = Icon.get_path("resources/icons/check.svg")
+
             # Update component styles - more comprehensive style coverage
             self.setStyleSheet(f"""
                 QWidget {{ background-color: transparent; color: {text_color}; }}
@@ -125,7 +129,7 @@ class VirusScanWidget(BaseComponent):
                 QCheckBox::indicator:checked {{ 
                     background-color: {accent_color}; 
                     border: 2px solid {accent_color};
-                    image: url("resources/icons/check.svg");
+                                            image: url("{check_icon_path}");
                 }}
                 QCheckBox::indicator:unchecked:hover {{ border-color: {self.lighten_color(accent_color, 20)}; background-color: {self.lighten_color(bg_color, 10)}; }}
                 QCheckBox::indicator:checked:hover {{ background-color: {self.lighten_color(accent_color, 10)}; }}

@@ -16,22 +16,22 @@ from PyQt5.QtCore import (Qt, QSize, QPoint, QPropertyAnimation,
                         QParallelAnimationGroup, QSequentialAnimationGroup,
                         QEasingCurve, pyqtSignal, QTimer, QAbstractAnimation, QThread,
                         QRect, QEvent, QObject)
-from utils.logger import Logger
-from tools.base_tools import PlatformManager
+from src.utils.logger import Logger
+from src.tools.base_tools import PlatformManager
 
-from components.base_component import BaseComponent
-from components.dashboard import DashboardWidget
-from components.system_cleaner import SystemCleanerWidget
-from components.disk_check import DiskCheckWidget
-from components.boot_repair import BootToolsWidget
-from components.virus_scan import VirusScanWidget
-from components.system_repair import SystemRepairWidget
-from components.dism_tool import DismToolWidget
-from components.network_reset import NetworkResetWidget
-from components.system_info import SystemInfoWidget
-from components.settings import SettingsWidget
-from config import Icon
-from config import App
+from src.components.base_component import BaseComponent
+from src.components.dashboard import DashboardWidget
+from src.components.system_cleaner import SystemCleanerWidget
+from src.components.disk_check import DiskCheckWidget
+from src.components.boot_repair import BootToolsWidget
+from src.components.virus_scan import VirusScanWidget
+from src.components.system_repair import SystemRepairWidget
+from src.components.dism_tool import DismToolWidget
+from src.components.network_reset import NetworkResetWidget
+from src.components.system_info import SystemInfoWidget
+from src.components.settings import SettingsWidget
+from src.config import Icon
+from src.config import App
 
 class MainWindow(QMainWindow):
     """Main application window"""
@@ -722,6 +722,10 @@ class MainWindow(QMainWindow):
             accent_color = theme_data["colors"].get("accent_color", "#007acc")
             border_color = theme_data["colors"].get("border_color", "#444444")
             
+            # Get icon path for check icon
+            from src.config import Icon
+            check_icon_path = Icon.get_path("resources/icons/check.svg")
+            
             # Update checkbox style
             checkbox_style = f"""
                 QCheckBox {{
@@ -749,7 +753,7 @@ class MainWindow(QMainWindow):
                 QCheckBox::indicator:checked {{
                     background-color: {accent_color};
                     border: 2px solid {accent_color};
-                    image: url(resources/icons/check.png);  /* 可选：添加勾选图标 */
+                    image: url({check_icon_path});  /* 可选：添加勾选图标 */
                 }}
                 
                 QCheckBox::indicator:unchecked:hover {{

@@ -10,8 +10,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QListWidgetItem, QTableWidget, QHeaderView, QTextEdit,
                             QMessageBox, QInputDialog)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize
-from components.base_component import BaseComponent
-from tools.system_cleaner import CleanerWorker
+from src.components.base_component import BaseComponent
+from src.tools.system_cleaner import CleanerWorker
 
 class SystemCleanerWidget(BaseComponent):
     def __init__(self, parent=None):

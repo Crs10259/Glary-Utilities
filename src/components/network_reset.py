@@ -6,8 +6,8 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QFrame, QPushButton, QSizePolicy, QSpacerItem,
                             QCheckBox, QTextEdit, QGroupBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from components.base_component import BaseComponent
-from tools.network_reset import NetworkResetThread
+from src.components.base_component import BaseComponent
+from src.tools.network_reset import NetworkResetThread
 
 class NetworkResetWidget(BaseComponent):
     def __init__(self, parent=None):

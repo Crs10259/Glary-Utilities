@@ -1,12 +1,12 @@
 from PyQt5.QtWidgets import QWidget, QSizePolicy, QVBoxLayout, QLabel, QCheckBox, QRadioButton, QButtonGroup
 from PyQt5.QtCore import QPropertyAnimation, QEasingCurve, QPoint, Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor, QFont
-from utils.animations import AnimationUtils
-from utils.settings import Settings
-from utils.theme_manager import ThemeManager
-from utils.logger import Logger
-from tools.base_tools import PlatformManager
-from tools.base_tools import SystemInformation
+from src.utils.animations import AnimationUtils
+from src.utils.settings import Settings
+from src.utils.theme_manager import ThemeManager
+from src.utils.logger import Logger
+from src.tools.base_tools import PlatformManager
+from src.tools.base_tools import SystemInformation
 
 class BaseComponent(QWidget):
     """Base component class for all application components"""

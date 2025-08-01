@@ -57,6 +57,9 @@ The project is not perfect, such as translation (mostly usable), light colored t
    
    # Install the application
    pipx install .
+   
+   # Run the application
+   glary-utilities
    ```
 
 3. Run the application using one of the following methods:
@@ -79,6 +82,12 @@ The project is not perfect, such as translation (mostly usable), light colored t
    **Option D: Using the installed command (after pipx installation)**
    ```bash
    glary-utilities
+   
+   # Available command line options:
+   glary-utilities --help          # Show help
+   glary-utilities --debug         # Enable debug mode
+   glary-utilities --no-splash     # Skip splash screen
+   glary-utilities --reset-settings # Reset all settings
    ```
 
 ## Building from Source

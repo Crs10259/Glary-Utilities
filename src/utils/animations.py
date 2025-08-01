@@ -1,6 +1,6 @@
 from PyQt5.QtCore import QPropertyAnimation, QSequentialAnimationGroup, QParallelAnimationGroup
 from PyQt5.QtCore import QEasingCurve, Qt, QSize, QPoint, QRect, QAbstractAnimation, QTimer
-from utils.settings import Settings
+from src.utils.settings import Settings
 
 class AnimationUtils:
     """Provide UI animation effect tools"""

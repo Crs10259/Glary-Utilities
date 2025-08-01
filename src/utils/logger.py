@@ -1,7 +1,7 @@
 import os
 import logging
 from datetime import datetime
-from config import Path
+from src.config import Path
 
 class Logger:
     _instance = None

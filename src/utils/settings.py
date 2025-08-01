@@ -2,8 +2,8 @@ import os
 import json
 import platform
 from PyQt5.QtCore import QObject, QSettings
-from config import Path
-from .logger import Logger
+from src.config import Path
+from src.utils.logger import Logger
 
 class Settings(QObject):
     def __init__(self, parent=None):

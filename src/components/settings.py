@@ -8,9 +8,9 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLab
                           QApplication, QMessageBox, QFrame, QRadioButton)
 from PyQt5.QtCore import Qt, QSize, QSettings, QTranslator, QCoreApplication, QTimer
 from PyQt5.QtGui import QColor, QIcon, QMovie
-from utils.animations import AnimationUtils
-from utils.theme_manager import ThemeManager
-from utils.logger import Logger
+from src.utils.animations import AnimationUtils
+from src.utils.theme_manager import ThemeManager
+from src.utils.logger import Logger
 import logging
 
 class SettingsWidget(QWidget):
@@ -297,7 +297,7 @@ class SettingsWidget(QWidget):
         self.enable_animations_check.stateChanged.connect(self.on_animations_changed)
         
         # Linux performance optimization option
-        from tools.base_tools import PlatformManager
+        from src.tools.base_tools import PlatformManager
         platform_manager = PlatformManager()
         if platform_manager.is_linux():
             self.optimize_linux_performance_check = QCheckBox(self.get_translation("optimize_linux_performance", "优化Linux性能（禁用复杂动画）"))

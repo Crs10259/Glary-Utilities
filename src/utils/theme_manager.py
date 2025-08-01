@@ -4,9 +4,9 @@ from typing import Dict, Any, Optional, Tuple, List
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtWidgets import QApplication
-from .settings import Settings
-from config import Icon, Path
-from .logger import Logger
+from src.utils.settings import Settings
+from src.config import Icon, Path
+from src.utils.logger import Logger
 
 class ThemeManager(QObject):
     """
