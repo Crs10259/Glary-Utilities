@@ -217,10 +217,10 @@ class DiskCheckWidget(BaseComponent):
         # Set a minimum size for the log
         self.log_output.setMinimumHeight(200)
         
-        # 初始状态信息
-        self.log_output.append(self.get_translation("ready_message", "磁盘检查工具准备就绪。请选择一个驱动器和检查选项，然后点击检查按钮。"))
+        # Initial status information
+        self.log_output.append(self.get_translation("ready_message", "Disk check tool is ready. Please select a drive and check options, then click the check button."))
         
-        # 在初始化完所有UI元素后再填充驱动器列表
+        # Populate drive list after all UI elements are initialized
         if self.platform_manager.is_windows():
             self.populate_drives()
 
@@ -228,20 +228,20 @@ class DiskCheckWidget(BaseComponent):
         self.apply_theme()
     
     def populate_drives(self):
-        """填充驱动器下拉列表"""
+        """Populate drive dropdown list"""
         # Ensure log_output is initialized
         if not hasattr(self, 'log_output') or self.log_output is None:
             self.logger.warning("Warning: log_output not yet initialized")
             return
         
         try:
-            # 获取可用驱动器
+            # Get available drives
             drives = self.system_information.get_drives()
             
             if drives:
                 for drive in drives:
                     if drive.get("accessible", False):
-                        # 添加可访问的驱动器
+                        # Add accessible drives
                         display_name = drive.get("display_name")
                         name = drive.get("name")
                         self.drive_combo.addItem(display_name, name)
@@ -278,49 +278,49 @@ class DiskCheckWidget(BaseComponent):
             self.logger.error(f"Error populating drive list: {str(e)}")
     
     def check_disk(self):
-        """检查磁盘错误"""
-        # 获取选中的驱动器
+        """Check disk errors"""
+        # Get selected drive
         drive = self.drive_combo.currentText()
         
-        # 验证驱动器
+        # Validate drive
         if not drive:
-            self.log_output.append("请选择一个驱动器")
+            self.log_output.append("Please select a drive")
             return
         
-        # 额外验证：确保驱动器存在且可访问
+        # Additional validation: ensure drive exists and is accessible
         if not os.path.exists(drive):
-            self.log_output.append(f"驱动器 {drive} 不存在或不可访问")
+            self.log_output.append(f"Drive {drive} does not exist or is not accessible")
             return
         
-        # 检查驱动器类型（仅适用于Windows）
+        # Check drive type (Windows only)
         if self.platform_manager.is_windows():
             from ctypes import windll
             drive_type = windll.kernel32.GetDriveTypeW(f"{drive}\\")
-            # 类型2是可移动驱动器，类型5是CD-ROM
+            # Type 2 is removable drive, type 5 is CD-ROM
             if drive_type in [2, 5]:
-                self.log_output.append(f"警告: {drive} 是可移动驱动器或光驱，可能无法正确检查")
-            # 类型0或1是未知或无效驱动器
+                self.log_output.append(f"Warning: {drive} is a removable drive or CD-ROM, may not be checked correctly")
+            # Type 0 or 1 is unknown or invalid drive
             elif drive_type in [0, 1]:
-                self.log_output.append(f"错误: {drive} 是无效驱动器")
+                self.log_output.append(f"Error: {drive} is an invalid drive")
                 return
         
-        # 获取检查类型
+        # Get check types
         check_file_system = self.file_system_cb.isChecked()
         check_bad_sectors = self.bad_sectors_cb.isChecked()
         read_only = self.read_only_cb.isChecked()
         
         if not check_file_system and not check_bad_sectors:
-            self.log_output.append("请至少选择一种检查类型")
+            self.log_output.append("Please select at least one check type")
             return
         
-        # 清除日志并禁用按钮
+        # Clear log and disable buttons
         self.log_output.clear()
         self.check_button.setEnabled(False)
         self.repair_button.setEnabled(False)
         
-        self.log_output.append(f"开始对驱动器 {drive} 进行磁盘检查...")
+        self.log_output.append(f"Starting disk check for drive {drive}...")
         
-        # 启动工作线程
+        # Start worker thread
         self.disk_worker = DiskCheckThread(drive, check_file_system, check_bad_sectors, read_only, "check")
         self.disk_worker.progress_updated.connect(self.update_log)
         self.disk_worker.operation_completed.connect(self.operation_completed)

@@ -70,22 +70,9 @@ class Settings(QObject):
             dict: Theme configuration data, returns None if theme doesn't exist
         """
         # Theme file path - first check user custom theme
-        themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resources", "themes")
+        themes_dir = Path.THEMES_DIR
         theme_file = os.path.join(themes_dir, f"{theme_name}.json")
-        
-        # If custom theme doesn't exist, try to load built-in theme
-        # if not os.path.exists(theme_file):
-        #     builtin_themes_dir = os.path.join(
-        #         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-        #         "resources", "themes"
-        #     )
-        # builtin_theme_file = os.path.join(builtin_themes_dir, f"{theme_name}.json")
-            
-        #     if os.path.exists(builtin_theme_file):
-        #         theme_file = builtin_theme_file
-        #     else:
-        #         return None
-                
+                     
         try:
             with open(theme_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
@@ -95,7 +82,7 @@ class Settings(QObject):
         
     def save_custom_theme(self, theme_data):
         """Save custom theme configuration"""
-        themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "themes")
+        themes_dir = Path.THEMES_DIR
         theme_file = os.path.join(themes_dir, "custom.json")
         
         # Ensure directory exists
@@ -119,7 +106,7 @@ class Settings(QObject):
 
     def get_available_themes(self):
         """Get all available themes"""
-        themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resources", "themes")
+        themes_dir = Path.THEMES_DIR
         themes = []
         
         # Ensure directory exists
@@ -157,13 +144,13 @@ class Settings(QObject):
         Args:
             key (str): Setting key name
             default_value: Default value
-            
+        
         Returns:
-            设置值，如果是布尔值相关的设置会确保返回bool类型
+            Setting value, if the setting is related to boolean values, it will ensure to return bool type
         """
         value = self.settings.value(key, default_value)
         
-        # 如果默认值是布尔类型，确保返回布尔值
+        # If the default value is a boolean type, ensure to return boolean value
         if isinstance(default_value, bool) or key.startswith(('enable_', 'show_', 'use_', 'is_')):
             if isinstance(value, str):
                 return value.lower() in ('true', 'yes', '1', 'on')
@@ -174,41 +161,41 @@ class Settings(QObject):
         return value
     
     def set_setting(self, key, value):
-        """设置设置值
+        """Set setting value
         
         Args:
-            key (str): 设置键名
-            value: 要设置的值
+            key (str): Setting key name
+            value: Value to set
         """
-        # 对于布尔值，确保存储为字符串 'true' 或 'false'
+        # For boolean values, ensure to store as string 'true' or 'false'
         if isinstance(value, bool):
             value = 'true' if value else 'false'
         
         self.settings.setValue(key, value)
     
     def sync(self):
-        """同步设置到磁盘"""
+        """Sync settings to disk"""
         self.settings.sync()
     
     def reset_settings(self):
-        """重置所有设置为默认值"""
+        """Reset all settings to default values"""
         self.settings.clear()
         self.logger.info("All settings have been reset to default values")
         
-        # 设置基本默认值
+        # Set basic default values
         self.set_setting("theme", "dark")
         self.set_setting("language", "English")
         self.set_setting("window_transparency", 100)
     
     def get_translation(self, section, key, default=None, language=None):
-        """获取给定键的翻译文本"""
-        # 使用缓存的语言设置，避免递归
+        """Get translation text for given key"""
+        # Use cached language setting to avoid recursion
         if not language:
             if not self._current_language:
                 self._current_language = self.settings.value("language", "en")
             language = self._current_language
             
-        # 处理语言代码映射
+        # Process language code mapping
         language_map = {
             "en": "en",
             "english": "en",
@@ -219,21 +206,21 @@ class Settings(QObject):
         
         lang_code = language_map.get(language.lower(), language)
             
-        # 如果语言不可用或者翻译字典为空，则创建一个默认结构
+        # If language is not available or translation dictionary is empty, create a default structure
         if not self.translations or lang_code not in self.translations:
-            # 尝试重新加载翻译
+            # Try to reload translations
             self.load_translations()
-            # 如果还是不存在，创建一个空的结构
+            # If still not exists, create an empty structure
             if lang_code not in self.translations:
                 self.translations[lang_code] = {}
         
-        # 检查section是否存在
+        # Check if section exists
         if section not in self.translations[lang_code]:
             self.translations[lang_code][section] = {}
         
-        # 如果找不到翻译，则返回键或默认值
+        # If translation is not found, return key or default value
         if key not in self.translations[lang_code][section]:
-            # 尝试在英语中查找作为回退
+            # Try to find in English as fallback
             if "en" in self.translations and section in self.translations["en"] and key in self.translations["en"][section]:
                 return self.translations["en"][section][key]
             return default if default is not None else key
@@ -241,23 +228,23 @@ class Settings(QObject):
         return self.translations[lang_code][section][key]
 
     def set_language(self, language):
-        """设置应用程序语言
+        """Set application language
         
         Args:
-            language: 要设置的语言
+            language: Language to set
         """
         self.set_setting("language", language)
-        self._current_language = language  # 更新缓存的语言设置
-        # 重新加载翻译
+        self._current_language = language  # Update cached language setting
+        # Reload translations
         self.load_translations()
         
     def set_current_language(self, language):
-        """设置当前语言并重新加载翻译
+        """Set current language and reload translations
         
         Args:
-            language: 要设置的语言代码或名称
+            language: Language code or name to set
         """
-        # 处理语言代码映射
+        # Process language code mapping
         language_map = {
             "en": "en",
             "english": "en",
@@ -271,27 +258,27 @@ class Settings(QObject):
         lang_code = language_map.get(language.lower(), language)
         self.set_setting("language", language)
         
-        # 确保翻译已加载
+        # Ensure translations are loaded
         if not self.translations or lang_code not in self.translations:
             self.load_translations()
             
     def validate_translations(self, raise_error=False):
-        """验证所有翻译是否存在
+        """Validate all translations exist
         
         Args:
-            raise_error: 当发现缺失翻译时是否抛出异常
+            raise_error: Whether to raise an exception when missing translations are found
             
         Returns:
-            dict: 按语言分组的缺失翻译映射，如果没有缺失则返回空字典
+            dict: Missing translations grouped by language, returns empty dictionary if no missing translations
         """
         missing_translations = {}
         
         try:
-            # 获取所有翻译键的列表
-            # 这个方法不会使用get_translation，避免潜在的递归
+            # Get list of all translation keys
+            # This method does not use get_translation to avoid potential recursion
             all_keys = {}
             
-            # 收集所有语言中所有部分的所有键
+            # Collect all keys in all sections for all languages
             for language, sections in self.translations.items():
                 if language not in all_keys:
                     all_keys[language] = {}
@@ -303,14 +290,14 @@ class Settings(QObject):
                     for key in keys:
                         all_keys[language][section].add(key)
             
-            # 检查每种语言的每个部分，确保每个键都存在
+            # Check each language's each section, ensure each key exists
             for language, sections in all_keys.items():
                 language_missing = {}
                 
                 for section, keys in sections.items():
                     section_missing = []
                     
-                    # 在这个语言的这个部分检查每个键
+                    # Check each key in this language's this section
                     for key in keys:
                         if section not in self.translations[language] or key not in self.translations[language][section]:
                             section_missing.append(key)

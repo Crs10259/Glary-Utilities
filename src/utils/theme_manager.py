@@ -5,7 +5,7 @@ from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtWidgets import QApplication
 from .settings import Settings
-from config import Icon
+from config import Icon, Path
 from .logger import Logger
 
 class ThemeManager(QObject):
@@ -15,7 +15,7 @@ class ThemeManager(QObject):
     _instance = None
     _initialized = False
     
-    # 主题变更信号
+    # Theme changed signal
     theme_changed = pyqtSignal(str)
     
     def __new__(cls):
@@ -32,9 +32,9 @@ class ThemeManager(QObject):
             return
             
         self.themes = {}
-        self.default_theme = "light"
+        self.default_theme = "dark"
         self.current_theme = self.default_theme
-        self.themes_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resources", "themes")
+        self.themes_dir = Path.THEMES_DIR
         self.settings = Settings()
         self.current_theme = self.settings.settings.value("theme", self.default_theme)
         
@@ -79,12 +79,12 @@ class ThemeManager(QObject):
     
     def _validate_theme(self, theme_data: Dict[str, Any]) -> bool:
         """Validate theme data structure"""
-        # 支持新的主题格式 (style字符串格式) 和旧的主题格式 (colors字典格式)
+        # Support new theme format (style string format) and old theme format (colors dictionary format)
         if "style" in theme_data:
-            # 新的主题格式 - 只需要名称和样式
+            # New theme format - only name and style
             return "name" in theme_data
         else:
-            # 旧的主题格式 - 需要名称和颜色
+            # Old theme format - requires name and colors
             required_fields = ["name", "colors"]
             required_colors = ["bg_color", "text_color", "accent_color"]
             
@@ -188,17 +188,17 @@ class ThemeManager(QObject):
                 json.dump(data, f, indent=4, ensure_ascii=False)
     
     def get_theme_names(self):
-        """获取所有主题名称列表"""
+        """Get all theme name list"""
         return list(self.themes.keys())
         
     def get_theme_display_names(self, language="en"):
-        """获取主题的显示名称"""
+        """Get theme display name"""
         display_names = {}
         for theme_name, theme_data in self.themes.items():
             if "name" in theme_data:
                 display_names[theme_name] = theme_data["name"]
             else:
-                # 如果没有名称，使用主题名的首字母大写版本
+                # If there is no name, use the capitalized version of the theme name
                 display_names[theme_name] = theme_name.capitalize()
         return display_names
     
@@ -732,44 +732,44 @@ class ThemeManager(QObject):
     
     def apply_theme(self, theme_name):
         """Apply a theme to the application"""
-        # 如果主题不存在，使用默认主题
+        # If the theme does not exist, use the default theme
         if theme_name not in self.themes:
             theme_name = self.default_theme
             
         self.current_theme = theme_name
         self.settings.settings.setValue("theme", theme_name)
         
-        # 获取主题数据
+        # Get theme data
         theme_data = self.themes[theme_name]
         
-        # 应用主题
+        # Apply theme
         if "style" in theme_data:
-            # 新的主题格式 - 直接应用样式表
+            # New theme format - apply style sheet directly
             QApplication.instance().setStyleSheet(theme_data["style"])
         else:
-            # 旧的主题格式 - 生成样式表
+            # Old theme format - generate style sheet
             style_sheet = self.generate_style_sheet(theme_name)
             QApplication.instance().setStyleSheet(style_sheet)
         
-        # 发射主题变更信号
+        # Emit theme changed signal
         self.theme_changed.emit(theme_name)
     
     def create_theme(self, theme_name, theme_data):
-        """创建新主题
+        """Create new theme
         
         Args:
-            theme_name (str): 主题名称
-            theme_data (dict): 主题数据
+            theme_name (str): Theme name
+            theme_data (dict): Theme data
             
         Returns:
-            bool: 是否成功创建主题
+            bool: Whether the theme is successfully created
         """
-        # 确保主题目录存在
-        themes_dir = os.path.join(self.settings.get_config_dir(), "themes")
+        # Ensure the theme directory exists
+        themes_dir = self.themes_dir
         if not os.path.exists(themes_dir):
             os.makedirs(themes_dir)
         
-        # 保存主题文件
+        # Save theme file
         theme_file = os.path.join(themes_dir, f"{theme_name}.json")
         try:
             with open(theme_file, 'w', encoding='utf-8') as f:

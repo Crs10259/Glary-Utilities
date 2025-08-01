@@ -272,7 +272,7 @@ class BootToolsWidget(BaseComponent):
             self.get_translation("startup_type", "Type")
         ])
         
-        # 设置表格属性
+        # Set table properties
         self.startup_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.startup_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.startup_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)

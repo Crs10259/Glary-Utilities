@@ -1426,7 +1426,7 @@ class SettingsWidget(QWidget):
             # Convert Qt.Checked/Qt.Unchecked to boolean
             checked = (state == Qt.Checked)
             
-            # 保存设置
+            # Save settings
             self.settings.set_setting(setting_key, checked)
             self.settings.sync()
             

@@ -187,7 +187,7 @@ class DismToolWidget(BaseComponent):
         self.start_button.setEnabled(False)
         self.log_output.append(f"Starting operation: {operation}")
         
-        # 启动工作线程
+        # Start worker thread
         self.dism_worker = DismThread(operation)
         self.dism_worker.progress_updated.connect(self.update_log)
         self.dism_worker.operation_completed.connect(self.operation_completed)
@@ -234,7 +234,7 @@ class DismToolWidget(BaseComponent):
         Raises:
             KeyError: If any translation key is missing
         """
-        # 尝试获取此组件中使用的所有翻译
+        # Try to get all translations used in this component
         keys = [
             "title", "description", "operations", "check_health", 
             "scan_health", "restore_health", "cleanup_image",

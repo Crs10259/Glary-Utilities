@@ -156,7 +156,7 @@ class SystemInfoWidget(BaseComponent):
         self.setAttribute(Qt.WA_StyledBackground, True)
         
         # Log
-        self.logger.info("系统信息UI初始化完成")
+        self.logger.info("System info UI initialized")
     
     def setup_hardware_tab(self):
         """Setup hardware information tab"""
@@ -367,8 +367,8 @@ class SystemInfoWidget(BaseComponent):
             self.get_translation("total", "Total"),
             self.get_translation("used", "Used")
         ])
-        self.disk_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)  # 根据内容调整列宽
-        self.disk_table.horizontalHeader().setStretchLastSection(True)  # 确保最后一列能填充剩余空间
+        self.disk_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)  # Adjust column width based on content
+        self.disk_table.horizontalHeader().setStretchLastSection(True)  # Ensure the last column fills remaining space
         self.disk_table.setStyleSheet("""
             QTableWidget {
                 background-color: #252525;

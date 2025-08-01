@@ -297,7 +297,7 @@ class ActionTile(QFrame):
             }}
         """)
         
-        # 添加阴影效果
+        # Add shadow effect
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(15)
         shadow.setColor(QColor(0, 0, 0, 80))
