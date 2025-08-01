@@ -22,7 +22,7 @@ The project is not perfect, such as translation (mostly usable), light colored t
 
 - Windows 10 or later (some features may work on earlier versions)
 - Python 3.13 or later (if running from source)
-- uv (recommended) or pip for dependency management
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip for dependency management
 
 ## Installation
 
@@ -44,6 +44,8 @@ The project is not perfect, such as translation (mostly usable), light colored t
    # Install dependencies
    uv sync
    ```
+   
+   > **Note**: [uv](https://docs.astral.sh/uv/) is a fast Python package installer and resolver, written in Rust. It's designed to be a drop-in replacement for pip and virtualenv.
 
    **Option B: Using pip (Development mode)**
    ```bash
@@ -199,6 +201,8 @@ This project uses `pyproject.toml` for dependency management instead of `require
 - **Reliable**: Better dependency resolution and lock file support
 - **Modern**: Built with modern Python packaging standards in mind
 - **Compatible**: Works seamlessly with existing pip-based workflows
+
+> **Learn more**: Visit the [uv documentation](https://docs.astral.sh/uv/) for detailed guides, tutorials, and advanced usage examples.
 
 ### Key Dependencies
 
