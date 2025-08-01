@@ -21,25 +21,37 @@ The project is not perfect, such as translation (mostly usable), light colored t
 ## Requirements
 
 - Windows 10 or later (some features may work on earlier versions)
-- Python 3.8 or later (if running from source)
+- Python 3.13 or later (if running from source)
+- uv (recommended) or pip for dependency management
 
 ## Installation
 
 ### Running from Source
 
 1. Clone this repository:
-   ```
+   ```bash
    git clone https://github.com/Crs10259/Glary-Utilities.git
    cd Glary-Utilities
    ```
 
-2. Install the required dependencies:
+2. Install the required dependencies using one of the following methods:
+
+   **Option A: Using uv (Recommended)**
+   ```bash
+   # Install uv if you haven't already
+   pip install uv
+   
+   # Install dependencies
+   uv sync
    ```
-   pip install -r requirements.txt
+
+   **Option B: Using pip**
+   ```bash
+   pip install -e .
    ```
 
 3. Run the application:
-   ```
+   ```bash
    python src/main.py
    ```
 
@@ -48,19 +60,80 @@ The project is not perfect, such as translation (mostly usable), light colored t
 To build the application and create an installer:
 
 1. Install the required dependencies:
+
+   **Using uv:**
+   ```bash
+   uv sync
    ```
-   pip install -r requirements.txt
+
+   **Using pip:**
+   ```bash
+   pip install -e .
    ```
 
 2. For creating standalone executables, you can use various packaging tools:
-   - **Windows**: Use tools like cx_Freeze, py2exe, or auto-py-to-exe
-   - **macOS**: Use py2app or create-dmg
-   - **Linux**: Use AppImage or snapcraft
+   - **Windows**: Use tools like PyInstaller, cx_Freeze, or auto-py-to-exe
+   - **macOS**: Use PyInstaller, py2app, or create-dmg
+   - **Linux**: Use PyInstaller, AppImage, or snapcraft
 
 3. For creating installers, you can use:
-   - **Windows**: NSIS (Nullsoft Scriptable Install System) or Inno Setup
-   - **macOS**: pkgbuild or create-dmg
-   - **Linux**: AppImage or snapcraft
+   - **Windows**: NSIS (Nullsoft Scriptable Install System), Inno Setup, or WiX Toolset
+   - **macOS**: pkgbuild, create-dmg, or DMG Canvas
+   - **Linux**: AppImage, snapcraft, or Flatpak
+
+### Example: Building with PyInstaller
+
+```bash
+# Install PyInstaller
+uv add pyinstaller
+
+# Build executable
+pyinstaller --onefile --windowed --name "Glary-Utilities" src/main.py
+```
+
+## Dependency Management
+
+This project uses `pyproject.toml` for dependency management instead of `requirements.txt`. The project supports both `uv` and `pip` for installing dependencies.
+
+### Why uv?
+
+- **Faster**: uv is significantly faster than pip for dependency resolution and installation
+- **Reliable**: Better dependency resolution and lock file support
+- **Modern**: Built with modern Python packaging standards in mind
+- **Compatible**: Works seamlessly with existing pip-based workflows
+
+### Key Dependencies
+
+- **PyQt5**: GUI framework
+- **psutil**: System and process utilities
+- **GPUtil**: GPU information
+- **Pillow**: Image processing
+- **pywin32**: Windows-specific functionality (Windows only)
+- **WMI**: Windows Management Instrumentation (Windows only)
+
+### Development Dependencies
+
+To install development dependencies:
+
+```bash
+# Using uv
+uv sync --dev
+
+# Using pip
+pip install -e ".[dev]"
+```
+
+### Build Dependencies
+
+To install build dependencies for creating executables:
+
+```bash
+# Using uv
+uv sync --build
+
+# Using pip
+pip install -e ".[build]"
+```
 
 ## Translations
 
